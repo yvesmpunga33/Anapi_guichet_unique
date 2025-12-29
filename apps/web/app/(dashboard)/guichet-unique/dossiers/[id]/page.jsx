@@ -89,23 +89,51 @@ const mockDossier = {
   ],
 };
 
-const workflowSteps = [
-  { step: 1, name: "Soumission", description: "Depot du dossier" },
-  { step: 2, name: "Verification", description: "Controle documents" },
-  { step: 3, name: "Examen Technique", description: "Analyse technique" },
-  { step: 4, name: "Examen Juridique", description: "Validation legale" },
-  { step: 5, name: "Commission", description: "Decision finale" },
-  { step: 6, name: "Agrement", description: "Delivrance" },
-];
+// Les etapes seront chargees dynamiquement depuis la configuration
 
 export default function DossierDetailPage() {
   const params = useParams();
+  const [workflowSteps, setWorkflowSteps] = useState([]);
   const router = useRouter();
   const [dossier, setDossier] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [newComment, setNewComment] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // Charger les etapes de workflow depuis la configuration
+  useEffect(() => {
+    const fetchWorkflowSteps = async () => {
+      try {
+        const response = await fetch('/api/config/workflow-steps?type=DOSSIER');
+        if (response.ok) {
+          const data = await response.json();
+          // Transformer les etapes pour avoir le format attendu
+          const steps = (data.steps || []).map(s => ({
+            step: s.stepNumber,
+            name: s.name,
+            description: s.description,
+            color: s.color,
+            icon: s.icon,
+            responsibleRole: s.responsibleRole,
+          }));
+          setWorkflowSteps(steps);
+        }
+      } catch (error) {
+        console.error('Error fetching workflow steps:', error);
+        // Fallback aux etapes par defaut si l'API echoue
+        setWorkflowSteps([
+          { step: 1, name: "Soumission", description: "Depot du dossier" },
+          { step: 2, name: "Verification", description: "Controle documents" },
+          { step: 3, name: "Examen Technique", description: "Analyse technique" },
+          { step: 4, name: "Examen Juridique", description: "Validation legale" },
+          { step: 5, name: "Commission", description: "Decision finale" },
+          { step: 6, name: "Agrement", description: "Delivrance" },
+        ]);
+      }
+    };
+    fetchWorkflowSteps();
+  }, []);
 
   useEffect(() => {
     // Simulate API call
@@ -171,7 +199,8 @@ export default function DossierDetailPage() {
 
   const status = statusConfig[dossier.status] || statusConfig.DRAFT;
   const StatusIcon = status.icon;
-  const progress = (dossier.currentStep / dossier.totalSteps) * 100;
+  const totalSteps = workflowSteps.length || dossier.totalSteps;
+  const progress = (dossier.currentStep / totalSteps) * 100;
 
   return (
     <div className="space-y-6">
@@ -228,47 +257,62 @@ export default function DossierDetailPage() {
         </div>
       </div>
 
-      {/* Workflow Progress */}
+      {/* Workflow Progress - Etapes dynamiques */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Progression du dossier</h3>
-        <div className="flex items-center justify-between">
-          {workflowSteps.map((step, index) => (
-            <div key={step.step} className="flex items-center flex-1">
-              <div className="flex flex-col items-center">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm ${
-                    step.step < dossier.currentStep
-                      ? "bg-green-500 text-white"
-                      : step.step === dossier.currentStep
-                      ? "bg-blue-600 text-white ring-4 ring-blue-100 dark:ring-blue-900"
-                      : "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
-                  }`}
-                >
-                  {step.step < dossier.currentStep ? (
-                    <CheckCircle2 className="w-5 h-5" />
-                  ) : (
-                    step.step
-                  )}
+        {workflowSteps.length > 0 ? (
+          <div className="flex items-center justify-between">
+            {workflowSteps.map((step, index) => (
+              <div key={step.step} className="flex items-center flex-1">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
+                      step.step < dossier.currentStep
+                        ? "bg-green-500 text-white"
+                        : step.step === dossier.currentStep
+                        ? "text-white ring-4 ring-opacity-30"
+                        : "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
+                    }`}
+                    style={step.step === dossier.currentStep ? {
+                      backgroundColor: step.color || '#3B82F6',
+                      '--tw-ring-color': step.color || '#3B82F6',
+                    } : {}}
+                  >
+                    {step.step < dossier.currentStep ? (
+                      <CheckCircle2 className="w-5 h-5" />
+                    ) : (
+                      step.step
+                    )}
+                  </div>
+                  <p className={`text-xs mt-2 font-medium text-center ${
+                    step.step <= dossier.currentStep
+                      ? "text-gray-900 dark:text-white"
+                      : "text-gray-400 dark:text-gray-500"
+                  }`}>
+                    {step.name}
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 text-center">{step.description}</p>
                 </div>
-                <p className={`text-xs mt-2 font-medium ${
-                  step.step <= dossier.currentStep
-                    ? "text-gray-900 dark:text-white"
-                    : "text-gray-400 dark:text-gray-500"
-                }`}>
-                  {step.name}
-                </p>
-                <p className="text-xs text-gray-400 dark:text-gray-500">{step.description}</p>
+                {index < workflowSteps.length - 1 && (
+                  <div
+                    className={`flex-1 h-1 mx-2 rounded transition-all ${
+                      step.step < dossier.currentStep
+                        ? "bg-green-500"
+                        : "bg-gray-200 dark:bg-gray-600"
+                    }`}
+                    style={step.step < dossier.currentStep - 1 ? {} :
+                      step.step === dossier.currentStep - 1 ? { backgroundColor: '#10B981' } : {}}
+                  />
+                )}
               </div>
-              {index < workflowSteps.length - 1 && (
-                <div className={`flex-1 h-1 mx-2 rounded ${
-                  step.step < dossier.currentStep
-                    ? "bg-green-500"
-                    : "bg-gray-200 dark:bg-gray-600"
-                }`} />
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <span className="ml-2 text-gray-500">Chargement des etapes...</span>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}

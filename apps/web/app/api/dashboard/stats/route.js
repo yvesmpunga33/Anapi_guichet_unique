@@ -20,6 +20,7 @@ export async function GET() {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
 
     // Parallel queries for performance
     const [
@@ -34,6 +35,12 @@ export async function GET() {
       approvedThisMonth,
       documentStats,
       recentInvestments,
+      investmentsByStatus,
+      investmentsBySector,
+      investmentsByProvince,
+      monthlyInvestments,
+      investorsByType,
+      investorsByCountry,
     ] = await Promise.all([
       // Total investors
       Investor.count(),
@@ -67,6 +74,7 @@ export async function GET() {
         attributes: [
           [sequelize.fn('SUM', sequelize.col('amount')), 'totalAmount'],
           [sequelize.fn('SUM', sequelize.col('jobsCreated')), 'totalJobs'],
+          [sequelize.fn('SUM', sequelize.col('jobsIndirect')), 'totalJobsIndirect'],
         ],
         raw: true,
       }),
@@ -126,6 +134,92 @@ export async function GET() {
           },
         ],
       }),
+
+      // Investments by status
+      Investment.findAll({
+        attributes: [
+          'status',
+          [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+          [sequelize.fn('SUM', sequelize.col('amount')), 'totalAmount'],
+        ],
+        group: ['status'],
+        raw: true,
+      }),
+
+      // Investments by sector
+      Investment.findAll({
+        attributes: [
+          'sector',
+          [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+          [sequelize.fn('SUM', sequelize.col('amount')), 'totalAmount'],
+        ],
+        where: {
+          sector: { [Op.ne]: null }
+        },
+        group: ['sector'],
+        order: [[sequelize.fn('SUM', sequelize.col('amount')), 'DESC']],
+        limit: 6,
+        raw: true,
+      }),
+
+      // Investments by province
+      Investment.findAll({
+        attributes: [
+          'province',
+          [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+          [sequelize.fn('SUM', sequelize.col('amount')), 'totalAmount'],
+        ],
+        where: {
+          province: { [Op.ne]: null }
+        },
+        group: ['province'],
+        order: [[sequelize.fn('SUM', sequelize.col('amount')), 'DESC']],
+        limit: 10,
+        raw: true,
+      }),
+
+      // Monthly investments for the year (for chart)
+      Investment.findAll({
+        attributes: [
+          [sequelize.fn('DATE_TRUNC', 'month', sequelize.col('createdAt')), 'month'],
+          [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+          [sequelize.fn('SUM', sequelize.col('amount')), 'totalAmount'],
+        ],
+        where: {
+          createdAt: { [Op.gte]: startOfYear }
+        },
+        group: [sequelize.fn('DATE_TRUNC', 'month', sequelize.col('createdAt'))],
+        order: [[sequelize.fn('DATE_TRUNC', 'month', sequelize.col('createdAt')), 'ASC']],
+        raw: true,
+      }),
+
+      // Investors by type
+      Investor.findAll({
+        attributes: [
+          'type',
+          [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+        ],
+        where: {
+          type: { [Op.ne]: null }
+        },
+        group: ['type'],
+        raw: true,
+      }),
+
+      // Investors by country
+      Investor.findAll({
+        attributes: [
+          'country',
+          [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+        ],
+        where: {
+          country: { [Op.ne]: null }
+        },
+        group: ['country'],
+        order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']],
+        limit: 10,
+        raw: true,
+      }),
     ]);
 
     // Cast stats results
@@ -141,11 +235,58 @@ export async function GET() {
       ? ((totalInvestments - lastMonthInvestments) / lastMonthInvestments * 100)
       : 0;
 
-    const currentAmount = currentStats?.totalAmount || 0;
-    const lastMonthAmount = lastMonthStats?.totalAmount || 0;
+    const currentAmount = parseFloat(currentStats?.totalAmount) || 0;
+    const lastMonthAmount = parseFloat(lastMonthStats?.totalAmount) || 0;
     const amountGrowth = lastMonthAmount > 0
       ? ((currentAmount - lastMonthAmount) / lastMonthAmount * 100)
       : 0;
+
+    // Format monthly data for chart
+    const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+    const monthlyData = monthNames.map((name, index) => {
+      const monthData = monthlyInvestments.find(m => {
+        const monthDate = new Date(m.month);
+        return monthDate.getMonth() === index;
+      });
+      return {
+        month: name,
+        count: parseInt(monthData?.count) || 0,
+        amount: parseFloat(monthData?.totalAmount) || 0,
+      };
+    });
+
+    // Status distribution
+    const statusDistribution = investmentsByStatus.map(s => ({
+      status: s.status,
+      count: parseInt(s.count),
+      amount: parseFloat(s.totalAmount) || 0,
+    }));
+
+    // Sector distribution
+    const sectorDistribution = investmentsBySector.map(s => ({
+      sector: s.sector,
+      count: parseInt(s.count),
+      amount: parseFloat(s.totalAmount) || 0,
+    }));
+
+    // Province distribution
+    const provinceDistribution = investmentsByProvince.map(p => ({
+      province: p.province,
+      count: parseInt(p.count),
+      amount: parseFloat(p.totalAmount) || 0,
+    }));
+
+    // Investor type distribution
+    const investorTypeDistribution = investorsByType.map(t => ({
+      type: t.type,
+      count: parseInt(t.count),
+    }));
+
+    // Country distribution
+    const countryDistribution = investorsByCountry.map(c => ({
+      country: c.country,
+      count: parseInt(c.count),
+    }));
 
     return NextResponse.json({
       summary: {
@@ -159,10 +300,19 @@ export async function GET() {
         totalAmount: currentAmount,
         amountGrowth: Math.round(amountGrowth * 10) / 10,
 
-        totalJobs: currentStats?.totalJobs || 0,
+        totalJobs: parseInt(currentStats?.totalJobs) || 0,
+        totalJobsIndirect: parseInt(currentStats?.totalJobsIndirect) || 0,
 
         pendingApprovals,
         approvedThisMonth,
+      },
+      charts: {
+        monthly: monthlyData,
+        statusDistribution,
+        sectorDistribution,
+        provinceDistribution,
+        investorTypeDistribution,
+        countryDistribution,
       },
       documents: documentStats.reduce((acc, s) => {
         acc[s.status] = parseInt(s.count);
@@ -176,6 +326,9 @@ export async function GET() {
           name: invJson.projectName,
           amount: invJson.amount,
           status: invJson.status,
+          sector: invJson.sector,
+          province: invJson.province,
+          progress: invJson.progress || 0,
           investor: invJson.investor?.name,
           createdAt: invJson.createdAt,
         };

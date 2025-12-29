@@ -695,27 +695,27 @@ export default function TrackingPage() {
                 <div className="grid grid-cols-6 gap-4 mb-8 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div className="text-center">
                     <p className="text-2xl font-bold text-blue-600">{stats.total}</p>
-                    <p className="text-xs text-gray-500">Total</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-200">Total</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
-                    <p className="text-xs text-gray-500">Approuves</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-200">Approuves</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-purple-600">{stats.inProgress}</p>
-                    <p className="text-xs text-gray-500">En Cours</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-200">En Cours</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-yellow-600">{stats.underReview}</p>
-                    <p className="text-xs text-gray-500">En Examen</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-200">En Examen</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-red-600">{stats.rejected}</p>
-                    <p className="text-xs text-gray-500">Rejetes</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-200">Rejetes</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-emerald-600">{stats.completed}</p>
-                    <p className="text-xs text-gray-500">Termines</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-200">Termines</p>
                   </div>
                 </div>
 

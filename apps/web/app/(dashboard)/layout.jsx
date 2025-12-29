@@ -67,6 +67,7 @@ const navigation = [
   {
     title: "CONFIGURATION",
     items: [
+      { name: "Actes administratifs", href: "/configuration/actes-administratifs", icon: FileCheck },
       { name: "Étapes de workflow", href: "/configuration/workflow-steps", icon: Workflow },
     ],
   },

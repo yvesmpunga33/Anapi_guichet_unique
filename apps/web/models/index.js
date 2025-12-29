@@ -23,6 +23,12 @@ import Investment from './Investment.js';
 import ApprovalRequest from './ApprovalRequest.js';
 import LegalDocument from './LegalDocument.js';
 import WorkflowStep from './WorkflowStep.js';
+// Nouveaux modeles pour le Guichet Unique
+import Sector from './Sector.js';
+import Ministry from './Ministry.js';
+import ActeAdministratif from './ActeAdministratif.js';
+import PieceRequise from './PieceRequise.js';
+import ActeAdministration from './ActeAdministration.js';
 
 // ==================== ASSOCIATIONS ====================
 
@@ -118,6 +124,32 @@ ApprovalRequest.belongsTo(User, { foreignKey: 'assignedToId', as: 'assignedTo' }
 LegalDocument.belongsTo(Investment, { foreignKey: 'investmentId', as: 'investment' });
 Investment.hasMany(LegalDocument, { foreignKey: 'investmentId', as: 'legalDocuments' });
 
+// ==================== GUICHET UNIQUE ASSOCIATIONS ====================
+
+// Sector - Self reference (hierarchy)
+Sector.belongsTo(Sector, { foreignKey: 'parentId', as: 'parent' });
+Sector.hasMany(Sector, { foreignKey: 'parentId', as: 'subSectors' });
+
+// ActeAdministratif - Sector
+ActeAdministratif.belongsTo(Sector, { foreignKey: 'sectorId', as: 'sector' });
+Sector.hasMany(ActeAdministratif, { foreignKey: 'sectorId', as: 'actes' });
+
+// ActeAdministratif - Ministry (ministere principal)
+ActeAdministratif.belongsTo(Ministry, { foreignKey: 'ministryId', as: 'ministry' });
+Ministry.hasMany(ActeAdministratif, { foreignKey: 'ministryId', as: 'actes' });
+
+// ActeAdministratif - PieceRequise
+ActeAdministratif.hasMany(PieceRequise, { foreignKey: 'acteId', as: 'piecesRequises', onDelete: 'CASCADE' });
+PieceRequise.belongsTo(ActeAdministratif, { foreignKey: 'acteId', as: 'acte' });
+
+// ActeAdministratif - ActeAdministration (administrations impliquees)
+ActeAdministratif.hasMany(ActeAdministration, { foreignKey: 'acteId', as: 'administrations', onDelete: 'CASCADE' });
+ActeAdministration.belongsTo(ActeAdministratif, { foreignKey: 'acteId', as: 'acte' });
+
+// ActeAdministration - Ministry
+ActeAdministration.belongsTo(Ministry, { foreignKey: 'ministryId', as: 'ministry' });
+Ministry.hasMany(ActeAdministration, { foreignKey: 'ministryId', as: 'acteAdministrations' });
+
 // Export all models
 export {
   sequelize,
@@ -143,6 +175,12 @@ export {
   ApprovalRequest,
   LegalDocument,
   WorkflowStep,
+  // Guichet Unique
+  Sector,
+  Ministry,
+  ActeAdministratif,
+  PieceRequise,
+  ActeAdministration,
 };
 
 export default {
@@ -169,4 +207,10 @@ export default {
   ApprovalRequest,
   LegalDocument,
   WorkflowStep,
+  // Guichet Unique
+  Sector,
+  Ministry,
+  ActeAdministratif,
+  PieceRequise,
+  ActeAdministration,
 };

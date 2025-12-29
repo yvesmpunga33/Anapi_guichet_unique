@@ -85,7 +85,8 @@ export default function NewAgrementPage() {
     projectTitle: "",
     projectLocation: "",
     investmentAmount: "",
-    jobsCreated: "",
+    directJobs: "",
+    indirectJobs: "",
     projectDuration: "",
     startDate: "",
     projectDescription: "",
@@ -543,13 +544,28 @@ export default function NewAgrementPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Emplois a creer
+                    Emplois directs a creer
                   </label>
                   <input
                     type="number"
-                    value={formData.jobsCreated}
-                    onChange={(e) => handleChange("jobsCreated", e.target.value)}
+                    min="0"
+                    value={formData.directJobs}
+                    onChange={(e) => handleChange("directJobs", e.target.value)}
                     placeholder="Ex: 100"
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Emplois indirects a creer
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.indirectJobs}
+                    onChange={(e) => handleChange("indirectJobs", e.target.value)}
+                    placeholder="Ex: 250"
                     className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>

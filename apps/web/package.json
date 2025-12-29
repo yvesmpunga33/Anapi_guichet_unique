@@ -8,8 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
-    "check-types": "tsc --noEmit",
-    "db:seed": "npx tsx prisma/seed.ts"
+    "db:seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
@@ -39,6 +38,7 @@
     "sequelize": "^6.37.7",
     "sonner": "^2.0.7",
     "sweetalert2": "^11.26.17",
+    "uuid": "^13.0.0",
     "xlsx": "^0.18.5",
     "zustand": "^5.0.9"
   },
@@ -46,18 +46,10 @@
     "@next/eslint-plugin-next": "^15.4.6",
     "@repo/eslint-config": "*",
     "@repo/tailwind-config": "*",
-    "@repo/typescript-config": "*",
     "@tailwindcss/postcss": "^4.1.5",
-    "@types/bcryptjs": "^3.0.0",
-    "@types/file-saver": "^2.0.7",
-    "@types/node": "^22.19.3",
-    "@types/react": "^19.1.0",
-    "@types/react-dom": "^19.1.1",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.39.1",
     "postcss": "^8.5.3",
-    "tailwindcss": "^4.1.5",
-    "tsx": "^4.21.0",
-    "typescript": "5.9.2"
+    "tailwindcss": "^4.1.5"
   }
 }

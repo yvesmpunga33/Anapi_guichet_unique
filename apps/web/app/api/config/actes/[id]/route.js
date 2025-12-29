@@ -13,13 +13,8 @@ export async function GET(request, { params }) {
         {
           model: PieceRequise,
           as: 'piecesRequises',
+          separate: true,
           order: [['orderIndex', 'ASC']],
-        },
-        {
-          model: ActeAdministration,
-          as: 'administrations',
-          include: [{ model: Ministry, as: 'ministry' }],
-          order: [['stepNumber', 'ASC']],
         },
       ],
     });
@@ -85,9 +80,8 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    // Supprimer les pieces et administrations (cascade)
+    // Supprimer les pieces (cascade)
     await PieceRequise.destroy({ where: { acteId: id } });
-    await ActeAdministration.destroy({ where: { acteId: id } });
     await acte.destroy();
 
     return NextResponse.json({ message: 'Acte supprime avec succes' });

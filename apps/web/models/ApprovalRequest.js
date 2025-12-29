@@ -50,6 +50,16 @@ ApprovalRequest.init(
       type: DataTypes.INTEGER,
       defaultValue: 0,
     },
+    directJobs: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      comment: 'Nombre d\'emplois directs à créer',
+    },
+    indirectJobs: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      comment: 'Nombre d\'emplois indirects à créer',
+    },
     province: {
       type: DataTypes.TEXT,
       allowNull: false,

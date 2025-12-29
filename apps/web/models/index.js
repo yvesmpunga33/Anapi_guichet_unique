@@ -22,6 +22,7 @@ import Investor from './Investor.js';
 import Investment from './Investment.js';
 import ApprovalRequest from './ApprovalRequest.js';
 import LegalDocument from './LegalDocument.js';
+import WorkflowStep from './WorkflowStep.js';
 
 // ==================== ASSOCIATIONS ====================
 
@@ -141,6 +142,7 @@ export {
   Investment,
   ApprovalRequest,
   LegalDocument,
+  WorkflowStep,
 };
 
 export default {
@@ -166,4 +168,5 @@ export default {
   Investment,
   ApprovalRequest,
   LegalDocument,
+  WorkflowStep,
 };

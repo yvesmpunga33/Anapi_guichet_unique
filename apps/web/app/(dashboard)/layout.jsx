@@ -29,6 +29,8 @@ import {
   Factory,
   ClipboardList,
   FileCheck,
+  Workflow,
+  Cog,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -60,6 +62,12 @@ const navigation = [
       { name: "Provinces", href: "/referentiels/provinces", icon: MapPin },
       { name: "Secteurs d'activité", href: "/referentiels/sectors", icon: Factory },
       { name: "Ministères", href: "/referentiels/ministries", icon: Building2 },
+    ],
+  },
+  {
+    title: "CONFIGURATION",
+    items: [
+      { name: "Étapes de workflow", href: "/configuration/workflow-steps", icon: Workflow },
     ],
   },
   {

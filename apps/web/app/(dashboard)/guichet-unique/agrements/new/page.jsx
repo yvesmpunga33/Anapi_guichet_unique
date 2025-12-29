@@ -286,8 +286,8 @@ export default function NewAgrementPage() {
                   <label
                     className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
                       formData.investorType === "company"
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                        : "border-gray-200 dark:border-gray-600"
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                        : "border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                     }`}
                   >
                     <input
@@ -304,8 +304,8 @@ export default function NewAgrementPage() {
                   <label
                     className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
                       formData.investorType === "individual"
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                        : "border-gray-200 dark:border-gray-600"
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                        : "border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                     }`}
                   >
                     <input

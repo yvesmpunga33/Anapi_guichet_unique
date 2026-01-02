@@ -29,6 +29,14 @@ import Ministry from './Ministry.js';
 import ActeAdministratif from './ActeAdministratif.js';
 import PieceRequise from './PieceRequise.js';
 import ActeAdministration from './ActeAdministration.js';
+import Dossier from './Dossier.js';
+import DossierDocument from './DossierDocument.js';
+import MinistryWorkflow from './MinistryWorkflow.js';
+import MinistryRequest from './MinistryRequest.js';
+import MinistryRequestHistory from './MinistryRequestHistory.js';
+import MinistryRequestDocument from './MinistryRequestDocument.js';
+import DossierSector from './DossierSector.js';
+import RequiredDocument from './RequiredDocument.js';
 
 // ==================== ASSOCIATIONS ====================
 
@@ -130,6 +138,10 @@ Investment.hasMany(LegalDocument, { foreignKey: 'investmentId', as: 'legalDocume
 Sector.belongsTo(Sector, { foreignKey: 'parentId', as: 'parent' });
 Sector.hasMany(Sector, { foreignKey: 'parentId', as: 'subSectors' });
 
+// Sector - Ministry (ministere de tutelle)
+Sector.belongsTo(Ministry, { foreignKey: 'ministryId', as: 'ministry' });
+Ministry.hasMany(Sector, { foreignKey: 'ministryId', as: 'sectors' });
+
 // ActeAdministratif - Sector
 ActeAdministratif.belongsTo(Sector, { foreignKey: 'sectorId', as: 'sector' });
 Sector.hasMany(ActeAdministratif, { foreignKey: 'sectorId', as: 'actes' });
@@ -149,6 +161,61 @@ ActeAdministration.belongsTo(ActeAdministratif, { foreignKey: 'acteId', as: 'act
 // ActeAdministration - Ministry
 ActeAdministration.belongsTo(Ministry, { foreignKey: 'ministryId', as: 'ministry' });
 Ministry.hasMany(ActeAdministration, { foreignKey: 'ministryId', as: 'acteAdministrations' });
+
+// ==================== DOSSIER ASSOCIATIONS ====================
+
+// Dossier - Investor (optionnel)
+Dossier.belongsTo(Investor, { foreignKey: 'investorId', as: 'investor' });
+Investor.hasMany(Dossier, { foreignKey: 'investorId', as: 'dossiers' });
+
+// Dossier - User (assignedTo)
+Dossier.belongsTo(User, { foreignKey: 'assignedToId', as: 'assignedTo' });
+
+// Dossier - User (createdBy)
+Dossier.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+
+// Dossier - DossierDocument
+Dossier.hasMany(DossierDocument, { foreignKey: 'dossierId', as: 'documents', onDelete: 'CASCADE' });
+DossierDocument.belongsTo(Dossier, { foreignKey: 'dossierId', as: 'dossier' });
+
+// DossierDocument - User (uploadedBy)
+DossierDocument.belongsTo(User, { foreignKey: 'uploadedById', as: 'uploadedBy' });
+
+// DossierSector - Many-to-Many (Dossier <-> Sector)
+DossierSector.belongsTo(Dossier, { foreignKey: 'dossierId', as: 'dossier' });
+DossierSector.belongsTo(Sector, { foreignKey: 'sectorId', as: 'sector' });
+Dossier.hasMany(DossierSector, { foreignKey: 'dossierId', as: 'dossierSectors', onDelete: 'CASCADE' });
+Sector.hasMany(DossierSector, { foreignKey: 'sectorId', as: 'dossierSectors' });
+
+// Many-to-Many through DossierSector
+Dossier.belongsToMany(Sector, { through: DossierSector, foreignKey: 'dossierId', otherKey: 'sectorId', as: 'sectors' });
+Sector.belongsToMany(Dossier, { through: DossierSector, foreignKey: 'sectorId', otherKey: 'dossierId', as: 'dossiers' });
+
+// ==================== MINISTRY REQUESTS ASSOCIATIONS ====================
+
+// MinistryWorkflow - Ministry
+MinistryWorkflow.belongsTo(Ministry, { foreignKey: 'ministryId', as: 'ministry' });
+Ministry.hasMany(MinistryWorkflow, { foreignKey: 'ministryId', as: 'workflows' });
+
+// MinistryRequest - Ministry
+MinistryRequest.belongsTo(Ministry, { foreignKey: 'ministryId', as: 'ministry' });
+Ministry.hasMany(MinistryRequest, { foreignKey: 'ministryId', as: 'requests' });
+
+// MinistryRequest - Investor (optionnel)
+MinistryRequest.belongsTo(Investor, { foreignKey: 'investorId', as: 'investor' });
+Investor.hasMany(MinistryRequest, { foreignKey: 'investorId', as: 'ministryRequests' });
+
+// MinistryRequest - Dossier (optionnel)
+MinistryRequest.belongsTo(Dossier, { foreignKey: 'dossierId', as: 'dossier' });
+Dossier.hasMany(MinistryRequest, { foreignKey: 'dossierId', as: 'ministryRequests' });
+
+// MinistryRequestHistory - MinistryRequest
+MinistryRequestHistory.belongsTo(MinistryRequest, { foreignKey: 'requestId', as: 'request' });
+MinistryRequest.hasMany(MinistryRequestHistory, { foreignKey: 'requestId', as: 'history', onDelete: 'CASCADE' });
+
+// MinistryRequestDocument - MinistryRequest
+MinistryRequestDocument.belongsTo(MinistryRequest, { foreignKey: 'requestId', as: 'request' });
+MinistryRequest.hasMany(MinistryRequestDocument, { foreignKey: 'requestId', as: 'documents', onDelete: 'CASCADE' });
 
 // Export all models
 export {
@@ -181,6 +248,16 @@ export {
   ActeAdministratif,
   PieceRequise,
   ActeAdministration,
+  Dossier,
+  DossierDocument,
+  DossierSector,
+  // Ministry Requests
+  MinistryWorkflow,
+  MinistryRequest,
+  MinistryRequestHistory,
+  MinistryRequestDocument,
+  // Configuration
+  RequiredDocument,
 };
 
 export default {
@@ -213,4 +290,14 @@ export default {
   ActeAdministratif,
   PieceRequise,
   ActeAdministration,
+  Dossier,
+  DossierDocument,
+  DossierSector,
+  // Ministry Requests
+  MinistryWorkflow,
+  MinistryRequest,
+  MinistryRequestHistory,
+  MinistryRequestDocument,
+  // Configuration
+  RequiredDocument,
 };

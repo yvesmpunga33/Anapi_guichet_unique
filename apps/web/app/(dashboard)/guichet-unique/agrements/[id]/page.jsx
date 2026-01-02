@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Swal from "sweetalert2";
 import {
   ArrowLeft,
   FileCheck,
@@ -344,6 +345,92 @@ export default function AgrementDetailPage() {
   const [newComment, setNewComment] = useState("");
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [workflowSteps, setWorkflowSteps] = useState([]);
+  const [previewDocument, setPreviewDocument] = useState(null);
+  const [actionModal, setActionModal] = useState({ type: null, isOpen: false });
+  const [actionComment, setActionComment] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Fonctions pour les actions
+  const openActionModal = (type) => {
+    setActionModal({ type, isOpen: true });
+    setActionComment("");
+  };
+
+  const closeActionModal = () => {
+    setActionModal({ type: null, isOpen: false });
+    setActionComment("");
+  };
+
+  const handleAction = async () => {
+    if (!actionModal.type) return;
+
+    setActionLoading(true);
+    try {
+      // Simuler un appel API
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Mettre à jour le statut localement
+      const newStatus = actionModal.type === 'approve' ? 'APPROVED'
+        : actionModal.type === 'reject' ? 'REJECTED'
+        : 'PENDING_INFO';
+
+      const actionText = actionModal.type === 'approve' ? 'Demande APPROUVEE'
+        : actionModal.type === 'reject' ? 'Demande REJETEE'
+        : 'Informations supplementaires demandees';
+
+      setApproval(prev => ({
+        ...prev,
+        status: newStatus,
+        history: [
+          { date: new Date().toISOString().replace('T', ' ').slice(0, 16), action: actionText, user: 'Yves Mpunga' },
+          ...prev.history
+        ],
+        comments: actionComment ? [
+          { id: Date.now().toString(), author: 'Yves Mpunga', role: 'Administrateur', date: new Date().toISOString().split('T')[0], content: actionComment, type: 'decision' },
+          ...prev.comments
+        ] : prev.comments
+      }));
+
+      closeActionModal();
+
+      // Afficher une notification de succès avec SweetAlert2
+      Swal.fire({
+        icon: 'success',
+        title: 'Action effectuee',
+        text: `${actionText} avec succes!`,
+        confirmButtonColor: actionModal.type === 'approve' ? '#16a34a' :
+                           actionModal.type === 'reject' ? '#dc2626' : '#ea580c',
+        timer: 3000,
+        timerProgressBar: true,
+      });
+    } catch (error) {
+      console.error('Error performing action:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Une erreur est survenue lors de l\'action',
+        confirmButtonColor: '#dc2626',
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Fonction pour ouvrir la prévisualisation
+  const openDocumentPreview = (doc) => {
+    setPreviewDocument(doc);
+  };
+
+  // Fonction pour fermer la prévisualisation
+  const closeDocumentPreview = () => {
+    setPreviewDocument(null);
+  };
+
+  // Fonction pour télécharger un document
+  const downloadDocument = (doc) => {
+    // Ouvrir le lien de téléchargement dans une nouvelle fenêtre
+    window.open(`/api/documents/${doc.id}/download`, '_blank');
+  };
 
   // Charger les etapes de workflow depuis la configuration
   useEffect(() => {
@@ -441,6 +528,12 @@ export default function AgrementDetailPage() {
 
   return (
     <div className="space-y-6">
+      {/* Type Badge - Titre principal */}
+      <div className={`inline-flex items-center px-4 py-2 rounded-xl text-base font-semibold ${type?.color || 'bg-gray-100 text-gray-700'}`}>
+        <Shield className="w-5 h-5 mr-2" />
+        {type?.label || approval.approvalType}
+      </div>
+
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div className="flex items-start gap-4">
@@ -464,10 +557,6 @@ export default function AgrementDetailPage() {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${type?.color || 'bg-gray-100 text-gray-700'}`}>
-                {type?.label || approval.approvalType}
-              </span>
-              <span className="text-gray-500 dark:text-gray-400">•</span>
               <span className="text-sm text-gray-500 dark:text-gray-400">
                 Soumis le {formatDate(approval.submittedAt)}
               </span>
@@ -484,27 +573,48 @@ export default function AgrementDetailPage() {
           </button>
 
           {/* Actions selon le statut */}
-          {approval.status === "UNDER_REVIEW" && (
+          {(approval.status === "UNDER_REVIEW" || approval.status === "SUBMITTED") && (
             <>
-              <button className="inline-flex items-center px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors">
+              <button
+                onClick={() => openActionModal('request_info')}
+                className="inline-flex items-center px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
+              >
                 <HelpCircle className="w-4 h-4 mr-2" />
                 Demander infos
               </button>
-              <button className="inline-flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
+              <button
+                onClick={() => openActionModal('reject')}
+                className="inline-flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+              >
                 <XOctagon className="w-4 h-4 mr-2" />
                 Rejeter
               </button>
-              <button className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+              <button
+                onClick={() => openActionModal('approve')}
+                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
                 <CheckCheck className="w-4 h-4 mr-2" />
                 Approuver
               </button>
             </>
           )}
-          {approval.status === "SUBMITTED" && (
-            <button className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              <User className="w-4 h-4 mr-2" />
-              Assigner
-            </button>
+          {approval.status === "PENDING_INFO" && (
+            <>
+              <button
+                onClick={() => openActionModal('reject')}
+                className="inline-flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+              >
+                <XOctagon className="w-4 h-4 mr-2" />
+                Rejeter
+              </button>
+              <button
+                onClick={() => openActionModal('approve')}
+                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <CheckCheck className="w-4 h-4 mr-2" />
+                Approuver
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -658,11 +768,19 @@ export default function AgrementDetailPage() {
                       </div>
                       <div className="flex items-center gap-3">
                         {getDocumentStatusBadge(doc.status)}
-                        <button className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors">
-                          <Eye className="w-4 h-4 text-gray-500" />
+                        <button
+                          onClick={() => openDocumentPreview(doc)}
+                          className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors group"
+                          title="Visualiser le document"
+                        >
+                          <Eye className="w-4 h-4 text-gray-500 group-hover:text-blue-600" />
                         </button>
-                        <button className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors">
-                          <Download className="w-4 h-4 text-gray-500" />
+                        <button
+                          onClick={() => downloadDocument(doc)}
+                          className="p-2 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors group"
+                          title="Telecharger le document"
+                        >
+                          <Download className="w-4 h-4 text-gray-500 group-hover:text-green-600" />
                         </button>
                       </div>
                     </div>
@@ -865,6 +983,261 @@ export default function AgrementDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de prévisualisation de document */}
+      {previewDocument && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col">
+            {/* Header du modal */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">{previewDocument.name}</h3>
+                  <p className="text-sm text-gray-500">{previewDocument.type} • {previewDocument.size}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {getDocumentStatusBadge(previewDocument.status)}
+                <button
+                  onClick={() => downloadDocument(previewDocument)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  title="Telecharger"
+                >
+                  <Download className="w-5 h-5 text-gray-500" />
+                </button>
+                <button
+                  onClick={closeDocumentPreview}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  title="Fermer"
+                >
+                  <XCircle className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenu de prévisualisation */}
+            <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-900">
+              {previewDocument.type === "PDF" || previewDocument.name.endsWith('.pdf') ? (
+                <div className="w-full h-full min-h-[600px]">
+                  {/* Aperçu PDF avec iframe - utilise l'URL du document */}
+                  <iframe
+                    src={`/api/documents/${previewDocument.id}/view`}
+                    className="w-full h-full min-h-[600px] border-0"
+                    title={previewDocument.name}
+                  />
+                </div>
+              ) : previewDocument.type === "Excel" || previewDocument.name.endsWith('.xlsx') || previewDocument.name.endsWith('.xls') ? (
+                <div className="w-full h-full min-h-[500px] flex items-center justify-center">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center max-w-md">
+                    <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                      <FileText className="w-10 h-10 text-green-600" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                      {previewDocument.name}
+                    </h4>
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">
+                      Fichier Excel
+                    </p>
+                    <button
+                      onClick={() => downloadDocument(previewDocument)}
+                      className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Telecharger pour ouvrir
+                    </button>
+                  </div>
+                </div>
+              ) : previewDocument.name.endsWith('.zip') || previewDocument.type === "Archive" ? (
+                <div className="w-full h-full min-h-[500px] flex items-center justify-center">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center max-w-md">
+                    <div className="w-16 h-16 bg-yellow-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                      <Paperclip className="w-10 h-10 text-yellow-600" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                      {previewDocument.name}
+                    </h4>
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">
+                      Archive compressee
+                    </p>
+                    <button
+                      onClick={() => downloadDocument(previewDocument)}
+                      className="inline-flex items-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Telecharger l'archive
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full h-full min-h-[500px] flex items-center justify-center">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center max-w-md">
+                    <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                      {previewDocument.name}
+                    </h4>
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">
+                      Apercu non disponible pour ce type de fichier
+                    </p>
+                    <button
+                      onClick={() => downloadDocument(previewDocument)}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Telecharger le fichier
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer du modal */}
+            <div className="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-500">
+                Uploade le {formatDate(previewDocument.uploadedAt)}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={closeDocumentPreview}
+                  className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
+                >
+                  Fermer
+                </button>
+                <button
+                  onClick={() => downloadDocument(previewDocument)}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Telecharger
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal d'action (Approuver, Rejeter, Demander infos) */}
+      {actionModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full">
+            {/* Header */}
+            <div className={`p-6 border-b border-gray-200 dark:border-gray-700 ${
+              actionModal.type === 'approve' ? 'bg-green-50 dark:bg-green-900/20' :
+              actionModal.type === 'reject' ? 'bg-red-50 dark:bg-red-900/20' :
+              'bg-orange-50 dark:bg-orange-900/20'
+            }`}>
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                  actionModal.type === 'approve' ? 'bg-green-100 dark:bg-green-900/50' :
+                  actionModal.type === 'reject' ? 'bg-red-100 dark:bg-red-900/50' :
+                  'bg-orange-100 dark:bg-orange-900/50'
+                }`}>
+                  {actionModal.type === 'approve' ? (
+                    <CheckCheck className={`w-6 h-6 text-green-600`} />
+                  ) : actionModal.type === 'reject' ? (
+                    <XOctagon className={`w-6 h-6 text-red-600`} />
+                  ) : (
+                    <HelpCircle className={`w-6 h-6 text-orange-600`} />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {actionModal.type === 'approve' ? 'Approuver la demande' :
+                     actionModal.type === 'reject' ? 'Rejeter la demande' :
+                     'Demander des informations'}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {approval?.requestNumber}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="p-6">
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
+                {actionModal.type === 'approve'
+                  ? 'Vous etes sur le point d\'approuver cette demande. Cette action est irreversible.'
+                  : actionModal.type === 'reject'
+                  ? 'Vous etes sur le point de rejeter cette demande. Veuillez fournir une justification.'
+                  : 'Veuillez specifier les informations supplementaires requises.'}
+              </p>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {actionModal.type === 'approve' ? 'Commentaire (optionnel)' :
+                   actionModal.type === 'reject' ? 'Motif du rejet *' :
+                   'Informations demandees *'}
+                </label>
+                <textarea
+                  value={actionComment}
+                  onChange={(e) => setActionComment(e.target.value)}
+                  rows={4}
+                  placeholder={
+                    actionModal.type === 'approve' ? 'Ajoutez un commentaire si necessaire...' :
+                    actionModal.type === 'reject' ? 'Expliquez les raisons du rejet...' :
+                    'Listez les documents ou informations manquantes...'
+                  }
+                  className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                />
+              </div>
+
+              {(actionModal.type === 'reject' || actionModal.type === 'request_info') && !actionComment && (
+                <p className="text-sm text-red-500 mt-2">
+                  Ce champ est obligatoire
+                </p>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-b-xl">
+              <button
+                onClick={closeActionModal}
+                disabled={actionLoading}
+                className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300 disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleAction}
+                disabled={actionLoading || ((actionModal.type === 'reject' || actionModal.type === 'request_info') && !actionComment)}
+                className={`inline-flex items-center px-6 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  actionModal.type === 'approve'
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : actionModal.type === 'reject'
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-orange-600 text-white hover:bg-orange-700'
+                }`}
+              >
+                {actionLoading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Traitement...
+                  </>
+                ) : (
+                  <>
+                    {actionModal.type === 'approve' ? (
+                      <CheckCheck className="w-4 h-4 mr-2" />
+                    ) : actionModal.type === 'reject' ? (
+                      <XOctagon className="w-4 h-4 mr-2" />
+                    ) : (
+                      <Send className="w-4 h-4 mr-2" />
+                    )}
+                    {actionModal.type === 'approve' ? 'Confirmer l\'approbation' :
+                     actionModal.type === 'reject' ? 'Confirmer le rejet' :
+                     'Envoyer la demande'}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

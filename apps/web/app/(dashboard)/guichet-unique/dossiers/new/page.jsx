@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -70,22 +70,23 @@ const dossierTypes = [
     icon: FileCheck,
     color: "purple"
   },
+  {
+    value: "PERMIS_CONSTRUCTION",
+    label: "Permis de construire",
+    description: "Construction et amenagement",
+    icon: Building2,
+    color: "orange"
+  },
+  {
+    value: "AUTORISATION_ACTIVITE",
+    label: "Autorisation d'activite",
+    description: "Exercice d'activite specifique",
+    icon: Briefcase,
+    color: "cyan"
+  },
 ];
 
-const sectors = [
-  { value: "agriculture", label: "Agriculture et elevage" },
-  { value: "mines", label: "Mines et extraction" },
-  { value: "industrie", label: "Industries manufacturieres" },
-  { value: "btp", label: "BTP et construction" },
-  { value: "commerce", label: "Commerce et distribution" },
-  { value: "transport", label: "Transport et logistique" },
-  { value: "tech", label: "Technologies de l'information" },
-  { value: "tourisme", label: "Tourisme et hotellerie" },
-  { value: "finance", label: "Services financiers" },
-  { value: "energie", label: "Energie et utilities" },
-  { value: "sante", label: "Sante et pharmacie" },
-  { value: "education", label: "Education et formation" },
-];
+// Les secteurs sont maintenant chargés dynamiquement depuis l'API
 
 const provinces = [
   "Kinshasa", "Kongo-Central", "Kwango", "Kwilu", "Mai-Ndombe",
@@ -95,13 +96,69 @@ const provinces = [
   "Tanganyika", "Lomami", "Kasai", "Kasai-Central", "Kasai-Oriental", "Sankuru",
 ];
 
-export default function NewDossierPage() {
+// Les documents requis sont maintenant chargés dynamiquement depuis l'API
+
+// Reusable Input Field - defined outside component to prevent re-renders
+const InputField = ({ label, required, error, className = "", ...props }) => (
+  <div className={className}>
+    <label className="block text-sm font-medium text-gray-400 mb-2">
+      {label} {required && <span className="text-orange-500">*</span>}
+    </label>
+    <input
+      {...props}
+      className={`w-full px-4 py-3 bg-gray-800/50 border rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all ${
+        error ? "border-red-500" : "border-gray-700"
+      }`}
+    />
+    {error && (
+      <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+        <AlertCircle className="w-3 h-3" /> {error}
+      </p>
+    )}
+  </div>
+);
+
+// Reusable Select Field - defined outside component to prevent re-renders
+const SelectField = ({ label, required, error, options, placeholder, className = "", ...props }) => (
+  <div className={className}>
+    <label className="block text-sm font-medium text-gray-400 mb-2">
+      {label} {required && <span className="text-orange-500">*</span>}
+    </label>
+    <select
+      {...props}
+      className={`w-full px-4 py-3 bg-gray-800/50 border rounded-xl text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none ${
+        error ? "border-red-500" : "border-gray-700"
+      }`}
+    >
+      <option value="" className="bg-gray-800">{placeholder}</option>
+      {options.map((opt) => (
+        <option key={typeof opt === 'string' ? opt : opt.value} value={typeof opt === 'string' ? opt : opt.value} className="bg-gray-800">
+          {typeof opt === 'string' ? opt : opt.label}
+        </option>
+      ))}
+    </select>
+    {error && (
+      <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+        <AlertCircle className="w-3 h-3" /> {error}
+      </p>
+    )}
+  </div>
+);
+
+function NewDossierForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const typeFromUrl = searchParams.get("type");
+
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState("investor");
+  const [sectors, setSectors] = useState([]);
+  const [loadingSectors, setLoadingSectors] = useState(true);
+  const [requiredDocuments, setRequiredDocuments] = useState([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
 
   const [formData, setFormData] = useState({
-    dossierType: "",
+    dossierType: typeFromUrl || "",
     investorType: "company",
     investorName: "",
     rccm: "",
@@ -115,7 +172,7 @@ export default function NewDossierPage() {
     city: "",
     projectName: "",
     projectDescription: "",
-    sector: "",
+    sectors: [], // Multi-sélection des secteurs (tableau d'IDs)
     subSector: "",
     projectProvince: "",
     projectCity: "",
@@ -128,8 +185,62 @@ export default function NewDossierPage() {
     endDate: "",
   });
 
-  const [documents, setDocuments] = useState([]);
+  // Documents associés aux types requis: { documentTypeId: { file, name, size, type } }
+  const [documentsByType, setDocumentsByType] = useState({});
   const [errors, setErrors] = useState({});
+
+  // Obtenir les documents requis pour le type de dossier sélectionné
+  const getRequiredDocuments = () => {
+    return requiredDocuments.map(doc => ({
+      id: doc.id,
+      name: doc.name,
+      required: doc.isRequired,
+      code: doc.code
+    }));
+  };
+
+  // Charger les secteurs depuis l'API
+  useEffect(() => {
+    const fetchSectors = async () => {
+      try {
+        setLoadingSectors(true);
+        const response = await fetch("/api/referentiels/sectors?isActive=true");
+        const result = await response.json();
+        setSectors(result.sectors || []);
+      } catch (err) {
+        console.error("Erreur chargement secteurs:", err);
+      } finally {
+        setLoadingSectors(false);
+      }
+    };
+    fetchSectors();
+  }, []);
+
+  // Charger les documents requis depuis l'API lorsque le type de dossier change
+  useEffect(() => {
+    const fetchRequiredDocuments = async () => {
+      if (!formData.dossierType) {
+        setRequiredDocuments([]);
+        return;
+      }
+      try {
+        setLoadingDocuments(true);
+        const response = await fetch(
+          `/api/config/required-documents?dossierType=${formData.dossierType}&activeOnly=true`
+        );
+        const result = await response.json();
+        setRequiredDocuments(result.documents || []);
+        // Réinitialiser les documents uploadés quand le type change
+        setDocumentsByType({});
+      } catch (err) {
+        console.error("Erreur chargement documents requis:", err);
+        setRequiredDocuments([]);
+      } finally {
+        setLoadingDocuments(false);
+      }
+    };
+    fetchRequiredDocuments();
+  }, [formData.dossierType]);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -138,20 +249,33 @@ export default function NewDossierPage() {
     }
   };
 
-  const handleFileUpload = (e) => {
-    const files = Array.from(e.target.files);
-    const newDocs = files.map((file) => ({
-      id: Date.now() + Math.random(),
-      name: file.name,
-      size: (file.size / 1024 / 1024).toFixed(2) + " MB",
-      type: file.type,
-      file: file,
-    }));
-    setDocuments((prev) => [...prev, ...newDocs]);
+  // Upload un fichier pour un type de document spécifique
+  const handleFileUploadForType = (documentTypeId, e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setDocumentsByType((prev) => ({
+        ...prev,
+        [documentTypeId]: {
+          file: file,
+          name: file.name,
+          size: (file.size / 1024 / 1024).toFixed(2) + " MB",
+          type: file.type,
+        },
+      }));
+      // Effacer l'erreur pour ce document
+      if (errors[`doc_${documentTypeId}`]) {
+        setErrors((prev) => ({ ...prev, [`doc_${documentTypeId}`]: null }));
+      }
+    }
   };
 
-  const removeDocument = (docId) => {
-    setDocuments((prev) => prev.filter((d) => d.id !== docId));
+  // Supprimer un fichier pour un type de document
+  const removeDocumentForType = (documentTypeId) => {
+    setDocumentsByType((prev) => {
+      const newDocs = { ...prev };
+      delete newDocs[documentTypeId];
+      return newDocs;
+    });
   };
 
   const currentSectionIndex = sections.findIndex(s => s.id === activeSection);
@@ -185,8 +309,8 @@ export default function NewDossierPage() {
         if (!formData.projectName.trim()) {
           newErrors.projectName = "Le nom du projet est obligatoire";
         }
-        if (!formData.sector) {
-          newErrors.sector = "Le secteur est obligatoire";
+        if (!formData.sectors || formData.sectors.length === 0) {
+          newErrors.sectors = "Selectionnez au moins un secteur d'activite";
         }
         if (!formData.projectProvince) {
           newErrors.projectProvince = "La province du projet est obligatoire";
@@ -196,6 +320,19 @@ export default function NewDossierPage() {
       case "financial":
         if (!formData.investmentAmount.trim()) {
           newErrors.investmentAmount = "Le montant d'investissement est obligatoire";
+        }
+        break;
+
+      case "documents":
+        // Vérifier que tous les documents requis sont fournis
+        const requiredDocs = getRequiredDocuments().filter(d => d.required);
+        requiredDocs.forEach((doc) => {
+          if (!documentsByType[doc.id]) {
+            newErrors[`doc_${doc.id}`] = `Le document "${doc.name}" est requis`;
+          }
+        });
+        if (Object.keys(newErrors).length > 0) {
+          newErrors.documents = "Veuillez fournir tous les documents requis";
         }
         break;
     }
@@ -245,11 +382,42 @@ export default function NewDossierPage() {
   };
 
   const handleSubmit = async (isDraft = false) => {
+    // Validate all sections before submitting (not for drafts)
+    if (!isDraft) {
+      for (const section of sections.slice(0, -1)) { // Exclude summary section
+        if (!validateSection(section.id)) {
+          setActiveSection(section.id);
+          return;
+        }
+      }
+    }
+
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const response = await fetch('/api/guichet-unique/dossiers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          isDraft,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erreur lors de la soumission');
+      }
+
+      // Redirect to dossiers list on success
       router.push("/guichet-unique/dossiers");
-    }, 1500);
+    } catch (error) {
+      console.error('Submit error:', error);
+      setErrors({ submit: error.message });
+      setLoading(false);
+    }
   };
 
   const isSectionComplete = (sectionId) => {
@@ -259,62 +427,17 @@ export default function NewDossierPage() {
       case "investor":
         return !!(formData.investorName && formData.email && formData.phone);
       case "project":
-        return !!(formData.projectName && formData.sector && formData.projectProvince);
+        return !!(formData.projectName && formData.sectors && formData.sectors.length > 0 && formData.projectProvince);
       case "financial":
         return !!formData.investmentAmount;
       case "documents":
-        return documents.length > 0;
+        // Vérifier que tous les documents requis sont fournis
+        const requiredDocs = getRequiredDocuments().filter(d => d.required);
+        return requiredDocs.every(doc => documentsByType[doc.id]);
       default:
         return false;
     }
   };
-
-  // Reusable Input Field
-  const InputField = ({ label, required, error, className = "", ...props }) => (
-    <div className={className}>
-      <label className="block text-sm font-medium text-gray-400 mb-2">
-        {label} {required && <span className="text-orange-500">*</span>}
-      </label>
-      <input
-        {...props}
-        className={`w-full px-4 py-3 bg-gray-800/50 border rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all ${
-          error ? "border-red-500" : "border-gray-700"
-        }`}
-      />
-      {error && (
-        <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-          <AlertCircle className="w-3 h-3" /> {error}
-        </p>
-      )}
-    </div>
-  );
-
-  // Reusable Select Field
-  const SelectField = ({ label, required, error, options, placeholder, className = "", ...props }) => (
-    <div className={className}>
-      <label className="block text-sm font-medium text-gray-400 mb-2">
-        {label} {required && <span className="text-orange-500">*</span>}
-      </label>
-      <select
-        {...props}
-        className={`w-full px-4 py-3 bg-gray-800/50 border rounded-xl text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none ${
-          error ? "border-red-500" : "border-gray-700"
-        }`}
-      >
-        <option value="" className="bg-gray-800">{placeholder}</option>
-        {options.map((opt) => (
-          <option key={typeof opt === 'string' ? opt : opt.value} value={typeof opt === 'string' ? opt : opt.value} className="bg-gray-800">
-            {typeof opt === 'string' ? opt : opt.label}
-          </option>
-        ))}
-      </select>
-      {error && (
-        <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-          <AlertCircle className="w-3 h-3" /> {error}
-        </p>
-      )}
-    </div>
-  );
 
   return (
     <div className="min-h-screen">
@@ -337,20 +460,19 @@ export default function NewDossierPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => handleSubmit(true)}
-            disabled={loading}
+          <Link
+            href="/guichet-unique/dossiers"
             className="px-4 py-2 text-orange-500 border border-orange-500 rounded-xl hover:bg-orange-500/10 transition-colors font-medium"
           >
             Annuler
-          </button>
+          </Link>
           <button
-            onClick={() => handleSubmit(false)}
+            onClick={() => handleSubmit(true)}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors font-medium"
+            className="flex items-center gap-2 px-4 py-2 border border-gray-600 text-gray-300 rounded-xl hover:bg-gray-700/50 transition-colors font-medium"
           >
             <Save className="w-4 h-4" />
-            Enregistrer
+            Brouillon
           </button>
         </div>
       </div>
@@ -625,21 +747,110 @@ export default function NewDossierPage() {
                     className="col-span-2"
                   />
 
-                  <SelectField
-                    label="Secteur d'activite"
-                    required
-                    value={formData.sector}
-                    onChange={(e) => handleChange("sector", e.target.value)}
-                    options={sectors}
-                    placeholder="Selectionnez un secteur"
-                    error={errors.sector}
-                  />
+                  {/* Multi-sélection des secteurs */}
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Secteurs d'activite <span className="text-orange-500">*</span>
+                    </label>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Selectionnez un ou plusieurs secteurs. Chaque secteur est lie a un ministere de tutelle.
+                    </p>
+
+                    {loadingSectors ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
+                        <span className="ml-2 text-gray-400">Chargement des secteurs...</span>
+                      </div>
+                    ) : (
+                      <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[300px] overflow-y-auto p-3 rounded-xl border ${
+                        errors.sectors ? "border-red-500" : "border-gray-700"
+                      } bg-gray-800/30`}>
+                        {sectors.map((sector) => {
+                          const isSelected = formData.sectors.includes(sector.id);
+                          return (
+                            <label
+                              key={sector.id}
+                              className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all ${
+                                isSelected
+                                  ? "bg-orange-500/20 border border-orange-500/50"
+                                  : "bg-gray-800/50 border border-gray-700 hover:border-gray-600"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    handleChange("sectors", [...formData.sectors, sector.id]);
+                                  } else {
+                                    handleChange("sectors", formData.sectors.filter(id => id !== sector.id));
+                                  }
+                                }}
+                                className="w-4 h-4 mt-1 text-orange-500 bg-gray-700 border-gray-600 rounded focus:ring-orange-500"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className={`font-medium text-sm ${isSelected ? "text-orange-400" : "text-white"}`}>
+                                  {sector.name}
+                                </p>
+                                <p className="text-xs text-gray-500">{sector.code}</p>
+                                {sector.ministry && (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <Building2 className="w-3 h-3 text-blue-400" />
+                                    <span className="text-xs text-blue-400">
+                                      {sector.ministry.name}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {errors.sectors && (
+                      <p className="text-red-400 text-xs mt-2 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {errors.sectors}
+                      </p>
+                    )}
+
+                    {/* Afficher les secteurs sélectionnés avec leurs ministères */}
+                    {formData.sectors.length > 0 && (
+                      <div className="mt-4 p-3 bg-gray-800/50 rounded-xl border border-gray-700">
+                        <p className="text-xs font-medium text-gray-400 mb-2">
+                          {formData.sectors.length} secteur(s) selectionne(s) - Ministeres impliques:
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {(() => {
+                            const selectedSectors = sectors.filter(s => formData.sectors.includes(s.id));
+                            const uniqueMinistries = [...new Map(
+                              selectedSectors
+                                .filter(s => s.ministry)
+                                .map(s => [s.ministry.id, s.ministry])
+                            ).values()];
+
+                            return uniqueMinistries.map(ministry => (
+                              <span
+                                key={ministry.id}
+                                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/20 text-blue-400 rounded-lg text-xs"
+                              >
+                                <Building2 className="w-3 h-3" />
+                                {ministry.name}
+                              </span>
+                            ));
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <InputField
-                    label="Sous-secteur"
+                    label="Sous-secteur / Specialite"
                     type="text"
                     value={formData.subSector}
                     onChange={(e) => handleChange("subSector", e.target.value)}
                     placeholder="Ex: Transformation cereales"
+                    className="col-span-2"
                   />
 
                   <SelectField
@@ -766,77 +977,192 @@ export default function NewDossierPage() {
                   Documents justificatifs
                 </h2>
                 <p className="text-sm text-gray-500 mb-6">
-                  Telechargez les pieces requises
+                  Telechargez les pieces requises pour votre dossier
                 </p>
 
-                {/* Upload Zone */}
-                <div className="border-2 border-dashed border-gray-700 rounded-xl p-8 text-center mb-6 hover:border-orange-500/50 transition-colors">
-                  <div className="w-14 h-14 bg-gray-800 rounded-xl flex items-center justify-center mx-auto mb-4">
-                    <Upload className="w-7 h-7 text-gray-400" />
-                  </div>
-                  <p className="text-white font-medium mb-1">
-                    Glissez vos fichiers ici
-                  </p>
-                  <p className="text-sm text-gray-500 mb-4">
-                    PDF, JPG, PNG - Max 10MB
-                  </p>
-                  <label className="inline-flex items-center px-5 py-2.5 bg-orange-500 text-white rounded-xl hover:bg-orange-600 cursor-pointer transition-colors font-medium">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Parcourir
-                    <input
-                      type="file"
-                      multiple
-                      onChange={handleFileUpload}
-                      className="hidden"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                    />
-                  </label>
-                </div>
-
-                {/* Documents list */}
-                {documents.length > 0 && (
-                  <div className="space-y-3 mb-6">
-                    <h4 className="text-sm font-medium text-gray-400">
-                      Fichiers ({documents.length})
-                    </h4>
-                    {documents.map((doc) => (
-                      <div
-                        key={doc.id}
-                        className="flex items-center justify-between p-4 bg-gray-800/50 rounded-xl"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
-                            <FileText className="w-5 h-5 text-orange-400" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-white">{doc.name}</p>
-                            <p className="text-xs text-gray-500">{doc.size}</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => removeDocument(doc.id)}
-                          className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
+                {/* Message d'erreur global */}
+                {errors.documents && (
+                  <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+                    <p className="text-red-400 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.documents}
+                    </p>
                   </div>
                 )}
 
-                {/* Required docs info */}
-                <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
-                  <h4 className="font-medium text-orange-400 mb-2 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" />
-                    Documents requis
-                  </h4>
-                  <ul className="text-sm text-orange-300/80 space-y-1 ml-6 list-disc">
-                    <li>Registre de commerce (RCCM)</li>
-                    <li>Identification nationale</li>
-                    <li>Plan d'affaires</li>
-                    <li>Preuve capacite financiere</li>
-                  </ul>
-                </div>
+                {/* Message si aucun type de dossier sélectionné */}
+                {!formData.dossierType && (
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6 text-center">
+                    <AlertCircle className="w-10 h-10 text-yellow-400 mx-auto mb-3" />
+                    <p className="text-yellow-400 font-medium mb-1">
+                      Type de dossier non selectionne
+                    </p>
+                    <p className="text-sm text-yellow-300/70">
+                      Veuillez d'abord selectionner un type de dossier pour voir les documents requis.
+                    </p>
+                  </div>
+                )}
+
+                {/* Liste des documents requis avec upload */}
+                {formData.dossierType && loadingDocuments && (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+                    <span className="ml-2 text-gray-400">Chargement des documents requis...</span>
+                  </div>
+                )}
+
+                {formData.dossierType && !loadingDocuments && getRequiredDocuments().length === 0 && (
+                  <div className="bg-gray-800/30 border border-gray-700 rounded-xl p-6 text-center">
+                    <FileText className="w-10 h-10 text-gray-500 mx-auto mb-3" />
+                    <p className="text-gray-400">
+                      Aucun document requis configure pour ce type de dossier.
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Contactez l'administrateur pour configurer les documents requis.
+                    </p>
+                  </div>
+                )}
+
+                {formData.dossierType && !loadingDocuments && getRequiredDocuments().length > 0 && (
+                  <div className="space-y-4">
+                    {getRequiredDocuments().map((docType) => {
+                      const uploadedDoc = documentsByType[docType.id];
+                      const hasError = errors[`doc_${docType.id}`];
+
+                      return (
+                        <div
+                          key={docType.id}
+                          className={`p-4 rounded-xl border-2 transition-all ${
+                            uploadedDoc
+                              ? "border-green-500/50 bg-green-500/5"
+                              : hasError
+                              ? "border-red-500/50 bg-red-500/5"
+                              : "border-gray-700 bg-gray-800/30"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            {/* Info du document requis */}
+                            <div className="flex items-start gap-3 flex-1">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                uploadedDoc
+                                  ? "bg-green-500/20"
+                                  : hasError
+                                  ? "bg-red-500/20"
+                                  : "bg-gray-700"
+                              }`}>
+                                {uploadedDoc ? (
+                                  <CheckCircle2 className="w-5 h-5 text-green-400" />
+                                ) : (
+                                  <FileText className={`w-5 h-5 ${hasError ? "text-red-400" : "text-gray-400"}`} />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className={`font-medium ${
+                                    uploadedDoc
+                                      ? "text-green-400"
+                                      : hasError
+                                      ? "text-red-400"
+                                      : "text-white"
+                                  }`}>
+                                    {docType.name}
+                                  </p>
+                                  {docType.required && (
+                                    <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded font-medium">
+                                      Requis
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Fichier uploadé */}
+                                {uploadedDoc && (
+                                  <div className="flex items-center gap-2 mt-2 p-2 bg-gray-800/50 rounded-lg">
+                                    <FileText className="w-4 h-4 text-orange-400" />
+                                    <span className="text-sm text-gray-300 truncate flex-1">
+                                      {uploadedDoc.name}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      {uploadedDoc.size}
+                                    </span>
+                                    <button
+                                      onClick={() => removeDocumentForType(docType.id)}
+                                      className="p-1 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                )}
+
+                                {/* Message d'erreur */}
+                                {hasError && !uploadedDoc && (
+                                  <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    Document requis non fourni
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Bouton upload */}
+                            <label className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-colors font-medium text-sm ${
+                              uploadedDoc
+                                ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                                : "bg-orange-500 text-white hover:bg-orange-600"
+                            }`}>
+                              {uploadedDoc ? (
+                                <>
+                                  <Upload className="w-4 h-4" />
+                                  Remplacer
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="w-4 h-4" />
+                                  Selectionner
+                                </>
+                              )}
+                              <input
+                                type="file"
+                                onChange={(e) => handleFileUploadForType(docType.id, e)}
+                                className="hidden"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Résumé */}
+                    <div className="mt-6 p-4 bg-gray-800/30 rounded-xl border border-gray-700">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-gray-400" />
+                          <span className="text-gray-400">Documents telecharges:</span>
+                        </div>
+                        <span className="text-white font-medium">
+                          {Object.keys(documentsByType).length} / {getRequiredDocuments().length}
+                        </span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {getRequiredDocuments().map((docType) => (
+                          <span
+                            key={docType.id}
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              documentsByType[docType.id]
+                                ? "bg-green-500/20 text-green-400"
+                                : docType.required
+                                ? "bg-red-500/20 text-red-400"
+                                : "bg-gray-700 text-gray-400"
+                            }`}
+                          >
+                            {docType.name.split(" ")[0]}
+                            {documentsByType[docType.id] && " ✓"}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -849,6 +1175,15 @@ export default function NewDossierPage() {
                 <p className="text-sm text-gray-500 mb-6">
                   Verifiez les informations avant soumission
                 </p>
+
+                {errors.submit && (
+                  <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+                    <p className="text-red-400 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.submit}
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-6">
                   {/* Type */}
@@ -891,10 +1226,6 @@ export default function NewDossierPage() {
                         <span className="text-white ml-2">{formData.projectName || "-"}</span>
                       </div>
                       <div>
-                        <span className="text-gray-500">Secteur:</span>
-                        <span className="text-white ml-2">{sectors.find(s => s.value === formData.sector)?.label || "-"}</span>
-                      </div>
-                      <div>
                         <span className="text-gray-500">Province:</span>
                         <span className="text-white ml-2">{formData.projectProvince || "-"}</span>
                       </div>
@@ -903,12 +1234,83 @@ export default function NewDossierPage() {
                         <span className="text-white ml-2">{formData.investmentAmount ? `${formData.investmentAmount} ${formData.currency}` : "-"}</span>
                       </div>
                     </div>
+
+                    {/* Secteurs sélectionnés */}
+                    {formData.sectors.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-gray-700">
+                        <p className="text-xs text-gray-500 mb-2">Secteurs d'activite:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {sectors.filter(s => formData.sectors.includes(s.id)).map(sector => (
+                            <span
+                              key={sector.id}
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-orange-500/20 text-orange-400 rounded-lg text-xs"
+                            >
+                              <Factory className="w-3 h-3" />
+                              {sector.name}
+                            </span>
+                          ))}
+                        </div>
+
+                        {/* Ministères impliqués */}
+                        <p className="text-xs text-gray-500 mt-3 mb-2">Ministeres impliques:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {(() => {
+                            const selectedSectors = sectors.filter(s => formData.sectors.includes(s.id));
+                            const uniqueMinistries = [...new Map(
+                              selectedSectors
+                                .filter(s => s.ministry)
+                                .map(s => [s.ministry.id, s.ministry])
+                            ).values()];
+
+                            return uniqueMinistries.map(ministry => (
+                              <span
+                                key={ministry.id}
+                                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/20 text-blue-400 rounded-lg text-xs"
+                              >
+                                <Building2 className="w-3 h-3" />
+                                {ministry.name}
+                              </span>
+                            ));
+                          })()}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Documents */}
                   <div className="bg-gray-800/30 rounded-xl p-4">
                     <h3 className="text-sm font-medium text-gray-400 mb-3">Documents</h3>
-                    <p className="text-white">{documents.length} fichier(s) telecharge(s)</p>
+                    <p className="text-white mb-3">{Object.keys(documentsByType).length} fichier(s) telecharge(s)</p>
+                    {Object.keys(documentsByType).length > 0 && (
+                      <div className="space-y-2">
+                        {getRequiredDocuments().map((docType) => {
+                          const uploadedDoc = documentsByType[docType.id];
+                          return (
+                            <div
+                              key={docType.id}
+                              className={`flex items-center gap-3 p-2 rounded-lg ${
+                                uploadedDoc ? "bg-green-500/10" : "bg-gray-700/50"
+                              }`}
+                            >
+                              {uploadedDoc ? (
+                                <CheckCircle2 className="w-4 h-4 text-green-400" />
+                              ) : (
+                                <AlertCircle className="w-4 h-4 text-gray-500" />
+                              )}
+                              <span className="text-sm text-gray-400">{docType.name}:</span>
+                              <span className={`text-sm ${uploadedDoc ? "text-green-400" : "text-gray-500"}`}>
+                                {uploadedDoc ? uploadedDoc.name : "Non fourni"}
+                              </span>
+                              {docType.required && !uploadedDoc && (
+                                <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded">
+                                  Requis
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -972,5 +1374,18 @@ export default function NewDossierPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Export avec Suspense pour useSearchParams
+export default function NewDossierPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      </div>
+    }>
+      <NewDossierForm />
+    </Suspense>
   );
 }

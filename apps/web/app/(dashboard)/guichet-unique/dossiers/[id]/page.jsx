@@ -32,6 +32,7 @@ import {
   TrendingUp,
   History,
   X,
+  Eye,
 } from "lucide-react";
 
 const statusConfig = {
@@ -100,12 +101,97 @@ export default function DossierDetailPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [newComment, setNewComment] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadName, setUploadName] = useState('');
+  const [uploadDescription, setUploadDescription] = useState('');
+  const [uploadCategory, setUploadCategory] = useState('OTHER');
+
+  // Fonction pour uploader un document
+  const handleUploadDocument = async () => {
+    if (!uploadFile) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+      formData.append('name', uploadName || uploadFile.name);
+      formData.append('description', uploadDescription);
+      formData.append('category', uploadCategory);
+
+      const response = await fetch(`/api/guichet-unique/dossiers/${params.id}/documents`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Ajouter le nouveau document à la liste
+        setDossier(prev => ({
+          ...prev,
+          documents: [
+            {
+              id: data.document.id,
+              name: data.document.name,
+              fileName: data.document.fileName,
+              filePath: data.document.filePath,
+              type: data.document.mimeType?.includes('pdf') ? 'PDF' :
+                    data.document.mimeType?.includes('sheet') || data.document.mimeType?.includes('excel') ? 'XLSX' : 'Document',
+              mimeType: data.document.mimeType,
+              size: formatFileSize(data.document.fileSize),
+              uploadedAt: data.document.createdAt,
+              category: data.document.category,
+              description: data.document.description,
+            },
+            ...prev.documents,
+          ],
+        }));
+        // Fermer le modal et réinitialiser
+        setShowUploadModal(false);
+        setUploadFile(null);
+        setUploadName('');
+        setUploadDescription('');
+        setUploadCategory('OTHER');
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Erreur lors de l\'upload');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Erreur lors de l\'upload du document');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Fonction pour ouvrir la prévisualisation
+  const openDocumentPreview = (doc) => {
+    setPreviewDocument(doc);
+  };
+
+  // Fonction pour fermer la prévisualisation
+  const closeDocumentPreview = () => {
+    setPreviewDocument(null);
+  };
+
+  // Fonction pour télécharger un document
+  const downloadDocument = (doc) => {
+    // Ouvrir le lien de téléchargement dans une nouvelle fenêtre
+    if (doc.id) {
+      window.open(`/api/documents/${doc.id}/download`, '_blank');
+    } else {
+      // Pour les documents mock sans ID réel
+      window.open(`/api/documents/mock-${doc.name}/download`, '_blank');
+    }
+  };
 
   // Charger les etapes de workflow depuis la configuration
   useEffect(() => {
     const fetchWorkflowSteps = async () => {
       try {
-        const response = await fetch('/api/config/workflow-steps?type=DOSSIER');
+        const response = await fetch('/api/config/workflow-steps?type=AGREMENT');
         if (response.ok) {
           const data = await response.json();
           // Transformer les etapes pour avoir le format attendu
@@ -136,12 +222,87 @@ export default function DossierDetailPage() {
   }, []);
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setDossier({ ...mockDossier, id: params.id });
-      setLoading(false);
-    }, 500);
+    // Charger le dossier réel depuis l'API
+    const fetchDossier = async () => {
+      try {
+        const response = await fetch(`/api/guichet-unique/dossiers/${params.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          // Transformer les données de l'API pour correspondre à la structure attendue
+          const apiDossier = data.dossier;
+          setDossier({
+            id: apiDossier.id,
+            reference: apiDossier.dossierNumber || `GU-${apiDossier.id.substring(0, 8)}`,
+            investorName: apiDossier.investorName || '',
+            investorType: apiDossier.investorType || 'company',
+            investorEmail: apiDossier.investorEmail || '',
+            investorPhone: apiDossier.investorPhone || '',
+            investorAddress: apiDossier.investorAddress || '',
+            investorCountry: apiDossier.investorCountry || 'RDC',
+            projectName: apiDossier.projectName || '',
+            projectDescription: apiDossier.projectDescription || '',
+            sector: apiDossier.sector || '',
+            subSector: apiDossier.subSector || '',
+            province: apiDossier.projectProvince || '',
+            city: apiDossier.projectCity || '',
+            status: apiDossier.status || 'DRAFT',
+            submittedAt: apiDossier.submittedAt || apiDossier.createdAt,
+            updatedAt: apiDossier.updatedAt,
+            amount: apiDossier.investmentAmount || 0,
+            currency: apiDossier.currency || 'USD',
+            jobsCreated: apiDossier.directJobs || 0,
+            jobsIndirect: apiDossier.indirectJobs || 0,
+            currentStep: apiDossier.currentStep || 1,
+            totalSteps: 6,
+            startDate: apiDossier.startDate,
+            endDate: apiDossier.endDate,
+            // Transformer les documents de l'API
+            documents: (apiDossier.documents || []).map(doc => ({
+              id: doc.id,
+              name: doc.name || doc.fileName,
+              fileName: doc.fileName,
+              filePath: doc.filePath,
+              type: doc.mimeType?.includes('pdf') ? 'PDF' :
+                    doc.mimeType?.includes('sheet') || doc.mimeType?.includes('excel') ? 'XLSX' :
+                    doc.mimeType?.includes('image') ? 'Image' : 'Document',
+              mimeType: doc.mimeType,
+              size: doc.fileSize ? formatFileSize(doc.fileSize) : 'N/A',
+              uploadedAt: doc.createdAt,
+              category: doc.category,
+              description: doc.description,
+            })),
+            timeline: apiDossier.timeline || [
+              { date: apiDossier.createdAt, action: 'Dossier créé', user: 'Système', status: 'info' }
+            ],
+            comments: apiDossier.comments || [],
+          });
+        } else {
+          // Fallback aux données mock si l'API échoue
+          console.error('Failed to fetch dossier, using mock data');
+          setDossier({ ...mockDossier, id: params.id });
+        }
+      } catch (error) {
+        console.error('Error fetching dossier:', error);
+        setDossier({ ...mockDossier, id: params.id });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDossier();
   }, [params.id]);
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return 'N/A';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let size = bytes;
+    let unitIndex = 0;
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+    return `${size.toFixed(1)} ${units[unitIndex]}`;
+  };
 
   const formatAmount = (amount, currency) => {
     return new Intl.NumberFormat("fr-FR", {
@@ -507,7 +668,10 @@ export default function DossierDetailPage() {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
           <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Documents ({dossier.documents.length})</h3>
-            <button className="inline-flex items-center px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm text-gray-700 dark:text-gray-200">
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="inline-flex items-center px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm text-gray-700 dark:text-gray-200"
+            >
               <Paperclip className="w-4 h-4 mr-2" />
               Ajouter un document
             </button>
@@ -516,17 +680,42 @@ export default function DossierDetailPage() {
             {dossier.documents.map((doc, index) => (
               <div key={index} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    doc.type === 'PDF' || doc.name.endsWith('.pdf')
+                      ? 'bg-red-100 dark:bg-red-900/30'
+                      : doc.type === 'XLSX' || doc.name.endsWith('.xlsx') || doc.name.endsWith('.xls')
+                      ? 'bg-green-100 dark:bg-green-900/30'
+                      : 'bg-blue-100 dark:bg-blue-900/30'
+                  }`}>
+                    <FileText className={`w-5 h-5 ${
+                      doc.type === 'PDF' || doc.name.endsWith('.pdf')
+                        ? 'text-red-600 dark:text-red-400'
+                        : doc.type === 'XLSX' || doc.name.endsWith('.xlsx') || doc.name.endsWith('.xls')
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-blue-600 dark:text-blue-400'
+                    }`} />
                   </div>
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white">{doc.name}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{doc.size} - {formatDate(doc.uploadedAt)}</p>
                   </div>
                 </div>
-                <button className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">
-                  <Download className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => openDocumentPreview(doc)}
+                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                    title="Visualiser"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => downloadDocument(doc)}
+                    className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                    title="Telecharger"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -716,6 +905,272 @@ export default function DossierDetailPage() {
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de prévisualisation de document */}
+      {previewDocument && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col">
+            {/* Header du modal */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  previewDocument.type === 'PDF' || previewDocument.name.endsWith('.pdf')
+                    ? 'bg-red-100 dark:bg-red-900/30'
+                    : previewDocument.type === 'XLSX' || previewDocument.name.endsWith('.xlsx') || previewDocument.name.endsWith('.xls')
+                    ? 'bg-green-100 dark:bg-green-900/30'
+                    : 'bg-blue-100 dark:bg-blue-900/30'
+                }`}>
+                  <FileText className={`w-5 h-5 ${
+                    previewDocument.type === 'PDF' || previewDocument.name.endsWith('.pdf')
+                      ? 'text-red-600'
+                      : previewDocument.type === 'XLSX' || previewDocument.name.endsWith('.xlsx') || previewDocument.name.endsWith('.xls')
+                      ? 'text-green-600'
+                      : 'text-blue-600'
+                  }`} />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">{previewDocument.name}</h3>
+                  <p className="text-sm text-gray-500">{previewDocument.type || 'Document'} • {previewDocument.size}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => downloadDocument(previewDocument)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  title="Telecharger"
+                >
+                  <Download className="w-5 h-5 text-gray-500" />
+                </button>
+                <button
+                  onClick={closeDocumentPreview}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  title="Fermer"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenu de prévisualisation */}
+            <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-900">
+              {previewDocument.type === "PDF" || previewDocument.name.endsWith('.pdf') ? (
+                <div className="w-full h-full min-h-[600px]">
+                  {/* Aperçu PDF avec iframe */}
+                  <iframe
+                    src={previewDocument.id ? `/api/documents/${previewDocument.id}/view` : `/api/documents/mock-${encodeURIComponent(previewDocument.name)}/view`}
+                    className="w-full h-full min-h-[600px] border-0"
+                    title={previewDocument.name}
+                  />
+                </div>
+              ) : previewDocument.type === "XLSX" || previewDocument.name.endsWith('.xlsx') || previewDocument.name.endsWith('.xls') ? (
+                <div className="w-full h-full min-h-[500px] flex items-center justify-center">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center max-w-md">
+                    <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                      <FileText className="w-10 h-10 text-green-600" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                      {previewDocument.name}
+                    </h4>
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">
+                      Fichier Excel - {previewDocument.size}
+                    </p>
+                    <button
+                      onClick={() => downloadDocument(previewDocument)}
+                      className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Telecharger pour ouvrir
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full h-full min-h-[500px] flex items-center justify-center">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center max-w-md">
+                    <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                      {previewDocument.name}
+                    </h4>
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">
+                      Apercu non disponible pour ce type de fichier
+                    </p>
+                    <button
+                      onClick={() => downloadDocument(previewDocument)}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Telecharger le fichier
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer du modal */}
+            <div className="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-500">
+                Uploade le {formatDate(previewDocument.uploadedAt)}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={closeDocumentPreview}
+                  className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
+                >
+                  Fermer
+                </button>
+                <button
+                  onClick={() => downloadDocument(previewDocument)}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Telecharger
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal d'upload de document */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Ajouter un document</h2>
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setUploadFile(null);
+                  setUploadName('');
+                  setUploadDescription('');
+                  setUploadCategory('OTHER');
+                }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {/* Zone de depot de fichier */}
+              <div
+                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                  uploadFile
+                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                    : 'border-gray-300 dark:border-gray-600 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                }`}
+                onClick={() => document.getElementById('file-upload').click()}
+              >
+                <input
+                  id="file-upload"
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setUploadFile(file);
+                      if (!uploadName) setUploadName(file.name);
+                    }
+                  }}
+                />
+                {uploadFile ? (
+                  <div className="flex items-center justify-center gap-3">
+                    <FileText className="w-8 h-8 text-green-600" />
+                    <div className="text-left">
+                      <p className="font-medium text-gray-900 dark:text-white">{uploadFile.name}</p>
+                      <p className="text-sm text-gray-500">{formatFileSize(uploadFile.size)}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <Paperclip className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-600 dark:text-gray-300">Cliquez pour selectionner un fichier</p>
+                    <p className="text-sm text-gray-400 mt-1">PDF, Word, Excel, Images (max 10MB)</p>
+                  </>
+                )}
+              </div>
+
+              {/* Nom du document */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Nom du document
+                </label>
+                <input
+                  type="text"
+                  value={uploadName}
+                  onChange={(e) => setUploadName(e.target.value)}
+                  placeholder="Nom du document"
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+
+              {/* Categorie */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Categorie
+                </label>
+                <select
+                  value={uploadCategory}
+                  onChange={(e) => setUploadCategory(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="RCCM">RCCM</option>
+                  <option value="ID_NATIONAL">ID National</option>
+                  <option value="NIF">NIF</option>
+                  <option value="BUSINESS_PLAN">Business Plan</option>
+                  <option value="FINANCIAL_PROOF">Preuve Financiere</option>
+                  <option value="TECHNICAL_STUDY">Etude Technique</option>
+                  <option value="OTHER">Autre</option>
+                </select>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description (optionnel)
+                </label>
+                <textarea
+                  value={uploadDescription}
+                  onChange={(e) => setUploadDescription(e.target.value)}
+                  placeholder="Description du document..."
+                  rows={3}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setUploadFile(null);
+                  setUploadName('');
+                  setUploadDescription('');
+                  setUploadCategory('OTHER');
+                }}
+                className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleUploadDocument}
+                disabled={!uploadFile || uploading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center"
+              >
+                {uploading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Upload en cours...
+                  </>
+                ) : (
+                  <>
+                    <Paperclip className="w-4 h-4 mr-2" />
+                    Uploader
+                  </>
+                )}
               </button>
             </div>
           </div>

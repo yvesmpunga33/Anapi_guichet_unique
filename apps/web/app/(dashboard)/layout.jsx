@@ -31,6 +31,10 @@ import {
   FileCheck,
   Workflow,
   Cog,
+  Landmark,
+  FileBadge,
+  Award,
+  ScrollText,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -44,8 +48,11 @@ const navigation = [
   {
     title: "GUICHET UNIQUE",
     items: [
-      { name: "Dossiers", href: "/guichet-unique/dossiers", icon: FolderOpen },
-      { name: "Demandes d'agrément", href: "/guichet-unique/agrements", icon: FileCheck },
+      { name: "Tous les dossiers", href: "/guichet-unique/dossiers", icon: FolderOpen },
+      { name: "Agréments", href: "/guichet-unique/agrements", icon: FileCheck },
+      { name: "Licences", href: "/guichet-unique/licences", icon: Award },
+      { name: "Permis", href: "/guichet-unique/permis", icon: ScrollText },
+      { name: "Autorisations", href: "/guichet-unique/autorisations", icon: FileBadge },
     ],
   },
   {
@@ -65,10 +72,20 @@ const navigation = [
     ],
   },
   {
+    title: "MINISTÈRES",
+    items: [
+      { name: "Liste des ministères", href: "/ministries", icon: Landmark },
+      { name: "Autorisations", href: "/ministries/autorisations", icon: FileBadge },
+      { name: "Licences", href: "/ministries/licences", icon: Award },
+      { name: "Permis", href: "/ministries/permis", icon: ScrollText },
+    ],
+  },
+  {
     title: "CONFIGURATION",
     items: [
       { name: "Actes administratifs", href: "/configuration/actes-administratifs", icon: FileCheck },
       { name: "Étapes de workflow", href: "/configuration/workflow-steps", icon: Workflow },
+      { name: "Workflows ministères", href: "/configuration/ministry-workflows", icon: Cog },
     ],
   },
   {

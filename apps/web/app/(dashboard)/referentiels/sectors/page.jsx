@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Swal from "sweetalert2";
 import {
   Factory,
   Plus,
@@ -23,6 +24,7 @@ import {
   Hammer,
   Pickaxe,
   Briefcase,
+  Building2,
 } from "lucide-react";
 
 const sectorIcons = {
@@ -62,6 +64,7 @@ const colorClasses = {
 
 export default function SectorsPage() {
   const [sectors, setSectors] = useState([]);
+  const [ministries, setMinistries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -84,6 +87,7 @@ export default function SectorsPage() {
     description: "",
     color: "blue",
     parentId: null,
+    ministryId: null,
     isActive: true,
   });
 
@@ -117,8 +121,19 @@ export default function SectorsPage() {
     }
   };
 
+  const fetchMinistries = async () => {
+    try {
+      const response = await fetch("/api/referentiels/ministries?isActive=true");
+      const result = await response.json();
+      setMinistries(result.ministries || []);
+    } catch (err) {
+      console.error("Erreur chargement ministères:", err);
+    }
+  };
+
   useEffect(() => {
     fetchSectors();
+    fetchMinistries();
   }, [currentPage, searchTerm]);
 
   const handleSearch = (e) => {
@@ -133,6 +148,7 @@ export default function SectorsPage() {
       description: "",
       color: "blue",
       parentId: null,
+      ministryId: null,
       isActive: true,
     });
     setSelectedSector(null);
@@ -147,6 +163,7 @@ export default function SectorsPage() {
       description: sector.description || "",
       color: sector.color || "blue",
       parentId: sector.parentId || null,
+      ministryId: sector.ministryId || null,
       isActive: sector.isActive !== false,
     });
     setSelectedSector(sector);
@@ -170,21 +187,33 @@ export default function SectorsPage() {
     setError(null);
 
     try {
-      const url = selectedSector
-        ? `/api/referentiels/sectors?id=${selectedSector.id}`
-        : "/api/referentiels/sectors";
+      const url = "/api/referentiels/sectors";
+
+      // Inclure l'ID dans le body pour les mises à jour
+      const bodyData = selectedSector
+        ? { ...formData, id: selectedSector.id }
+        : formData;
 
       const response = await fetch(url, {
         method: selectedSector ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(bodyData),
       });
 
       const result = await response.json();
 
-      if (result.success) {
+      if (result.sector || result.success) {
         setShowModal(false);
         fetchSectors();
+        Swal.fire({
+          icon: "success",
+          title: "Succès",
+          text: selectedSector
+            ? "Secteur modifié avec succès"
+            : "Secteur créé avec succès",
+          timer: 3000,
+          showConfirmButton: false,
+        });
       } else {
         setError(result.error || "Une erreur est survenue");
       }
@@ -204,9 +233,16 @@ export default function SectorsPage() {
       );
       const result = await response.json();
 
-      if (result.success) {
+      if (result.success || result.message) {
         setShowDeleteModal(false);
         fetchSectors();
+        Swal.fire({
+          icon: "success",
+          title: "Supprimé",
+          text: "Secteur supprimé avec succès",
+          timer: 3000,
+          showConfirmButton: false,
+        });
       } else {
         setError(result.error || "Erreur lors de la suppression");
       }
@@ -600,6 +636,30 @@ export default function SectorsPage() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    Ministère de tutelle
+                  </div>
+                </label>
+                <select
+                  value={formData.ministryId || ""}
+                  onChange={(e) => setFormData({ ...formData, ministryId: e.target.value || null })}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="">-- Sélectionner un ministère --</option>
+                  {ministries.map((ministry) => (
+                    <option key={ministry.id} value={ministry.id}>
+                      {ministry.name} ({ministry.code})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Le ministère responsable de ce secteur d'activité
+                </p>
+              </div>
+
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
@@ -678,6 +738,21 @@ export default function SectorsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Description</p>
                   <p className="text-gray-900 dark:text-white mt-1">{selectedSector.description}</p>
+                </div>
+              )}
+
+              {selectedSector.ministry && (
+                <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center">
+                    <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Ministère de tutelle</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {selectedSector.ministry.name}
+                    </p>
+                    <p className="text-xs text-gray-500">{selectedSector.ministry.code}</p>
+                  </div>
                 </div>
               )}
 

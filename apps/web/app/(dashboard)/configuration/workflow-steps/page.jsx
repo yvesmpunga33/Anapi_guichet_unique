@@ -24,9 +24,13 @@ import {
 } from "lucide-react";
 
 const workflowTypes = [
-  { value: "AGREMENT", label: "Demandes d'agrement" },
-  { value: "DOSSIER", label: "Dossiers guichet unique" },
-  { value: "INVESTMENT", label: "Projets d'investissement" },
+  { value: "AGREMENT", label: "Demandes d'agrement", category: "general" },
+  { value: "INVESTMENT", label: "Projets d'investissement", category: "general" },
+  // Types specifiques du Guichet Unique
+  { value: "AGREMENT_REGIME", label: "Agréments", category: "guichet" },
+  { value: "LICENCE_EXPLOITATION", label: "Licences", category: "guichet" },
+  { value: "PERMIS_CONSTRUCTION", label: "Permis", category: "guichet" },
+  { value: "AUTORISATION_ACTIVITE", label: "Autorisations", category: "guichet" },
 ];
 
 const iconOptions = [
@@ -235,23 +239,48 @@ export default function WorkflowStepsPage() {
 
       {/* Workflow Type Selector */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 mb-6">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Type de workflow
-        </label>
-        <div className="flex gap-3">
-          {workflowTypes.map((type) => (
-            <button
-              key={type.value}
-              onClick={() => setSelectedType(type.value)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                selectedType === type.value
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-              }`}
-            >
-              {type.label}
-            </button>
-          ))}
+        {/* Types generaux */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Types généraux
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {workflowTypes.filter(t => t.category === 'general').map((type) => (
+              <button
+                key={type.value}
+                onClick={() => setSelectedType(type.value)}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  selectedType === type.value
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                }`}
+              >
+                {type.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Types Guichet Unique */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Guichet Unique
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {workflowTypes.filter(t => t.category === 'guichet').map((type) => (
+              <button
+                key={type.value}
+                onClick={() => setSelectedType(type.value)}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  selectedType === type.value
+                    ? "bg-emerald-600 text-white"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                }`}
+              >
+                {type.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -330,17 +359,17 @@ export default function WorkflowStepsPage() {
                         {step.name}
                       </p>
                       {step.isRequired && (
-                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-xs rounded">
+                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 text-xs rounded font-medium">
                           Obligatoire
                         </span>
                       )}
                       {step.isFinal && (
-                        <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 text-xs rounded">
+                        <span className="px-2 py-0.5 bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-300 text-xs rounded font-medium">
                           Finale
                         </span>
                       )}
                       {!step.isActive && (
-                        <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 text-xs rounded">
+                        <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs rounded font-medium">
                           Inactive
                         </span>
                       )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Swal from "sweetalert2";
 import {
   Building2,
   Plus,
@@ -150,21 +151,33 @@ export default function MinistriesPage() {
     setError(null);
 
     try {
-      const url = selectedMinistry
-        ? `/api/referentiels/ministries?id=${selectedMinistry.id}`
-        : "/api/referentiels/ministries";
+      const url = "/api/referentiels/ministries";
+
+      // Inclure l'ID dans le body pour les mises à jour
+      const bodyData = selectedMinistry
+        ? { ...formData, id: selectedMinistry.id }
+        : formData;
 
       const response = await fetch(url, {
         method: selectedMinistry ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(bodyData),
       });
 
       const result = await response.json();
 
-      if (result.success) {
+      if (result.ministry || result.success) {
         setShowModal(false);
         fetchMinistries();
+        Swal.fire({
+          icon: "success",
+          title: "Succès",
+          text: selectedMinistry
+            ? "Ministère modifié avec succès"
+            : "Ministère créé avec succès",
+          timer: 3000,
+          showConfirmButton: false,
+        });
       } else {
         setError(result.error || "Une erreur est survenue");
       }
@@ -184,9 +197,16 @@ export default function MinistriesPage() {
       );
       const result = await response.json();
 
-      if (result.success) {
+      if (result.success || result.message) {
         setShowDeleteModal(false);
         fetchMinistries();
+        Swal.fire({
+          icon: "success",
+          title: "Supprimé",
+          text: "Ministère supprimé avec succès",
+          timer: 3000,
+          showConfirmButton: false,
+        });
       } else {
         setError(result.error || "Erreur lors de la suppression");
       }

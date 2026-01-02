@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { Sector } from '../../../../models/index.js';
+import { Sector, Ministry } from '../../../../models/index.js';
 import { Op } from 'sequelize';
 
 // GET - Liste des secteurs
@@ -29,11 +29,18 @@ export async function GET(request) {
       where.parentId = parentId;
     }
 
+    // Filtrer par ministère si spécifié
+    const ministryId = searchParams.get('ministryId');
+    if (ministryId) {
+      where.ministryId = ministryId;
+    }
+
     const sectors = await Sector.findAll({
       where,
       include: [
         { model: Sector, as: 'parent', attributes: ['id', 'code', 'name'] },
         { model: Sector, as: 'subSectors', attributes: ['id', 'code', 'name'] },
+        { model: Ministry, as: 'ministry', attributes: ['id', 'code', 'name', 'shortName'] },
       ],
       order: [['code', 'ASC']],
     });

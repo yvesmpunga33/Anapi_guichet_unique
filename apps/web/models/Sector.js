@@ -31,6 +31,21 @@ Sector.init(
         key: 'id',
       },
     },
+    ministryId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      comment: 'Ministere de tutelle du secteur',
+      references: {
+        model: 'ministries',
+        key: 'id',
+      },
+    },
+    color: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      defaultValue: 'blue',
+      comment: 'Couleur pour l\'affichage',
+    },
     isActive: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

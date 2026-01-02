@@ -42,6 +42,11 @@ import {
   Sun,
   Moon,
   Home,
+  Scale,
+  BookOpen,
+  FileSignature,
+  Bell,
+  Gavel,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import MessageNotifications from "../../components/notifications/MessageNotifications";
@@ -150,6 +155,17 @@ const getNavigation = (intl) => [
       { name: intl.formatMessage({ id: "nav.licenses", defaultMessage: "Licences" }), href: "/guichet-unique/licences", icon: Award },
       { name: intl.formatMessage({ id: "nav.permits", defaultMessage: "Permis" }), href: "/guichet-unique/permis", icon: ScrollText },
       { name: intl.formatMessage({ id: "nav.authorizations", defaultMessage: "Autorisations" }), href: "/guichet-unique/autorisations", icon: FileBadge },
+    ],
+  },
+  {
+    titleKey: "nav.legal",
+    title: intl.formatMessage({ id: "nav.legal", defaultMessage: "DIRECTION JURIDIQUE" }),
+    items: [
+      { name: intl.formatMessage({ id: "nav.legalDashboard", defaultMessage: "Tableau de bord" }), href: "/legal/dashboard", icon: Scale },
+      { name: intl.formatMessage({ id: "nav.legalTexts", defaultMessage: "Textes juridiques" }), href: "/legal/texts", icon: BookOpen },
+      { name: intl.formatMessage({ id: "nav.contracts", defaultMessage: "Contrats" }), href: "/legal/contracts", icon: FileSignature },
+      { name: intl.formatMessage({ id: "nav.legalAlerts", defaultMessage: "Alertes" }), href: "/legal/alerts", icon: Bell },
+      { name: intl.formatMessage({ id: "nav.legalConfig", defaultMessage: "Configurations" }), href: "/legal/configurations", icon: Settings },
     ],
   },
   {

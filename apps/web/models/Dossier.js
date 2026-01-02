@@ -94,6 +94,27 @@ Dossier.init(
       type: DataTypes.STRING,
       defaultValue: 'RDC',
     },
+    // Representant legal
+    representativeName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'Nom du representant legal',
+    },
+    representativeFunction: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'Fonction du representant legal',
+    },
+    representativePhone: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'Telephone du representant legal',
+    },
+    representativeEmail: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'Email du representant legal',
+    },
     // Project information
     projectName: {
       type: DataTypes.STRING,

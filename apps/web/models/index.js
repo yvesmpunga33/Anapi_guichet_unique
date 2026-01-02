@@ -46,6 +46,17 @@ import MessageAttachment from './MessageAttachment.js';
 import Province from './Province.js';
 import City from './City.js';
 import Commune from './Commune.js';
+// Direction Juridique
+import LegalDocumentType from './LegalDocumentType.js';
+import LegalDomain from './LegalDomain.js';
+import JuridicalText from './JuridicalText.js';
+import ContractType from './ContractType.js';
+import Contract from './Contract.js';
+import LegalAlert from './LegalAlert.js';
+// Devises
+import Currency from './Currency.js';
+// Pays
+import Country from './Country.js';
 
 // ==================== ASSOCIATIONS ====================
 
@@ -281,6 +292,32 @@ Commune.belongsTo(City, { foreignKey: 'cityId', as: 'city' });
 Dossier.belongsTo(Commune, { foreignKey: 'investorCommuneId', as: 'investorCommuneRef' });
 Dossier.belongsTo(Commune, { foreignKey: 'projectCommuneId', as: 'projectCommuneRef' });
 
+// ==================== DIRECTION JURIDIQUE ASSOCIATIONS ====================
+
+// JuridicalText - LegalDocumentType
+JuridicalText.belongsTo(LegalDocumentType, { foreignKey: 'typeId', as: 'documentType' });
+LegalDocumentType.hasMany(JuridicalText, { foreignKey: 'typeId', as: 'documents' });
+
+// JuridicalText - LegalDomain
+JuridicalText.belongsTo(LegalDomain, { foreignKey: 'domainId', as: 'domain' });
+LegalDomain.hasMany(JuridicalText, { foreignKey: 'domainId', as: 'documents' });
+
+// Contract - ContractType
+Contract.belongsTo(ContractType, { foreignKey: 'typeId', as: 'contractType' });
+ContractType.hasMany(Contract, { foreignKey: 'typeId', as: 'contracts' });
+
+// Contract - LegalDomain
+Contract.belongsTo(LegalDomain, { foreignKey: 'domainId', as: 'domain' });
+LegalDomain.hasMany(Contract, { foreignKey: 'domainId', as: 'contracts' });
+
+// LegalAlert - Contract
+LegalAlert.belongsTo(Contract, { foreignKey: 'contractId', as: 'contract' });
+Contract.hasMany(LegalAlert, { foreignKey: 'contractId', as: 'alerts' });
+
+// LegalAlert - JuridicalText
+LegalAlert.belongsTo(JuridicalText, { foreignKey: 'documentId', as: 'document' });
+JuridicalText.hasMany(LegalAlert, { foreignKey: 'documentId', as: 'alerts' });
+
 // Export all models
 export {
   sequelize,
@@ -331,6 +368,15 @@ export {
   Province,
   City,
   Commune,
+  Currency,
+  Country,
+  // Direction Juridique
+  LegalDocumentType,
+  LegalDomain,
+  JuridicalText,
+  ContractType,
+  Contract,
+  LegalAlert,
 };
 
 export default {
@@ -382,4 +428,13 @@ export default {
   Province,
   City,
   Commune,
+  Currency,
+  Country,
+  // Direction Juridique
+  LegalDocumentType,
+  LegalDomain,
+  JuridicalText,
+  ContractType,
+  Contract,
+  LegalAlert,
 };

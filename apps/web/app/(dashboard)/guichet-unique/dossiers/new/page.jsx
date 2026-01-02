@@ -30,6 +30,9 @@ import {
   Factory,
   FileCheck,
   ChevronRight,
+  Search,
+  Globe,
+  UserCheck,
 } from "lucide-react";
 
 const sections = [
@@ -165,6 +168,17 @@ function NewDossierForm() {
   const [projectCommunes, setProjectCommunes] = useState([]);
   const [loadingProjectCommunes, setLoadingProjectCommunes] = useState(false);
 
+  // Liste des pays
+  const [countries, setCountries] = useState([]);
+  const [loadingCountries, setLoadingCountries] = useState(true);
+
+  // Recherche investisseur existant
+  const [investorSearch, setInvestorSearch] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchingInvestor, setSearchingInvestor] = useState(false);
+  const [selectedExistingInvestor, setSelectedExistingInvestor] = useState(null);
+  const [showInvestorDropdown, setShowInvestorDropdown] = useState(false);
+
   const [formData, setFormData] = useState({
     dossierType: typeFromUrl || "",
     investorType: "company",
@@ -175,7 +189,14 @@ function NewDossierForm() {
     address: "",
     phone: "",
     email: "",
-    country: "RDC",
+    country: "CD", // Code ISO du pays
+    // Investisseur existant
+    investorId: null,
+    // Representant legal
+    representativeName: "",
+    representativeFunction: "",
+    representativePhone: "",
+    representativeEmail: "",
     // Investisseur - Province, Ville, Commune
     investorProvinceId: "",
     investorProvince: "",
@@ -234,6 +255,49 @@ function NewDossierForm() {
     };
     fetchSectors();
   }, []);
+
+  // Charger les pays depuis l'API
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        setLoadingCountries(true);
+        const response = await fetch("/api/referentiels/countries");
+        const result = await response.json();
+        setCountries(result.countries || []);
+      } catch (err) {
+        console.error("Erreur chargement pays:", err);
+      } finally {
+        setLoadingCountries(false);
+      }
+    };
+    fetchCountries();
+  }, []);
+
+  // Recherche investisseur existant avec debounce
+  useEffect(() => {
+    const searchInvestors = async () => {
+      if (!investorSearch || investorSearch.length < 2) {
+        setSearchResults([]);
+        setShowInvestorDropdown(false);
+        return;
+      }
+      try {
+        setSearchingInvestor(true);
+        const response = await fetch(`/api/investors/search?q=${encodeURIComponent(investorSearch)}`);
+        const result = await response.json();
+        setSearchResults(result.investors || []);
+        setShowInvestorDropdown(true);
+      } catch (err) {
+        console.error("Erreur recherche investisseur:", err);
+        setSearchResults([]);
+      } finally {
+        setSearchingInvestor(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(searchInvestors, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [investorSearch]);
 
   // Charger les documents requis depuis l'API lorsque le type de dossier change
   useEffect(() => {
@@ -447,6 +511,65 @@ function NewDossierForm() {
     }));
   };
 
+  // Sélectionner un investisseur existant
+  const handleSelectExistingInvestor = (investor) => {
+    setSelectedExistingInvestor(investor);
+    setInvestorSearch("");
+    setShowInvestorDropdown(false);
+    // Pré-remplir le formulaire avec les données de l'investisseur
+    setFormData(prev => ({
+      ...prev,
+      investorId: investor.id,
+      investorType: investor.type || "company",
+      investorName: investor.name || "",
+      rccm: investor.rccm || "",
+      idNat: investor.idNat || "",
+      nif: investor.nif || "",
+      email: investor.email || "",
+      phone: investor.phone || "",
+      country: investor.country || "CD",
+      investorProvinceId: investor.provinceId || "",
+      investorProvince: investor.province || "",
+      investorCityId: investor.cityId || "",
+      investorCity: investor.city || "",
+      investorCommuneId: investor.communeId || "",
+      investorCommune: investor.commune || "",
+      address: investor.address || "",
+      representativeName: investor.representativeName || "",
+      representativeFunction: investor.representativeFunction || "",
+      representativePhone: investor.representativePhone || "",
+      representativeEmail: investor.representativeEmail || "",
+    }));
+  };
+
+  // Réinitialiser la sélection d'investisseur
+  const handleClearExistingInvestor = () => {
+    setSelectedExistingInvestor(null);
+    setFormData(prev => ({
+      ...prev,
+      investorId: null,
+      investorType: "company",
+      investorName: "",
+      rccm: "",
+      idNat: "",
+      nif: "",
+      email: "",
+      phone: "",
+      country: "CD",
+      investorProvinceId: "",
+      investorProvince: "",
+      investorCityId: "",
+      investorCity: "",
+      investorCommuneId: "",
+      investorCommune: "",
+      address: "",
+      representativeName: "",
+      representativeFunction: "",
+      representativePhone: "",
+      representativeEmail: "",
+    }));
+  };
+
   // Upload un fichier pour un type de document spécifique
   const handleFileUploadForType = (documentTypeId, e) => {
     const file = e.target.files[0];
@@ -592,15 +715,26 @@ function NewDossierForm() {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/guichet-unique/dossiers', {
+      // Créer FormData pour l'upload de fichiers
+      const submitFormData = new FormData();
+
+      // Ajouter les données JSON du formulaire
+      submitFormData.append('data', JSON.stringify({
+        ...formData,
+        isDraft,
+      }));
+
+      // Ajouter les fichiers documents
+      Object.entries(documentsByType).forEach(([docTypeId, docInfo]) => {
+        if (docInfo.file) {
+          submitFormData.append(`documents[${docTypeId}]`, docInfo.file);
+        }
+      });
+
+      // Utiliser l'endpoint d'upload
+      const response = await fetch('/api/guichet-unique/dossiers/upload', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          isDraft,
-        }),
+        body: submitFormData, // Pas de Content-Type header pour FormData
       });
 
       const result = await response.json();
@@ -790,8 +924,78 @@ function NewDossierForm() {
                   Informations de l'investisseur
                 </h2>
                 <p className="text-sm text-gray-500 mb-6">
-                  Renseignez les informations du demandeur
+                  Renseignez les informations du demandeur ou selectionnez un investisseur existant
                 </p>
+
+                {/* Recherche investisseur existant */}
+                <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Search className="w-4 h-4 text-blue-400" />
+                    <span className="text-sm font-medium text-blue-400">Rechercher un investisseur existant</span>
+                  </div>
+
+                  {selectedExistingInvestor ? (
+                    <div className="flex items-center justify-between p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <UserCheck className="w-5 h-5 text-green-400" />
+                        <div>
+                          <p className="text-white font-medium">{selectedExistingInvestor.name}</p>
+                          <p className="text-xs text-gray-400">
+                            {selectedExistingInvestor.rccm || selectedExistingInvestor.email}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleClearExistingInvestor}
+                        className="p-1 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={investorSearch}
+                        onChange={(e) => setInvestorSearch(e.target.value)}
+                        placeholder="Rechercher par nom, RCCM, email..."
+                        className="w-full px-4 py-2 pl-10 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                      {searchingInvestor && (
+                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 animate-spin" />
+                      )}
+
+                      {/* Dropdown des résultats */}
+                      {showInvestorDropdown && searchResults.length > 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {searchResults.map((inv) => (
+                            <button
+                              key={inv.id}
+                              type="button"
+                              onClick={() => handleSelectExistingInvestor(inv)}
+                              className="w-full px-4 py-3 text-left hover:bg-gray-700/50 border-b border-gray-700/50 last:border-0"
+                            >
+                              <p className="text-white font-medium">{inv.name}</p>
+                              <p className="text-xs text-gray-400">
+                                {inv.rccm && `RCCM: ${inv.rccm} • `}
+                                {inv.email}
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {showInvestorDropdown && investorSearch.length >= 2 && searchResults.length === 0 && !searchingInvestor && (
+                        <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg p-4 text-center">
+                          <p className="text-gray-400 text-sm">Aucun investisseur trouve</p>
+                          <p className="text-xs text-gray-500 mt-1">Remplissez le formulaire pour creer un nouveau</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {/* Type d'investisseur */}
                 <div className="mb-6">
@@ -977,7 +1181,75 @@ function NewDossierForm() {
                     onChange={(e) => handleChange("address", e.target.value)}
                     placeholder="Numero, Avenue"
                   />
+
+                  {/* Pays */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      <Globe className="w-4 h-4 inline mr-1" />
+                      Pays
+                    </label>
+                    <select
+                      value={formData.country}
+                      onChange={(e) => handleChange("country", e.target.value)}
+                      disabled={loadingCountries}
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50"
+                    >
+                      {loadingCountries ? (
+                        <option value="" className="bg-gray-800">Chargement...</option>
+                      ) : (
+                        countries.map((country) => (
+                          <option key={country.code} value={country.code} className="bg-gray-800">
+                            {country.name}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
                 </div>
+
+                {/* Section Représentant légal - uniquement pour les entreprises */}
+                {formData.investorType === "company" && (
+                  <div className="mt-6 pt-6 border-t border-gray-700">
+                    <div className="flex items-center gap-2 mb-4">
+                      <User className="w-5 h-5 text-orange-400" />
+                      <h3 className="text-md font-medium text-white">Representant legal</h3>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Informations sur le representant legal ou le dirigeant de l'entreprise
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <InputField
+                        label="Nom complet"
+                        type="text"
+                        value={formData.representativeName}
+                        onChange={(e) => handleChange("representativeName", e.target.value)}
+                        placeholder="Ex: Jean-Pierre Mukendi"
+                      />
+                      <InputField
+                        label="Fonction"
+                        type="text"
+                        value={formData.representativeFunction}
+                        onChange={(e) => handleChange("representativeFunction", e.target.value)}
+                        placeholder="Ex: Directeur General"
+                      />
+                      <InputField
+                        label="Telephone"
+                        type="tel"
+                        value={formData.representativePhone}
+                        onChange={(e) => handleChange("representativePhone", e.target.value)}
+                        placeholder="+243 XXX XXX XXX"
+                      />
+                      <InputField
+                        label="Email"
+                        type="email"
+                        value={formData.representativeEmail}
+                        onChange={(e) => handleChange("representativeEmail", e.target.value)}
+                        placeholder="representant@exemple.cd"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1518,6 +1790,10 @@ function NewDossierForm() {
                     <h3 className="text-sm font-medium text-gray-400 mb-3">Investisseur</h3>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
+                        <span className="text-gray-500">Type:</span>
+                        <span className="text-white ml-2">{formData.investorType === "company" ? "Entreprise" : "Individuel"}</span>
+                      </div>
+                      <div>
                         <span className="text-gray-500">Nom:</span>
                         <span className="text-white ml-2">{formData.investorName || "-"}</span>
                       </div>
@@ -1528,6 +1804,12 @@ function NewDossierForm() {
                       <div>
                         <span className="text-gray-500">Telephone:</span>
                         <span className="text-white ml-2">{formData.phone || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Pays:</span>
+                        <span className="text-white ml-2">
+                          {countries.find(c => c.code === formData.country)?.name || formData.country || "-"}
+                        </span>
                       </div>
                       <div>
                         <span className="text-gray-500">Province:</span>
@@ -1541,7 +1823,50 @@ function NewDossierForm() {
                         <span className="text-gray-500">Commune:</span>
                         <span className="text-white ml-2">{formData.investorCommune || "-"}</span>
                       </div>
+                      {formData.investorType === "company" && formData.rccm && (
+                        <div>
+                          <span className="text-gray-500">RCCM:</span>
+                          <span className="text-white ml-2">{formData.rccm}</span>
+                        </div>
+                      )}
+                      {formData.investorType === "company" && formData.idNat && (
+                        <div>
+                          <span className="text-gray-500">ID National:</span>
+                          <span className="text-white ml-2">{formData.idNat}</span>
+                        </div>
+                      )}
                     </div>
+
+                    {/* Représentant légal dans le récapitulatif */}
+                    {formData.investorType === "company" && formData.representativeName && (
+                      <div className="mt-4 pt-4 border-t border-gray-700">
+                        <p className="text-xs text-gray-500 mb-2">Representant legal:</p>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-500">Nom:</span>
+                            <span className="text-white ml-2">{formData.representativeName}</span>
+                          </div>
+                          {formData.representativeFunction && (
+                            <div>
+                              <span className="text-gray-500">Fonction:</span>
+                              <span className="text-white ml-2">{formData.representativeFunction}</span>
+                            </div>
+                          )}
+                          {formData.representativePhone && (
+                            <div>
+                              <span className="text-gray-500">Telephone:</span>
+                              <span className="text-white ml-2">{formData.representativePhone}</span>
+                            </div>
+                          )}
+                          {formData.representativeEmail && (
+                            <div>
+                              <span className="text-gray-500">Email:</span>
+                              <span className="text-white ml-2">{formData.representativeEmail}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Projet */}

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../../lib/auth.js';
-import { Dossier, DossierDocument, Investor, User } from '../../../../../models/index.js';
+import { Dossier, DossierDocument, Investor, User, Ministry } from '../../../../../models/index.js';
 
 // GET - Obtenir un dossier par ID
 export async function GET(request, { params }) {
@@ -12,6 +12,7 @@ export async function GET(request, { params }) {
         { model: User, as: 'assignedTo', attributes: ['id', 'name', 'email'] },
         { model: User, as: 'createdBy', attributes: ['id', 'name', 'email'] },
         { model: Investor, as: 'investor' },
+        { model: Ministry, as: 'ministry', attributes: ['id', 'name', 'shortName', 'code'] },
         {
           model: DossierDocument,
           as: 'documents',

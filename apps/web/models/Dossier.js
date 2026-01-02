@@ -175,6 +175,12 @@ Dossier.init(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    // Ministry responsible
+    ministryId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      comment: 'ID du ministère responsable',
+    },
     // Created by
     createdById: {
       type: DataTypes.TEXT,

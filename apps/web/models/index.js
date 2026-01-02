@@ -174,6 +174,10 @@ Dossier.belongsTo(User, { foreignKey: 'assignedToId', as: 'assignedTo' });
 // Dossier - User (createdBy)
 Dossier.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
 
+// Dossier - Ministry (ministère responsable)
+Dossier.belongsTo(Ministry, { foreignKey: 'ministryId', as: 'ministry' });
+Ministry.hasMany(Dossier, { foreignKey: 'ministryId', as: 'dossiers' });
+
 // Dossier - DossierDocument
 Dossier.hasMany(DossierDocument, { foreignKey: 'dossierId', as: 'documents', onDelete: 'CASCADE' });
 DossierDocument.belongsTo(Dossier, { foreignKey: 'dossierId', as: 'dossier' });

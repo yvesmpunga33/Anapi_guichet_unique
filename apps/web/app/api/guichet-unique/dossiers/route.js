@@ -37,6 +37,7 @@ export async function GET(request) {
     const status = searchParams.get('status');
     const dossierType = searchParams.get('type');
     const province = searchParams.get('province');
+    const ministryId = searchParams.get('ministryId');
     const offset = (page - 1) * limit;
 
     // Build where clause
@@ -75,6 +76,10 @@ export async function GET(request) {
       where.projectProvince = province;
     }
 
+    if (ministryId) {
+      where.ministryId = ministryId;
+    }
+
     const { count, rows: dossiers } = await Dossier.findAndCountAll({
       where,
       order: [['createdAt', 'DESC']],
@@ -97,8 +102,28 @@ export async function GET(request) {
       ],
     });
 
-    // Calculate stats
+    // Calculate stats - filtrer par type et ministère si spécifiés
+    const statsWhere = {};
+    if (dossierType) {
+      const typeCategories = {
+        'AGREMENT': ['AGREMENT', 'AGREMENT_REGIME'],
+        'LICENCE': ['LICENCE', 'LICENCE_EXPLOITATION'],
+        'PERMIS': ['PERMIS', 'PERMIS_CONSTRUCTION'],
+        'AUTORISATION': ['AUTORISATION', 'AUTORISATION_ACTIVITE'],
+      };
+      if (typeCategories[dossierType]) {
+        statsWhere.dossierType = { [Op.in]: typeCategories[dossierType] };
+      } else {
+        statsWhere.dossierType = dossierType;
+      }
+    }
+
+    if (ministryId) {
+      statsWhere.ministryId = ministryId;
+    }
+
     const stats = await Dossier.findAll({
+      where: statsWhere,
       attributes: [
         'status',
         [Dossier.sequelize.fn('COUNT', Dossier.sequelize.col('id')), 'count'],

@@ -24,6 +24,7 @@ import {
   ArrowRight,
   Building2,
   Circle,
+  Landmark,
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import Link from "next/link";
@@ -458,6 +459,14 @@ export default function AutorisationsPage() {
                     <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                       <MapPin className="w-4 h-4 mr-2 text-gray-400" />
                       <span>{dossier.projectProvince || "Province non specifiee"}</span>
+                    </div>
+
+                    {/* Ministry */}
+                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                      <Landmark className="w-4 h-4 mr-2 text-indigo-500" />
+                      <span className="truncate">
+                        {dossier.ministry?.shortName || dossier.ministry?.name || "Non assigné"}
+                      </span>
                     </div>
 
                     <div className="flex items-center text-sm">

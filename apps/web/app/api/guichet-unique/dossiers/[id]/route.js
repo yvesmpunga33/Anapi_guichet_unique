@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../../lib/auth.js';
-import { Dossier, DossierDocument, Investor, User, Ministry } from '../../../../../models/index.js';
+import { Dossier, DossierDocument, Investor, User, Ministry, DossierStepValidation } from '../../../../../models/index.js';
 
 // GET - Obtenir un dossier par ID
 export async function GET(request, { params }) {
@@ -85,6 +85,60 @@ export async function PATCH(request, { params }) {
         status: 'PENDING_DOCUMENTS',
         decisionNote: data.decisionNote || 'Documents supplementaires requis',
       });
+    } else if (data.action === 'advance_step') {
+      // Avancer à l'étape suivante du workflow
+      const currentStep = dossier.currentStep || 1;
+      const nextStep = data.targetStep || currentStep + 1;
+
+      await dossier.update({
+        currentStep: nextStep,
+        // Mettre à jour le statut si necessaire
+        status: nextStep > 1 ? 'IN_REVIEW' : dossier.status,
+      });
+    } else if (data.action === 'set_step') {
+      // Définir une étape spécifique (pour correction/retour en arrière)
+      if (data.step && data.step >= 1) {
+        await dossier.update({
+          currentStep: data.step,
+        });
+      }
+    } else if (data.action === 'validate_step') {
+      // Valider l'étape actuelle et passer à la suivante
+      const currentStep = dossier.currentStep || 1;
+      const totalSteps = data.totalSteps || 4; // Nombre total d'étapes
+      const stepNote = data.note || `Étape ${currentStep} validée`;
+      const stepName = data.stepName || `Étape ${currentStep}`;
+
+      // Enregistrer la validation dans l'historique
+      await DossierStepValidation.create({
+        dossierId: id,
+        stepNumber: currentStep,
+        stepName: stepName,
+        validatedById: session?.user?.id || null,
+        validatedByName: session?.user?.name || 'Système',
+        note: stepNote,
+        validatedAt: new Date(),
+        status: 'VALIDATED',
+      });
+
+      // Mettre à jour le dossier
+      const updateData = {};
+
+      // Si c'est la dernière étape, marquer comme approuvé mais ne pas dépasser
+      if (data.isFinalStep || currentStep >= totalSteps) {
+        updateData.currentStep = totalSteps; // Rester sur la dernière étape
+        updateData.status = 'APPROVED';
+        updateData.decisionDate = new Date();
+        updateData.decisionNote = data.note || 'Dossier approuvé';
+      } else {
+        // Passer à l'étape suivante
+        updateData.currentStep = currentStep + 1;
+        if (currentStep === 1) {
+          updateData.status = 'IN_REVIEW';
+        }
+      }
+
+      await dossier.update(updateData);
     } else {
       // General update
       const updateData = {};

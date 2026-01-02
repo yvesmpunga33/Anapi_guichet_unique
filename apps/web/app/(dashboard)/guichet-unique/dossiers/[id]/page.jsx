@@ -112,6 +112,10 @@ export default function DossierDetailPage() {
   const [uploadDescription, setUploadDescription] = useState('');
   const [uploadCategory, setUploadCategory] = useState('OTHER');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showStepModal, setShowStepModal] = useState(false);
+  const [selectedStep, setSelectedStep] = useState(null);
+  const [stepNote, setStepNote] = useState('');
+  const [validatingStep, setValidatingStep] = useState(false);
 
   // Fonction pour uploader un document
   const handleUploadDocument = async () => {
@@ -327,6 +331,71 @@ export default function DossierDetailPage() {
     });
   };
 
+  // Fonction pour ouvrir le modal de validation d'étape
+  const openStepValidation = (step) => {
+    // Ne pas permettre de valider si le dossier est déjà approuvé ou si ce n'est pas l'étape courante
+    if (step.step === dossier.currentStep && dossier.status !== 'APPROVED') {
+      setSelectedStep(step);
+      setStepNote('');
+      setShowStepModal(true);
+    }
+  };
+
+  // Fonction pour valider l'étape actuelle
+  const handleValidateStep = async () => {
+    if (!selectedStep) return;
+
+    setValidatingStep(true);
+    try {
+      const isFinalStep = selectedStep.step === workflowSteps.length;
+      const response = await fetch(`/api/guichet-unique/dossiers/${params.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'validate_step',
+          note: stepNote,
+          stepName: selectedStep.name,
+          isFinalStep,
+          totalSteps: workflowSteps.length,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Mettre à jour le dossier local
+        setDossier(prev => ({
+          ...prev,
+          currentStep: prev.currentStep + 1,
+          status: data.dossier.status || prev.status,
+        }));
+        setShowStepModal(false);
+        setSelectedStep(null);
+        setStepNote('');
+
+        // Afficher une notification de succès (si SweetAlert2 est disponible)
+        if (typeof window !== 'undefined' && window.Swal) {
+          window.Swal.fire({
+            icon: 'success',
+            title: 'Étape validée',
+            text: isFinalStep
+              ? 'Le dossier a été approuvé avec succès!'
+              : `L'étape "${selectedStep.name}" a été validée avec succès.`,
+            timer: 3000,
+            showConfirmButton: false,
+          });
+        }
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Erreur lors de la validation');
+      }
+    } catch (error) {
+      console.error('Error validating step:', error);
+      alert('Erreur lors de la validation de l\'étape');
+    } finally {
+      setValidatingStep(false);
+    }
+  };
+
   const handleAddComment = () => {
     if (newComment.trim() && dossier) {
       const comment = {
@@ -394,6 +463,20 @@ export default function DossierDetailPage() {
             <p className="text-gray-500 dark:text-gray-400 mt-1">
               {dossier.projectName}
             </p>
+            {/* Ministère responsable - affiché dans le header */}
+            {dossier.ministry && (
+              <div className="flex items-center gap-2 mt-2">
+                <Landmark className="w-4 h-4 text-indigo-500" />
+                <span className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
+                  {dossier.ministry.name}
+                </span>
+                {dossier.ministry.shortName && (
+                  <span className="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 rounded text-indigo-700 dark:text-indigo-300">
+                    {dossier.ministry.shortName}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -439,49 +522,79 @@ export default function DossierDetailPage() {
 
             {/* Étapes */}
             <div className="relative flex justify-between">
-              {workflowSteps.map((step, index) => (
-                <div key={step.step} className="flex flex-col items-center" style={{ width: `${100 / workflowSteps.length}%` }}>
-                  {/* Cercle de l'étape */}
+              {workflowSteps.map((step, index) => {
+                const isCurrentStep = step.step === dossier.currentStep;
+                const isCompleted = step.step < dossier.currentStep || (isCurrentStep && dossier.status === 'APPROVED');
+                const isClickable = isCurrentStep && dossier.status !== 'APPROVED';
+
+                return (
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all z-10 ${
-                      step.step < dossier.currentStep
-                        ? "bg-green-500 text-white shadow-lg shadow-green-500/30"
-                        : step.step === dossier.currentStep
-                        ? "text-white shadow-lg ring-4 ring-opacity-30"
-                        : "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
-                    }`}
-                    style={step.step === dossier.currentStep ? {
-                      backgroundColor: step.color || '#3B82F6',
-                      '--tw-ring-color': step.color || '#3B82F6',
-                      boxShadow: `0 10px 25px -5px ${step.color || '#3B82F6'}40`,
-                    } : {}}
+                    key={step.step}
+                    className={`flex flex-col items-center ${isClickable ? 'cursor-pointer group' : ''}`}
+                    style={{ width: `${100 / workflowSteps.length}%` }}
+                    onClick={() => isClickable && openStepValidation(step)}
                   >
-                    {step.step < dossier.currentStep ? (
-                      <CheckCircle2 className="w-5 h-5" />
-                    ) : (
-                      step.step
+                    {/* Cercle de l'étape */}
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all z-10 ${
+                        isCompleted
+                          ? "bg-green-500 text-white shadow-lg shadow-green-500/30"
+                          : isCurrentStep
+                          ? "text-white shadow-lg ring-4 ring-opacity-30 group-hover:scale-110 group-hover:ring-opacity-50"
+                          : "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
+                      }`}
+                      style={isCurrentStep ? {
+                        backgroundColor: step.color || '#3B82F6',
+                        '--tw-ring-color': step.color || '#3B82F6',
+                        boxShadow: `0 10px 25px -5px ${step.color || '#3B82F6'}40`,
+                      } : {}}
+                    >
+                      {isCompleted ? (
+                        <CheckCircle2 className="w-5 h-5" />
+                      ) : (
+                        step.step
+                      )}
+                    </div>
+
+                    {/* Nom de l'étape */}
+                    <p className={`text-sm mt-3 font-semibold text-center px-1 ${
+                      step.step <= dossier.currentStep
+                        ? "text-gray-900 dark:text-white"
+                        : "text-gray-500 dark:text-gray-400"
+                    } ${isClickable ? 'group-hover:text-blue-600 dark:group-hover:text-blue-400' : ''}`}>
+                      {step.name}
+                    </p>
+
+                    {/* Description */}
+                    <p className={`text-xs mt-1 text-center px-2 max-w-[150px] leading-relaxed ${
+                      isCurrentStep
+                        ? "text-gray-700 dark:text-gray-200"
+                        : "text-gray-500 dark:text-gray-400"
+                    }`}>
+                      {step.description}
+                    </p>
+
+                    {/* Indicateur "Cliquez pour valider" pour l'étape courante ou "Terminé" si approuvé */}
+                    {isCurrentStep && dossier.status !== 'APPROVED' && (
+                      <span className="mt-2 text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full font-medium group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
+                        Cliquez pour valider
+                      </span>
+                    )}
+                    {isCurrentStep && dossier.status === 'APPROVED' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(`/api/guichet-unique/dossiers/${params.id}/certificate`, '_blank');
+                        }}
+                        className="mt-2 text-xs px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-full font-medium transition-colors flex items-center gap-1"
+                      >
+                        <FileText className="w-3 h-3" />
+                        Voir le certificat
+                      </button>
                     )}
                   </div>
-
-                  {/* Nom de l'étape */}
-                  <p className={`text-sm mt-3 font-semibold text-center px-1 ${
-                    step.step <= dossier.currentStep
-                      ? "text-gray-900 dark:text-white"
-                      : "text-gray-500 dark:text-gray-400"
-                  }`}>
-                    {step.name}
-                  </p>
-
-                  {/* Description */}
-                  <p className={`text-xs mt-1 text-center px-2 max-w-[150px] leading-relaxed ${
-                    step.step === dossier.currentStep
-                      ? "text-gray-700 dark:text-gray-200"
-                      : "text-gray-500 dark:text-gray-400"
-                  }`}>
-                    {step.description}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ) : (
@@ -1231,6 +1344,102 @@ export default function DossierDetailPage() {
                   <>
                     <Paperclip className="w-4 h-4 mr-2" />
                     Uploader
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de validation d'étape */}
+      {showStepModal && selectedStep && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold"
+                  style={{ backgroundColor: selectedStep.color || '#3B82F6' }}
+                >
+                  {selectedStep.step}
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Valider l'étape
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {selectedStep.name}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  <strong>Attention:</strong> En validant cette étape, le dossier passera à l'étape suivante.
+                  {selectedStep.step === workflowSteps.length && (
+                    <span className="block mt-1 text-green-600 dark:text-green-400">
+                      C'est la dernière étape. Le dossier sera marqué comme <strong>Approuvé</strong>.
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Note de validation (optionnel)
+                </label>
+                <textarea
+                  value={stepNote}
+                  onChange={(e) => setStepNote(e.target.value)}
+                  placeholder="Ajoutez une note pour cette validation..."
+                  rows={3}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                />
+              </div>
+
+              {/* Informations sur l'étape suivante */}
+              {selectedStep.step < workflowSteps.length && (
+                <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Prochaine étape</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {workflowSteps[selectedStep.step]?.name || 'Étape suivante'}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowStepModal(false);
+                  setSelectedStep(null);
+                  setStepNote('');
+                }}
+                disabled={validatingStep}
+                className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300 disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleValidateStep}
+                disabled={validatingStep}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center"
+              >
+                {validatingStep ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Validation...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Valider l'étape
                   </>
                 )}
               </button>

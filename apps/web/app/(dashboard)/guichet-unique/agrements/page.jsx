@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FileCheck,
   Plus,
@@ -8,169 +8,217 @@ import {
   Filter,
   Eye,
   Edit,
-  Trash2,
   Clock,
   CheckCircle2,
   XCircle,
   AlertCircle,
   FileText,
-  Calendar,
   ChevronLeft,
   ChevronRight,
   Download,
+  Loader2,
   User,
-  Building2,
+  MapPin,
+  DollarSign,
+  Calendar,
   ArrowRight,
-  RotateCcw,
+  Building2,
+  Landmark,
 } from "lucide-react";
 import Link from "next/link";
 
-const approvalTypes = {
-  AGREMENT_REGIME: { label: "Agrement au Regime", color: "bg-purple-100 text-purple-700" },
-  EXONERATION_FISCALE: { label: "Exoneration Fiscale", color: "bg-blue-100 text-blue-700" },
-  LICENCE_EXPLOITATION: { label: "Licence d'Exploitation", color: "bg-green-100 text-green-700" },
-  PERMIS_CONSTRUCTION: { label: "Permis de Construction", color: "bg-orange-100 text-orange-700" },
-  AUTORISATION_IMPORT: { label: "Autorisation Import", color: "bg-cyan-100 text-cyan-700" },
-};
-
 const statusConfig = {
-  DRAFT: { label: "Brouillon", color: "bg-gray-100 text-gray-700", icon: FileText },
-  SUBMITTED: { label: "Soumise", color: "bg-blue-100 text-blue-700", icon: Clock },
-  UNDER_REVIEW: { label: "En examen", color: "bg-yellow-100 text-yellow-700", icon: AlertCircle },
-  PENDING_INFO: { label: "Info requise", color: "bg-orange-100 text-orange-700", icon: AlertCircle },
-  APPROVED: { label: "Approuvee", color: "bg-green-100 text-green-700", icon: CheckCircle2 },
-  REJECTED: { label: "Rejetee", color: "bg-red-100 text-red-700", icon: XCircle },
-  REVISION: { label: "En revision", color: "bg-purple-100 text-purple-700", icon: RotateCcw },
+  DRAFT: {
+    label: "Brouillon",
+    color: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
+    icon: FileText,
+  },
+  SUBMITTED: {
+    label: "Soumis",
+    color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    icon: Clock,
+  },
+  IN_REVIEW: {
+    label: "En examen",
+    color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+    icon: AlertCircle,
+  },
+  UNDER_REVIEW: {
+    label: "En examen",
+    color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+    icon: AlertCircle,
+  },
+  PENDING_DOCUMENTS: {
+    label: "Documents requis",
+    color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+    icon: FileText,
+  },
+  MINISTRY_REVIEW: {
+    label: "Examen ministere",
+    color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
+    icon: Building2,
+  },
+  APPROVED: {
+    label: "Approuve",
+    color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+    icon: CheckCircle2,
+  },
+  REJECTED: {
+    label: "Rejete",
+    color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    icon: XCircle,
+  },
+  COMPLETED: {
+    label: "Termine",
+    color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+    icon: CheckCircle2,
+  },
 };
 
-const priorityConfig = {
-  LOW: { label: "Basse", color: "bg-gray-100 text-gray-600" },
-  NORMAL: { label: "Normale", color: "bg-blue-100 text-blue-600" },
-  HIGH: { label: "Haute", color: "bg-orange-100 text-orange-600" },
-  URGENT: { label: "Urgente", color: "bg-red-100 text-red-600" },
+// Calcul de la progression basé sur currentStep et les étapes dynamiques
+const getProgressFromStep = (currentStep, totalSteps) => {
+  if (!currentStep || !totalSteps || totalSteps === 0) return 0;
+  return Math.round((currentStep / totalSteps) * 100);
 };
 
-const mockApprovals = [
-  {
-    id: "1",
-    requestNumber: "AGR-2024-00089",
-    investorName: "Congo Mining Corporation",
-    investorType: "company",
-    approvalType: "AGREMENT_REGIME",
-    description: "Demande d'agrement au regime preferentiel pour projet minier",
-    status: "UNDER_REVIEW",
-    priority: "HIGH",
-    submittedAt: "2024-01-15",
-    dueDate: "2024-02-15",
-    assignedTo: "Jean Kabila",
-    currentStep: "Examen technique",
-    steps: [
-      { name: "Reception", status: "completed", completedAt: "2024-01-15" },
-      { name: "Verification documents", status: "completed", completedAt: "2024-01-17" },
-      { name: "Examen technique", status: "in_progress" },
-      { name: "Examen juridique", status: "pending" },
-      { name: "Decision finale", status: "pending" },
-    ],
-  },
-  {
-    id: "2",
-    requestNumber: "AGR-2024-00088",
-    investorName: "AgroTech RDC SARL",
-    investorType: "company",
-    approvalType: "EXONERATION_FISCALE",
-    description: "Demande d'exoneration fiscale pour importation equipements agricoles",
-    status: "PENDING_INFO",
-    priority: "NORMAL",
-    submittedAt: "2024-01-12",
-    dueDate: "2024-02-12",
-    assignedTo: "Marie Lumumba",
-    currentStep: "Documents manquants",
-    steps: [
-      { name: "Reception", status: "completed", completedAt: "2024-01-12" },
-      { name: "Verification documents", status: "pending" },
-      { name: "Examen fiscal", status: "pending" },
-      { name: "Decision finale", status: "pending" },
-    ],
-  },
-  {
-    id: "3",
-    requestNumber: "AGR-2024-00087",
-    investorName: "TechInvest Africa Ltd",
-    investorType: "company",
-    approvalType: "LICENCE_EXPLOITATION",
-    description: "Licence d'exploitation pour centre de donnees",
-    status: "APPROVED",
-    priority: "NORMAL",
-    submittedAt: "2024-01-08",
-    dueDate: "2024-02-08",
-    assignedTo: "Pierre Tshisekedi",
-    currentStep: "Termine",
-    steps: [
-      { name: "Reception", status: "completed", completedAt: "2024-01-08" },
-      { name: "Verification documents", status: "completed", completedAt: "2024-01-10" },
-      { name: "Examen technique", status: "completed", completedAt: "2024-01-15" },
-      { name: "Decision finale", status: "completed", completedAt: "2024-01-18" },
-    ],
-  },
-  {
-    id: "4",
-    requestNumber: "AGR-2024-00086",
-    investorName: "Jean-Pierre Mukendi",
-    investorType: "individual",
-    approvalType: "PERMIS_CONSTRUCTION",
-    description: "Permis de construction pour hotel touristique",
-    status: "SUBMITTED",
-    priority: "URGENT",
-    submittedAt: "2024-01-20",
-    dueDate: "2024-01-30",
-    assignedTo: "Non assigne",
-    currentStep: "En attente d'assignation",
-    steps: [
-      { name: "Reception", status: "completed", completedAt: "2024-01-20" },
-      { name: "Assignation", status: "pending" },
-      { name: "Examen urbanistique", status: "pending" },
-      { name: "Decision finale", status: "pending" },
-    ],
-  },
-  {
-    id: "5",
-    requestNumber: "AGR-2024-00085",
-    investorName: "Congo Cement Industries",
-    investorType: "company",
-    approvalType: "AUTORISATION_IMPORT",
-    description: "Autorisation d'importation d'equipements industriels",
-    status: "REJECTED",
-    priority: "HIGH",
-    submittedAt: "2024-01-05",
-    dueDate: "2024-02-05",
-    assignedTo: "Marie Lumumba",
-    currentStep: "Rejete",
-    steps: [
-      { name: "Reception", status: "completed", completedAt: "2024-01-05" },
-      { name: "Verification documents", status: "completed", completedAt: "2024-01-07" },
-      { name: "Examen douanier", status: "completed", completedAt: "2024-01-10" },
-      { name: "Decision finale", status: "rejected", completedAt: "2024-01-12" },
-    ],
-  },
-];
+// Fallback pour le statut si pas de currentStep
+const getProgressFromStatus = (status, totalSteps) => {
+  const stepMap = {
+    DRAFT: 0,
+    SUBMITTED: totalSteps > 0 ? Math.round((1 / totalSteps) * 100) : 20,
+    IN_REVIEW: totalSteps > 0 ? Math.round((2 / totalSteps) * 100) : 40,
+    UNDER_REVIEW: totalSteps > 0 ? Math.round((2 / totalSteps) * 100) : 40,
+    PENDING_DOCUMENTS: totalSteps > 0 ? Math.round((2 / totalSteps) * 100) : 40,
+    MINISTRY_REVIEW: totalSteps > 0 ? Math.round((3 / totalSteps) * 100) : 60,
+    APPROVED: 100,
+    REJECTED: 100,
+    COMPLETED: 100,
+  };
+  return stepMap[status] || 0;
+};
 
 export default function AgrementsPage() {
-  const [approvals, setApprovals] = useState(mockApprovals);
+  const [dossiers, setDossiers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-
-  const filteredApprovals = approvals.filter((approval) => {
-    const matchesSearch =
-      approval.requestNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      approval.investorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      approval.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || approval.status === statusFilter;
-    const matchesType = typeFilter === "all" || approval.approvalType === typeFilter;
-    return matchesSearch && matchesStatus && matchesType;
+  const [workflowSteps, setWorkflowSteps] = useState([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    draft: 0,
+    submitted: 0,
+    inReview: 0,
+    approved: 0,
+    rejected: 0,
+  });
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 12,
+    total: 0,
+    totalPages: 0,
   });
 
+  // Fetch workflow steps dynamically pour AGREMENT_REGIME
+  const fetchWorkflowSteps = async () => {
+    try {
+      const response = await fetch('/api/config/workflow-steps?type=AGREMENT_REGIME&activeOnly=true');
+      if (response.ok) {
+        const data = await response.json();
+        const steps = (data.steps || [])
+          .sort((a, b) => a.stepNumber - b.stepNumber)
+          .map(s => ({
+            id: s.id,
+            stepNumber: s.stepNumber,
+            name: s.name,
+            description: s.description,
+            icon: s.icon,
+            color: s.color,
+            responsibleRole: s.responsibleRole,
+            isFinal: s.isFinal,
+          }));
+        setWorkflowSteps(steps);
+      }
+    } catch (error) {
+      console.error('Error fetching workflow steps:', error);
+      // Fallback to default steps if API fails
+      setWorkflowSteps([
+        { id: 1, stepNumber: 1, name: "Soumission" },
+        { id: 2, stepNumber: 2, name: "Verification documentaire" },
+        { id: 3, stepNumber: 3, name: "Analyse ANAPI" },
+        { id: 4, stepNumber: 4, name: "Transmission Ministere" },
+        { id: 5, stepNumber: 5, name: "Examen Ministere" },
+        { id: 6, stepNumber: 6, name: "Commission Interministerielle" },
+        { id: 7, stepNumber: 7, name: "Signature DG" },
+        { id: 8, stepNumber: 8, name: "Delivrance Agrement" },
+      ]);
+    }
+  };
+
+  useEffect(() => {
+    fetchWorkflowSteps();
+  }, []);
+
+  const fetchDossiers = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString(),
+        type: 'AGREMENT',
+      });
+
+      if (searchTerm) {
+        params.append('search', searchTerm);
+      }
+
+      if (statusFilter !== 'all') {
+        params.append('status', statusFilter);
+      }
+
+      const response = await fetch(`/api/guichet-unique/dossiers?${params}`);
+      const result = await response.json();
+
+      if (response.ok) {
+        setDossiers(result.data || []);
+        setStats(result.stats || stats);
+        setPagination(prev => ({
+          ...prev,
+          total: result.pagination?.total || 0,
+          totalPages: result.pagination?.totalPages || 0,
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching agrements:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDossiers();
+  }, [pagination.page, statusFilter]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (pagination.page === 1) {
+        fetchDossiers();
+      } else {
+        setPagination(prev => ({ ...prev, page: 1 }));
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const formatAmount = (amount, currency = 'USD') => {
+    return new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: currency,
+      minimumFractionDigits: 0,
+    }).format(amount || 0);
+  };
+
   const formatDate = (dateString) => {
+    if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString("fr-FR", {
       day: "2-digit",
       month: "short",
@@ -178,18 +226,12 @@ export default function AgrementsPage() {
     });
   };
 
-  const getDaysRemaining = (dueDate) => {
-    const today = new Date();
-    const due = new Date(dueDate);
-    const diff = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    return diff;
-  };
-
-  const stats = {
-    total: approvals.length,
-    pending: approvals.filter((a) => ["SUBMITTED", "UNDER_REVIEW", "PENDING_INFO"].includes(a.status)).length,
-    approved: approvals.filter((a) => a.status === "APPROVED").length,
-    urgent: approvals.filter((a) => a.priority === "URGENT" || a.priority === "HIGH").length,
+  const getDaysSinceSubmission = (submittedAt) => {
+    if (!submittedAt) return 0;
+    const submitted = new Date(submittedAt);
+    const now = new Date();
+    const diffTime = Math.abs(now - submitted);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
   return (
@@ -197,68 +239,72 @@ export default function AgrementsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Demandes d'Agrement
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Suivi des autorisations, licences et permis
-          </p>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+              <FileCheck className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Agrements
+              </h1>
+              <p className="text-gray-500 dark:text-gray-400">
+                Gestion des demandes d'agrement au regime
+              </p>
+            </div>
+          </div>
         </div>
         <Link
-          href="/guichet-unique/agrements/new"
-          className="inline-flex items-center px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          href="/guichet-unique/dossiers/new?type=AGREMENT_REGIME"
+          className="inline-flex items-center px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
         >
           <Plus className="w-5 h-5 mr-2" />
-          Nouvelle Demande
+          Nouvel Agrement
         </Link>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Demandes</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stats.total}</p>
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+              <FileCheck className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
-            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-              <FileCheck className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
+              <p className="text-xs text-gray-500">Total</p>
             </div>
           </div>
         </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">En Traitement</p>
-              <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mt-1">{stats.pending}</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
+              <Clock className="w-5 h-5 text-yellow-600" />
             </div>
-            <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl flex items-center justify-center">
-              <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+            <div>
+              <p className="text-2xl font-bold text-yellow-600">{stats.inReview + stats.submitted}</p>
+              <p className="text-xs text-gray-500">En cours</p>
             </div>
           </div>
         </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Approuvees</p>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{stats.approved}</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5 text-green-600" />
             </div>
-            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
-              <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+            <div>
+              <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
+              <p className="text-xs text-gray-500">Approuves</p>
             </div>
           </div>
         </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Prioritaires</p>
-              <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{stats.urgent}</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+              <XCircle className="w-5 h-5 text-red-600" />
             </div>
-            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+            <div>
+              <p className="text-2xl font-bold text-red-600">{stats.rejected}</p>
+              <p className="text-xs text-gray-500">Rejetes</p>
             </div>
           </div>
         </div>
@@ -266,217 +312,261 @@ export default function AgrementsPage() {
 
       {/* Filters */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-        <div className="flex flex-col lg:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Rechercher par numero, investisseur..."
+              placeholder="Rechercher par reference, investisseur ou projet..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="all">Tous les types</option>
-              {Object.entries(approvalTypes).map(([key, value]) => (
-                <option key={key} value={key}>{value.label}</option>
-              ))}
-            </select>
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-gray-400" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="all">Tous les statuts</option>
-              {Object.entries(statusConfig).map(([key, value]) => (
-                <option key={key} value={key}>{value.label}</option>
-              ))}
+              <option value="DRAFT">Brouillon</option>
+              <option value="SUBMITTED">Soumis</option>
+              <option value="IN_REVIEW">En examen</option>
+              <option value="APPROVED">Approuve</option>
+              <option value="REJECTED">Rejete</option>
             </select>
-            <button className="p-2.5 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-              <Download className="w-5 h-5 text-gray-500" />
-            </button>
           </div>
+          <button className="p-2.5 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+            <Download className="w-5 h-5 text-gray-500" />
+          </button>
         </div>
       </div>
 
-      {/* Cards View */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {filteredApprovals.map((approval) => {
-          const status = statusConfig[approval.status] || statusConfig.DRAFT;
-          const StatusIcon = status.icon;
-          const type = approvalTypes[approval.approvalType];
-          const priority = priorityConfig[approval.priority];
-          const daysRemaining = getDaysRemaining(approval.dueDate);
-          const completedSteps = approval.steps.filter(s => s.status === "completed").length;
-          const progress = (completedSteps / approval.steps.length) * 100;
-
-          return (
-            <div
-              key={approval.id}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow"
-            >
-              <div className="p-5">
-                {/* Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-                      <FileCheck className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-white">
-                        {approval.requestNumber}
-                      </p>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${type?.color || 'bg-gray-100 text-gray-700'}`}>
-                        {type?.label || approval.approvalType}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${priority.color}`}>
-                      {priority.label}
-                    </span>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${status.color}`}>
-                      <StatusIcon className="w-3 h-3 mr-1" />
-                      {status.label}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Investor Info */}
-                <div className="mb-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    {approval.investorType === "company" ? (
-                      <Building2 className="w-4 h-4 text-gray-400" />
-                    ) : (
-                      <User className="w-4 h-4 text-gray-400" />
-                    )}
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {approval.investorName}
-                    </p>
-                  </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
-                    {approval.description}
-                  </p>
-                </div>
-
-                {/* Progress */}
-                <div className="mb-4">
-                  <div className="flex items-center justify-between text-xs mb-2">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Progression: {approval.currentStep}
-                    </span>
-                    <span className="font-medium text-gray-700 dark:text-gray-300">
-                      {completedSteps}/{approval.steps.length} etapes
-                    </span>
-                  </div>
-                  <div className="flex gap-1">
-                    {approval.steps.map((step, index) => (
-                      <div
-                        key={index}
-                        className={`flex-1 h-2 rounded-full ${
-                          step.status === "completed"
-                            ? "bg-green-500"
-                            : step.status === "in_progress"
-                            ? "bg-yellow-500"
-                            : step.status === "rejected"
-                            ? "bg-red-500"
-                            : "bg-gray-200 dark:bg-gray-600"
-                        }`}
-                        title={step.name}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Meta Info */}
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                      <Calendar className="w-4 h-4" />
-                      <span>{formatDate(approval.submittedAt)}</span>
-                    </div>
-                    <div className={`flex items-center gap-1 ${
-                      daysRemaining < 0 ? "text-red-500" : daysRemaining <= 7 ? "text-orange-500" : "text-gray-500 dark:text-gray-400"
-                    }`}>
-                      <Clock className="w-4 h-4" />
-                      <span>
-                        {daysRemaining < 0
-                          ? `${Math.abs(daysRemaining)}j en retard`
-                          : `${daysRemaining}j restants`}
-                      </span>
-                    </div>
-                  </div>
-                  <Link
-                    href={`/guichet-unique/agrements/${approval.id}`}
-                    className="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
-                  >
-                    Details
-                    <ArrowRight className="w-4 h-4 ml-1" />
-                  </Link>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
-                      <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                        {approval.assignedTo.charAt(0)}
-                      </span>
-                    </div>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      {approval.assignedTo}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors">
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors">
-                      <Edit className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {filteredApprovals.length === 0 && (
+      {/* Cards */}
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
+          <span className="ml-3 text-gray-500">Chargement...</span>
+        </div>
+      ) : dossiers.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
-          <FileCheck className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">Aucune demande trouvee</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-            Essayez de modifier vos filtres de recherche
+          <FileCheck className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <p className="text-xl font-medium text-gray-500 dark:text-gray-400">Aucun agrement trouve</p>
+          <p className="text-sm text-gray-400 mt-2">
+            {searchTerm || statusFilter !== 'all'
+              ? "Essayez de modifier vos filtres"
+              : "Commencez par creer une nouvelle demande d'agrement"}
           </p>
+          {!searchTerm && statusFilter === 'all' && (
+            <Link
+              href="/guichet-unique/dossiers/new?type=AGREMENT_REGIME"
+              className="inline-flex items-center px-4 py-2 mt-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Nouvel Agrement
+            </Link>
+          )}
         </div>
-      )}
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {dossiers.map((dossier) => {
+              const status = statusConfig[dossier.status] || statusConfig.DRAFT;
+              const StatusIcon = status.icon;
+              const totalSteps = workflowSteps.length;
+              const progress = dossier.currentStep
+                ? getProgressFromStep(dossier.currentStep, totalSteps)
+                : getProgressFromStatus(dossier.status, totalSteps);
+              const currentStepData = workflowSteps.find(s => s.stepNumber === dossier.currentStep);
+              const currentStepName = currentStepData?.name || status.label;
+              const daysSinceSubmission = getDaysSinceSubmission(dossier.submittedAt);
+              const isUrgent = daysSinceSubmission > 30 && !['APPROVED', 'REJECTED', 'COMPLETED', 'DRAFT'].includes(dossier.status);
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Affichage de <span className="font-medium">{filteredApprovals.length}</span> demandes
-        </p>
-        <div className="flex items-center gap-2">
-          <button className="p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <button className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium">
-            1
-          </button>
-          <button className="p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
+              return (
+                <div
+                  key={dossier.id}
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-l-4 border-purple-500 border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-all"
+                >
+                  <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/30">
+                          <FileCheck className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white">
+                            {dossier.dossierNumber}
+                          </h3>
+                          <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+                            Agrement
+                          </span>
+                        </div>
+                      </div>
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${status.color}`}>
+                        <StatusIcon className="w-3.5 h-3.5 mr-1" />
+                        {status.label}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 space-y-3">
+                    <h4 className="font-medium text-gray-900 dark:text-white line-clamp-1">
+                      {dossier.projectName || "Projet non defini"}
+                    </h4>
+
+                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                      <User className="w-4 h-4 mr-2 text-gray-400" />
+                      <span className="truncate">{dossier.investorName || "Non specifie"}</span>
+                    </div>
+
+                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                      <MapPin className="w-4 h-4 mr-2 text-gray-400" />
+                      <span>{dossier.projectProvince || "Province non specifiee"}</span>
+                    </div>
+
+                    {/* Ministry */}
+                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                      <Landmark className="w-4 h-4 mr-2 text-indigo-500" />
+                      <span className="truncate">
+                        {dossier.ministry?.shortName || dossier.ministry?.name || "Non assigne"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center text-sm">
+                      <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {formatAmount(dossier.investmentAmount, dossier.currency)}
+                      </span>
+                    </div>
+
+                    {/* Progress */}
+                    <div className="pt-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-gray-500">Progression</span>
+                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                          {currentStepName}
+                        </span>
+                      </div>
+                      <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            dossier.status === 'REJECTED' ? 'bg-red-500' :
+                            dossier.status === 'APPROVED' || dossier.status === 'COMPLETED' ? 'bg-green-500' : 'bg-purple-500'
+                          }`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      {/* Progress Steps - Dynamic */}
+                      <div className="flex justify-between mt-1">
+                        {workflowSteps.map((step) => {
+                          const isCompleted = dossier.currentStep >= step.stepNumber ||
+                            (dossier.status === 'APPROVED' || dossier.status === 'COMPLETED');
+                          const isCurrent = dossier.currentStep === step.stepNumber;
+                          return (
+                            <div
+                              key={step.id}
+                              className={`w-2 h-2 rounded-full transition-all ${
+                                isCompleted
+                                  ? dossier.status === 'REJECTED' ? 'bg-red-500' : 'bg-purple-500'
+                                  : isCurrent
+                                    ? 'bg-purple-300 ring-2 ring-purple-500 ring-offset-1'
+                                    : 'bg-gray-200 dark:bg-gray-600'
+                              }`}
+                              title={`${step.name}${step.responsibleRole ? ` - ${step.responsibleRole}` : ''}`}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
+                      <div className="flex items-center text-xs text-gray-500">
+                        <Calendar className="w-3.5 h-3.5 mr-1" />
+                        {formatDate(dossier.submittedAt || dossier.createdAt)}
+                      </div>
+                      {dossier.status !== 'DRAFT' && dossier.status !== 'APPROVED' && dossier.status !== 'REJECTED' && (
+                        <span className={`text-xs font-medium ${isUrgent ? 'text-red-500' : 'text-gray-500'}`}>
+                          {daysSinceSubmission} jour{daysSinceSubmission > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <Link
+                        href={`/guichet-unique/dossiers/${dossier.id}`}
+                        className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg"
+                        title="Voir details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Link>
+                      <Link
+                        href={`/guichet-unique/dossiers/${dossier.id}/edit`}
+                        className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg"
+                        title="Modifier"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Link>
+                    </div>
+                    <Link
+                      href={`/guichet-unique/dossiers/${dossier.id}`}
+                      className="inline-flex items-center text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 font-medium"
+                    >
+                      Voir plus
+                      <ArrowRight className="w-4 h-4 ml-1" />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Pagination */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+            <p className="text-sm text-gray-500">
+              Affichage de <span className="font-medium">{dossiers.length}</span> sur{" "}
+              <span className="font-medium">{pagination.total}</span> agrements
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                disabled={pagination.page <= 1}
+                className="p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
+                const startPage = Math.max(1, Math.min(pagination.page - 2, pagination.totalPages - 4));
+                const page = startPage + i;
+                if (page > pagination.totalPages) return null;
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setPagination(prev => ({ ...prev, page }))}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                      pagination.page === page
+                        ? "bg-purple-600 text-white"
+                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                disabled={pagination.page >= pagination.totalPages}
+                className="p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

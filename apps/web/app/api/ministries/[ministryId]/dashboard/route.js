@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { MinistryRequest, Ministry, MinistryWorkflow } from '../../../../../models/index.js';
+import { Dossier, Ministry, MinistryWorkflow } from '../../../../../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../../../../lib/sequelize.js';
 
-// GET - Dashboard statistiques pour un ministère
+// GET - Dashboard statistiques pour un ministère (basé sur les Dossiers du Guichet Unique)
 export async function GET(request, { params }) {
   try {
     const { ministryId } = await params;
@@ -17,19 +17,26 @@ export async function GET(request, { params }) {
       );
     }
 
-    // Statistiques globales par type de demande
-    const statsByType = await MinistryRequest.findAll({
+    // Mapper les types de dossier vers les catégories
+    const typeMapping = {
+      'AUTORISATION': ['AUTORISATION', 'AUTORISATION_ACTIVITE'],
+      'LICENCE': ['LICENCE', 'LICENCE_EXPLOITATION'],
+      'PERMIS': ['PERMIS', 'PERMIS_CONSTRUCTION'],
+    };
+
+    // Statistiques globales par type de dossier
+    const statsByType = await Dossier.findAll({
       where: { ministryId },
       attributes: [
-        'requestType',
+        'dossierType',
         'status',
         [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
       ],
-      group: ['requestType', 'status'],
+      group: ['dossierType', 'status'],
       raw: true,
     });
 
-    // Organiser les stats
+    // Organiser les stats par catégorie
     const stats = {
       AUTORISATION: { total: 0, pending: 0, inProgress: 0, approved: 0, rejected: 0 },
       LICENCE: { total: 0, pending: 0, inProgress: 0, approved: 0, rejected: 0 },
@@ -37,18 +44,27 @@ export async function GET(request, { params }) {
     };
 
     statsByType.forEach(s => {
-      const type = s.requestType;
+      // Déterminer la catégorie basée sur le type de dossier
+      let category = null;
+      for (const [cat, types] of Object.entries(typeMapping)) {
+        if (types.includes(s.dossierType)) {
+          category = cat;
+          break;
+        }
+      }
+      if (!category) return;
+
       const count = parseInt(s.count);
-      stats[type].total += count;
+      stats[category].total += count;
 
       if (['SUBMITTED', 'PENDING_DOCUMENTS'].includes(s.status)) {
-        stats[type].pending += count;
-      } else if (['IN_PROGRESS', 'UNDER_REVIEW'].includes(s.status)) {
-        stats[type].inProgress += count;
+        stats[category].pending += count;
+      } else if (['IN_REVIEW', 'IN_PROGRESS', 'UNDER_REVIEW'].includes(s.status)) {
+        stats[category].inProgress += count;
       } else if (s.status === 'APPROVED') {
-        stats[type].approved += count;
+        stats[category].approved += count;
       } else if (s.status === 'REJECTED') {
-        stats[type].rejected += count;
+        stats[category].rejected += count;
       }
     });
 
@@ -61,34 +77,29 @@ export async function GET(request, { params }) {
       rejected: stats.AUTORISATION.rejected + stats.LICENCE.rejected + stats.PERMIS.rejected,
     };
 
-    // Demandes récentes
-    const recentRequests = await MinistryRequest.findAll({
+    // Dossiers récents
+    const recentDossiers = await Dossier.findAll({
       where: { ministryId },
       order: [['createdAt', 'DESC']],
       limit: 10,
       attributes: [
-        'id', 'requestNumber', 'requestType', 'applicantName',
-        'subject', 'status', 'currentStep', 'totalSteps',
-        'priority', 'createdAt', 'submittedAt'
+        'id', 'dossierNumber', 'dossierType', 'investorName',
+        'projectName', 'status', 'currentStep',
+        'createdAt', 'submittedAt'
       ],
     });
 
-    // Demandes urgentes ou en retard
-    const urgentRequests = await MinistryRequest.findAll({
+    // Dossiers en attente urgents (plus de 30 jours)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const urgentDossiers = await Dossier.findAll({
       where: {
         ministryId,
-        status: { [Op.in]: ['SUBMITTED', 'IN_PROGRESS', 'PENDING_DOCUMENTS'] },
-        [Op.or]: [
-          { priority: 'URGENT' },
-          { priority: 'HIGH' },
-          {
-            dueDate: {
-              [Op.lt]: new Date(),
-            },
-          },
-        ],
+        status: { [Op.in]: ['SUBMITTED', 'IN_REVIEW', 'PENDING_DOCUMENTS'] },
+        submittedAt: { [Op.lt]: thirtyDaysAgo },
       },
-      order: [['priority', 'DESC'], ['createdAt', 'ASC']],
+      order: [['submittedAt', 'ASC']],
       limit: 5,
     });
 
@@ -96,23 +107,23 @@ export async function GET(request, { params }) {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    const monthlyStats = await MinistryRequest.findAll({
+    const monthlyStats = await Dossier.findAll({
       where: {
         ministryId,
         createdAt: { [Op.gte]: sixMonthsAgo },
       },
       attributes: [
         [sequelize.fn('DATE_TRUNC', 'month', sequelize.col('createdAt')), 'month'],
-        'requestType',
+        'dossierType',
         [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
       ],
-      group: [sequelize.fn('DATE_TRUNC', 'month', sequelize.col('createdAt')), 'requestType'],
+      group: [sequelize.fn('DATE_TRUNC', 'month', sequelize.col('createdAt')), 'dossierType'],
       order: [[sequelize.fn('DATE_TRUNC', 'month', sequelize.col('createdAt')), 'ASC']],
       raw: true,
     });
 
     // Taux de traitement moyen
-    const completedRequests = await MinistryRequest.findAll({
+    const completedDossiers = await Dossier.findAll({
       where: {
         ministryId,
         status: { [Op.in]: ['APPROVED', 'REJECTED'] },
@@ -124,14 +135,14 @@ export async function GET(request, { params }) {
     });
 
     let avgProcessingDays = 0;
-    if (completedRequests.length > 0) {
-      const totalDays = completedRequests.reduce((sum, r) => {
+    if (completedDossiers.length > 0) {
+      const totalDays = completedDossiers.reduce((sum, d) => {
         const days = Math.ceil(
-          (new Date(r.decisionDate) - new Date(r.submittedAt)) / (1000 * 60 * 60 * 24)
+          (new Date(d.decisionDate) - new Date(d.submittedAt)) / (1000 * 60 * 60 * 24)
         );
         return sum + days;
       }, 0);
-      avgProcessingDays = Math.round(totalDays / completedRequests.length);
+      avgProcessingDays = Math.round(totalDays / completedDossiers.length);
     }
 
     // Workflows configurés
@@ -160,8 +171,8 @@ export async function GET(request, { params }) {
       },
       stats,
       globalStats,
-      recentRequests,
-      urgentRequests,
+      recentRequests: recentDossiers,
+      urgentRequests: urgentDossiers,
       monthlyStats,
       avgProcessingDays,
       workflowConfig,

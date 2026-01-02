@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Landmark,
-  Search,
+  ChevronDown,
   Loader2,
   ArrowRight,
   LayoutDashboard,
@@ -20,25 +20,22 @@ import {
 } from "lucide-react";
 
 export default function MinistriesListPage() {
-  const [ministries, setMinistries] = useState([]);
+  const [allMinistries, setAllMinistries] = useState([]);
+  const [filteredMinistries, setFilteredMinistries] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedMinistry, setSelectedMinistry] = useState("");
   const [stats, setStats] = useState({});
 
   const fetchMinistries = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
-        limit: "100",
-        ...(searchTerm && { search: searchTerm }),
-      });
-
-      const response = await fetch(`/api/referentiels/ministries?${params}`);
+      const response = await fetch(`/api/referentiels/ministries?limit=100`);
       const result = await response.json();
 
       const data = result.success ? result.data : (result.ministries || []);
       const activeMinistries = data.filter(m => m.isActive !== false);
-      setMinistries(activeMinistries);
+      setAllMinistries(activeMinistries);
+      setFilteredMinistries(activeMinistries);
 
       // Fetch stats for each ministry
       const statsPromises = activeMinistries.map(async (ministry) => {
@@ -58,7 +55,7 @@ export default function MinistriesListPage() {
       });
       setStats(statsMap);
     } catch (err) {
-      console.error("Erreur chargement ministères:", err);
+      console.error("Erreur chargement ministeres:", err);
     } finally {
       setLoading(false);
     }
@@ -66,7 +63,16 @@ export default function MinistriesListPage() {
 
   useEffect(() => {
     fetchMinistries();
-  }, [searchTerm]);
+  }, []);
+
+  // Filtrer les ministeres quand la selection change
+  useEffect(() => {
+    if (selectedMinistry) {
+      setFilteredMinistries(allMinistries.filter(m => m.id === selectedMinistry));
+    } else {
+      setFilteredMinistries(allMinistries);
+    }
+  }, [selectedMinistry, allMinistries]);
 
   const getMinistryColor = (index) => {
     const colors = [
@@ -99,18 +105,24 @@ export default function MinistriesListPage() {
         </div>
       </div>
 
-      {/* Search */}
+      {/* Filter */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
         <div className="flex items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher un ministère..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            />
+            <Landmark className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <select
+              value={selectedMinistry}
+              onChange={(e) => setSelectedMinistry(e.target.value)}
+              className="w-full pl-10 pr-10 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white appearance-none cursor-pointer"
+            >
+              <option value="">Tous les ministeres</option>
+              {allMinistries.map((ministry) => (
+                <option key={ministry.id} value={ministry.id}>
+                  {ministry.shortName || ministry.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
           </div>
           <Link
             href="/configuration/ministry-workflows"
@@ -127,14 +139,14 @@ export default function MinistriesListPage() {
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
         </div>
-      ) : ministries.length === 0 ? (
+      ) : filteredMinistries.length === 0 ? (
         <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-xl">
           <Landmark className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400 text-lg">Aucun ministère trouvé</p>
+          <p className="text-gray-500 dark:text-gray-400 text-lg">Aucun ministere trouve</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {ministries.map((ministry, index) => {
+          {filteredMinistries.map((ministry, index) => {
             const ministryStats = stats[ministry.id];
             return (
               <div

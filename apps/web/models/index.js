@@ -37,6 +37,7 @@ import MinistryRequestHistory from './MinistryRequestHistory.js';
 import MinistryRequestDocument from './MinistryRequestDocument.js';
 import DossierSector from './DossierSector.js';
 import RequiredDocument from './RequiredDocument.js';
+import DossierStepValidation from './DossierStepValidation.js';
 
 // ==================== ASSOCIATIONS ====================
 
@@ -195,6 +196,13 @@ Sector.hasMany(DossierSector, { foreignKey: 'sectorId', as: 'dossierSectors' });
 Dossier.belongsToMany(Sector, { through: DossierSector, foreignKey: 'dossierId', otherKey: 'sectorId', as: 'sectors' });
 Sector.belongsToMany(Dossier, { through: DossierSector, foreignKey: 'sectorId', otherKey: 'dossierId', as: 'dossiers' });
 
+// Dossier - StepValidations (historique des validations d'étapes)
+Dossier.hasMany(DossierStepValidation, { foreignKey: 'dossierId', as: 'stepValidations', onDelete: 'CASCADE' });
+DossierStepValidation.belongsTo(Dossier, { foreignKey: 'dossierId', as: 'dossier' });
+
+// DossierStepValidation - User (validatedBy)
+DossierStepValidation.belongsTo(User, { foreignKey: 'validatedById', as: 'validatedBy' });
+
 // ==================== MINISTRY REQUESTS ASSOCIATIONS ====================
 
 // MinistryWorkflow - Ministry
@@ -255,6 +263,7 @@ export {
   Dossier,
   DossierDocument,
   DossierSector,
+  DossierStepValidation,
   // Ministry Requests
   MinistryWorkflow,
   MinistryRequest,
@@ -297,6 +306,7 @@ export default {
   Dossier,
   DossierDocument,
   DossierSector,
+  DossierStepValidation,
   // Ministry Requests
   MinistryWorkflow,
   MinistryRequest,

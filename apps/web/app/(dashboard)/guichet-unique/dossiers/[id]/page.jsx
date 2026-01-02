@@ -33,6 +33,8 @@ import {
   History,
   X,
   Eye,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 
 const statusConfig = {
@@ -108,6 +110,7 @@ export default function DossierDetailPage() {
   const [uploadName, setUploadName] = useState('');
   const [uploadDescription, setUploadDescription] = useState('');
   const [uploadCategory, setUploadCategory] = useState('OTHER');
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Fonction pour uploader un document
   const handleUploadDocument = async () => {
@@ -913,8 +916,12 @@ export default function DossierDetailPage() {
 
       {/* Modal de prévisualisation de document */}
       {previewDocument && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-2">
+          <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-2xl flex flex-col transition-all duration-300 ${
+            isFullscreen
+              ? 'w-full h-full max-w-none max-h-none rounded-none'
+              : 'max-w-5xl w-full max-h-[90vh]'
+          }`}>
             {/* Header du modal */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-3">
@@ -940,6 +947,17 @@ export default function DossierDetailPage() {
               </div>
               <div className="flex items-center gap-2">
                 <button
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  title={isFullscreen ? "Reduire" : "Plein ecran"}
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="w-5 h-5 text-gray-500" />
+                  ) : (
+                    <Maximize2 className="w-5 h-5 text-gray-500" />
+                  )}
+                </button>
+                <button
                   onClick={() => downloadDocument(previewDocument)}
                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   title="Telecharger"
@@ -947,7 +965,10 @@ export default function DossierDetailPage() {
                   <Download className="w-5 h-5 text-gray-500" />
                 </button>
                 <button
-                  onClick={closeDocumentPreview}
+                  onClick={() => {
+                    closeDocumentPreview();
+                    setIsFullscreen(false);
+                  }}
                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   title="Fermer"
                 >

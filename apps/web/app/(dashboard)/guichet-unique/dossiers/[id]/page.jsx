@@ -423,23 +423,33 @@ export default function DossierDetailPage() {
 
       {/* Workflow Progress - Etapes dynamiques */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Progression du dossier</h3>
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-6">Progression du dossier</h3>
         {workflowSteps.length > 0 ? (
-          <div className="flex items-center justify-between">
-            {workflowSteps.map((step, index) => (
-              <div key={step.step} className="flex items-center flex-1">
-                <div className="flex flex-col items-center">
+          <div className="relative">
+            {/* Ligne de progression en arrière-plan */}
+            <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-600 mx-8" />
+            <div
+              className="absolute top-5 left-0 h-1 bg-green-500 mx-8 transition-all duration-500"
+              style={{ width: `calc(${((dossier.currentStep - 1) / (workflowSteps.length - 1)) * 100}% - 4rem)` }}
+            />
+
+            {/* Étapes */}
+            <div className="relative flex justify-between">
+              {workflowSteps.map((step, index) => (
+                <div key={step.step} className="flex flex-col items-center" style={{ width: `${100 / workflowSteps.length}%` }}>
+                  {/* Cercle de l'étape */}
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all z-10 ${
                       step.step < dossier.currentStep
-                        ? "bg-green-500 text-white"
+                        ? "bg-green-500 text-white shadow-lg shadow-green-500/30"
                         : step.step === dossier.currentStep
-                        ? "text-white ring-4 ring-opacity-30"
+                        ? "text-white shadow-lg ring-4 ring-opacity-30"
                         : "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
                     }`}
                     style={step.step === dossier.currentStep ? {
                       backgroundColor: step.color || '#3B82F6',
                       '--tw-ring-color': step.color || '#3B82F6',
+                      boxShadow: `0 10px 25px -5px ${step.color || '#3B82F6'}40`,
                     } : {}}
                   >
                     {step.step < dossier.currentStep ? (
@@ -448,28 +458,27 @@ export default function DossierDetailPage() {
                       step.step
                     )}
                   </div>
-                  <p className={`text-xs mt-2 font-medium text-center ${
+
+                  {/* Nom de l'étape */}
+                  <p className={`text-sm mt-3 font-semibold text-center px-1 ${
                     step.step <= dossier.currentStep
                       ? "text-gray-900 dark:text-white"
                       : "text-gray-400 dark:text-gray-500"
                   }`}>
                     {step.name}
                   </p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 text-center">{step.description}</p>
+
+                  {/* Description - visible au survol ou toujours pour l'étape active */}
+                  <p className={`text-xs mt-1 text-center px-2 max-w-[150px] leading-relaxed ${
+                    step.step === dossier.currentStep
+                      ? "text-gray-600 dark:text-gray-300"
+                      : "text-gray-400 dark:text-gray-500"
+                  }`}>
+                    {step.description}
+                  </p>
                 </div>
-                {index < workflowSteps.length - 1 && (
-                  <div
-                    className={`flex-1 h-1 mx-2 rounded transition-all ${
-                      step.step < dossier.currentStep
-                        ? "bg-green-500"
-                        : "bg-gray-200 dark:bg-gray-600"
-                    }`}
-                    style={step.step < dossier.currentStep - 1 ? {} :
-                      step.step === dossier.currentStep - 1 ? { backgroundColor: '#10B981' } : {}}
-                  />
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         ) : (
           <div className="flex items-center justify-center py-4">

@@ -643,6 +643,34 @@ export default function DossierDetailPage() {
               </div>
             </div>
 
+            {/* Ministère responsable */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Ministère responsable</h3>
+              {dossier.ministry ? (
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Landmark className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white">{dossier.ministry.name}</p>
+                    {dossier.ministry.shortName && (
+                      <span className="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 rounded text-indigo-700 dark:text-indigo-300">
+                        {dossier.ministry.shortName}
+                      </span>
+                    )}
+                    {dossier.ministry.code && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Code: {dossier.ministry.code}</p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
+                  <Landmark className="w-5 h-5" />
+                  <span className="text-sm italic">Aucun ministère assigné</span>
+                </div>
+              )}
+            </div>
+
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Dates cles</h3>
               <div className="space-y-3">
@@ -675,34 +703,6 @@ export default function DossierDetailPage() {
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Ministère responsable */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Ministère responsable</h3>
-              {dossier.ministry ? (
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Landmark className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900 dark:text-white">{dossier.ministry.name}</p>
-                    {dossier.ministry.shortName && (
-                      <span className="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 rounded text-indigo-700 dark:text-indigo-300">
-                        {dossier.ministry.shortName}
-                      </span>
-                    )}
-                    {dossier.ministry.code && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Code: {dossier.ministry.code}</p>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
-                  <Landmark className="w-5 h-5" />
-                  <span className="text-sm italic">Aucun ministère assigné</span>
-                </div>
-              )}
             </div>
           </div>
         </div>

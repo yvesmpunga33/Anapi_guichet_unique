@@ -68,12 +68,19 @@ startxref
       });
     }
 
-    // Verifier si le fichier existe
-    const filePath = document.filePath;
+    // Construire le chemin absolu du fichier
+    // Le filePath stocké est relatif (ex: /uploads/guichet-unique/dossiers/xxx/file.pdf)
+    let filePath = document.filePath;
+
+    // Si le chemin est relatif (commence par /), construire le chemin absolu
+    if (filePath && filePath.startsWith('/')) {
+      filePath = path.join(process.cwd(), 'public', filePath);
+    }
 
     if (!filePath || !fs.existsSync(filePath)) {
+      console.error('File not found at path:', filePath);
       return NextResponse.json(
-        { error: 'Fichier non trouve' },
+        { error: 'Fichier non trouve', path: filePath },
         { status: 404 }
       );
     }

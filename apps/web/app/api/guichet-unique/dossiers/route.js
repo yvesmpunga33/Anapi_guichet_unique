@@ -89,6 +89,11 @@ export async function GET(request) {
             { model: Ministry, as: 'ministry', attributes: ['id', 'code', 'name'] }
           ],
         },
+        {
+          model: Ministry,
+          as: 'ministry',
+          attributes: ['id', 'name', 'shortName', 'code'],
+        },
       ],
     });
 

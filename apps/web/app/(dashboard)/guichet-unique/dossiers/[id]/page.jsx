@@ -463,16 +463,16 @@ export default function DossierDetailPage() {
                   <p className={`text-sm mt-3 font-semibold text-center px-1 ${
                     step.step <= dossier.currentStep
                       ? "text-gray-900 dark:text-white"
-                      : "text-gray-400 dark:text-gray-500"
+                      : "text-gray-500 dark:text-gray-400"
                   }`}>
                     {step.name}
                   </p>
 
-                  {/* Description - visible au survol ou toujours pour l'étape active */}
+                  {/* Description */}
                   <p className={`text-xs mt-1 text-center px-2 max-w-[150px] leading-relaxed ${
                     step.step === dossier.currentStep
-                      ? "text-gray-600 dark:text-gray-300"
-                      : "text-gray-400 dark:text-gray-500"
+                      ? "text-gray-700 dark:text-gray-200"
+                      : "text-gray-500 dark:text-gray-400"
                   }`}>
                     {step.description}
                   </p>

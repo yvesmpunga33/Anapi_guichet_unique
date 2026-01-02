@@ -38,6 +38,20 @@ User.init(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    ministryId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'ministries',
+        key: 'id',
+      },
+    },
+    modules: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      defaultValue: [],
+      comment: 'Liste des modules auxquels l\'utilisateur a accès',
+    },
     isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,

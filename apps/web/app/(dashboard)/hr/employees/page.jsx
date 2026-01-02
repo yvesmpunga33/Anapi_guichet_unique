@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useIntl } from "react-intl";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   Plus,
   Search,
@@ -16,6 +18,8 @@ import {
 } from "lucide-react";
 
 export default function EmployeesPage() {
+  const intl = useIntl();
+  const { locale } = useLanguage();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -52,7 +56,7 @@ export default function EmployeesPage() {
   });
 
   const formatCurrency = (amount, currency) => {
-    return new Intl.NumberFormat("fr-CD", {
+    return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: currency || "CDF",
       minimumFractionDigits: 0,
@@ -60,7 +64,7 @@ export default function EmployeesPage() {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("fr-FR", {
+    return new Date(dateString).toLocaleDateString(locale, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -83,10 +87,13 @@ export default function EmployeesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Gestion des Employes
+            {intl.formatMessage({ id: "hr.employees.title", defaultMessage: "Gestion des Employes" })}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {employees.length} employe{employees.length > 1 ? "s" : ""} au total
+            {intl.formatMessage(
+              { id: "hr.employees.totalCount", defaultMessage: "{count} employe(s) au total" },
+              { count: employees.length }
+            )}
           </p>
         </div>
 
@@ -94,7 +101,7 @@ export default function EmployeesPage() {
           <button
             onClick={fetchEmployees}
             className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700"
-            title="Actualiser"
+            title={intl.formatMessage({ id: "common.refresh", defaultMessage: "Actualiser" })}
           >
             <RefreshCw className="w-5 h-5" />
           </button>
@@ -109,7 +116,7 @@ export default function EmployeesPage() {
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
           >
             <Plus className="w-5 h-5" />
-            <span className="hidden sm:inline">Ajouter</span>
+            <span className="hidden sm:inline">{intl.formatMessage({ id: "common.add", defaultMessage: "Ajouter" })}</span>
           </Link>
         </div>
       </div>
@@ -121,7 +128,7 @@ export default function EmployeesPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Rechercher par nom, matricule ou email..."
+              placeholder={intl.formatMessage({ id: "hr.employees.searchPlaceholder", defaultMessage: "Rechercher par nom, matricule ou email..." })}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
@@ -133,15 +140,15 @@ export default function EmployeesPage() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             >
-              <option value="all">Tous les statuts</option>
-              <option value="ACTIVE">Actif</option>
-              <option value="INACTIVE">Inactif</option>
-              <option value="ON_LEAVE">En conge</option>
-              <option value="TERMINATED">Termine</option>
+              <option value="all">{intl.formatMessage({ id: "hr.employees.allStatuses", defaultMessage: "Tous les statuts" })}</option>
+              <option value="ACTIVE">{intl.formatMessage({ id: "hr.employees.status.active", defaultMessage: "Actif" })}</option>
+              <option value="INACTIVE">{intl.formatMessage({ id: "hr.employees.status.inactive", defaultMessage: "Inactif" })}</option>
+              <option value="ON_LEAVE">{intl.formatMessage({ id: "hr.employees.status.onLeave", defaultMessage: "En conge" })}</option>
+              <option value="TERMINATED">{intl.formatMessage({ id: "hr.employees.status.terminated", defaultMessage: "Termine" })}</option>
             </select>
             <button className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
               <Filter className="w-5 h-5" />
-              <span className="hidden sm:inline">Filtres</span>
+              <span className="hidden sm:inline">{intl.formatMessage({ id: "common.filter", defaultMessage: "Filtres" })}</span>
             </button>
           </div>
         </div>
@@ -155,11 +162,11 @@ export default function EmployeesPage() {
           </div>
         ) : filteredEmployees.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
-            <p className="text-lg font-medium">Aucun employe trouve</p>
+            <p className="text-lg font-medium">{intl.formatMessage({ id: "hr.employees.noEmployeesFound", defaultMessage: "Aucun employe trouve" })}</p>
             <p className="text-sm mt-1">
               {searchTerm || statusFilter !== "all"
-                ? "Essayez de modifier vos criteres de recherche"
-                : "Commencez par ajouter un nouvel employe"}
+                ? intl.formatMessage({ id: "hr.employees.tryModifyFilters", defaultMessage: "Essayez de modifier vos criteres de recherche" })
+                : intl.formatMessage({ id: "hr.employees.startByAdding", defaultMessage: "Commencez par ajouter un nouvel employe" })}
             </p>
           </div>
         ) : (
@@ -168,25 +175,25 @@ export default function EmployeesPage() {
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
                   <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    Employe
+                    {intl.formatMessage({ id: "hr.employees.employee", defaultMessage: "Employe" })}
                   </th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    Departement
+                    {intl.formatMessage({ id: "hr.employees.department", defaultMessage: "Departement" })}
                   </th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    Poste
+                    {intl.formatMessage({ id: "hr.employees.position", defaultMessage: "Poste" })}
                   </th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    Date d'embauche
+                    {intl.formatMessage({ id: "hr.employees.hireDate", defaultMessage: "Date d'embauche" })}
                   </th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    Salaire
+                    {intl.formatMessage({ id: "hr.employees.salary", defaultMessage: "Salaire" })}
                   </th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    Statut
+                    {intl.formatMessage({ id: "common.status", defaultMessage: "Statut" })}
                   </th>
                   <th className="text-right px-6 py-4 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    Actions
+                    {intl.formatMessage({ id: "common.actions", defaultMessage: "Actions" })}
                   </th>
                 </tr>
               </thead>
@@ -230,10 +237,10 @@ export default function EmployeesPage() {
                           employee.status
                         )}`}
                       >
-                        {employee.status === "ACTIVE" && "Actif"}
-                        {employee.status === "INACTIVE" && "Inactif"}
-                        {employee.status === "ON_LEAVE" && "En conge"}
-                        {employee.status === "TERMINATED" && "Termine"}
+                        {employee.status === "ACTIVE" && intl.formatMessage({ id: "hr.employees.status.active", defaultMessage: "Actif" })}
+                        {employee.status === "INACTIVE" && intl.formatMessage({ id: "hr.employees.status.inactive", defaultMessage: "Inactif" })}
+                        {employee.status === "ON_LEAVE" && intl.formatMessage({ id: "hr.employees.status.onLeave", defaultMessage: "En conge" })}
+                        {employee.status === "TERMINATED" && intl.formatMessage({ id: "hr.employees.status.terminated", defaultMessage: "Termine" })}
                       </span>
                     </td>
                     <td className="px-6 py-4">

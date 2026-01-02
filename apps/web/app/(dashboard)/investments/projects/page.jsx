@@ -29,17 +29,20 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
+import { useIntl } from "react-intl";
+import { useLanguage } from "@/contexts/LanguageContext";
 
-const statusConfig = {
-  DRAFT: { label: "Brouillon", color: "text-gray-600", bgColor: "bg-gray-100", icon: Clock },
-  SUBMITTED: { label: "Soumis", color: "text-blue-600", bgColor: "bg-blue-100", icon: Clock },
-  UNDER_REVIEW: { label: "En examen", color: "text-yellow-600", bgColor: "bg-yellow-100", icon: AlertCircle },
-  APPROVED: { label: "Approuve", color: "text-green-600", bgColor: "bg-green-100", icon: CheckCircle2 },
-  REJECTED: { label: "Rejete", color: "text-red-600", bgColor: "bg-red-100", icon: XCircle },
-  IN_PROGRESS: { label: "En cours", color: "text-purple-600", bgColor: "bg-purple-100", icon: TrendingUp },
-  COMPLETED: { label: "Termine", color: "text-emerald-600", bgColor: "bg-emerald-100", icon: CheckCircle2 },
-  CANCELLED: { label: "Annule", color: "text-gray-600", bgColor: "bg-gray-100", icon: XCircle },
-};
+// Fonction dynamique pour le statusConfig avec internationalisation
+const getStatusConfig = (intl) => ({
+  DRAFT: { label: intl.formatMessage({ id: "status.draft", defaultMessage: "Brouillon" }), color: "text-gray-600", bgColor: "bg-gray-100", icon: Clock },
+  SUBMITTED: { label: intl.formatMessage({ id: "status.submitted", defaultMessage: "Soumis" }), color: "text-blue-600", bgColor: "bg-blue-100", icon: Clock },
+  UNDER_REVIEW: { label: intl.formatMessage({ id: "status.underReview", defaultMessage: "En examen" }), color: "text-yellow-600", bgColor: "bg-yellow-100", icon: AlertCircle },
+  APPROVED: { label: intl.formatMessage({ id: "status.approved", defaultMessage: "Approuvé" }), color: "text-green-600", bgColor: "bg-green-100", icon: CheckCircle2 },
+  REJECTED: { label: intl.formatMessage({ id: "status.rejected", defaultMessage: "Rejeté" }), color: "text-red-600", bgColor: "bg-red-100", icon: XCircle },
+  IN_PROGRESS: { label: intl.formatMessage({ id: "status.inProgress", defaultMessage: "En cours" }), color: "text-purple-600", bgColor: "bg-purple-100", icon: TrendingUp },
+  COMPLETED: { label: intl.formatMessage({ id: "status.completed", defaultMessage: "Terminé" }), color: "text-emerald-600", bgColor: "bg-emerald-100", icon: CheckCircle2 },
+  CANCELLED: { label: intl.formatMessage({ id: "status.cancelled", defaultMessage: "Annulé" }), color: "text-gray-600", bgColor: "bg-gray-100", icon: XCircle },
+});
 
 const sectorIcons = {
   "Mines": Factory,
@@ -52,6 +55,9 @@ const sectorIcons = {
 };
 
 export default function ProjectsPage() {
+  const intl = useIntl();
+  const { locale } = useLanguage();
+  const statusConfig = getStatusConfig(intl);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -136,7 +142,7 @@ export default function ProjectsPage() {
   }, [searchTerm]);
 
   const formatAmount = (amount, currency = 'USD') => {
-    return new Intl.NumberFormat("fr-FR", {
+    return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: currency,
       minimumFractionDigits: 0,
@@ -146,7 +152,7 @@ export default function ProjectsPage() {
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString("fr-FR", {
+    return new Date(dateString).toLocaleDateString(locale, {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -159,10 +165,10 @@ export default function ProjectsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Projets d'Investissement
+            {intl.formatMessage({ id: "projects.title", defaultMessage: "Projets d'Investissement" })}
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Suivi et gestion des projets d'investissement
+            {intl.formatMessage({ id: "projects.subtitle", defaultMessage: "Suivi et gestion des projets d'investissement" })}
           </p>
         </div>
         <Link
@@ -170,7 +176,7 @@ export default function ProjectsPage() {
           className="inline-flex items-center px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
         >
           <Plus className="w-5 h-5 mr-2" />
-          Nouveau Projet
+          {intl.formatMessage({ id: "projects.newProject", defaultMessage: "Nouveau Projet" })}
         </Link>
       </div>
 
@@ -179,7 +185,7 @@ export default function ProjectsPage() {
         <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Projets</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "projects.totalProjects", defaultMessage: "Total Projets" })}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stats.total}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
@@ -191,7 +197,7 @@ export default function ProjectsPage() {
         <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">En Cours</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "projects.inProgress", defaultMessage: "En Cours" })}</p>
               <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">{stats.inProgress}</p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
@@ -203,7 +209,7 @@ export default function ProjectsPage() {
         <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Montant Total</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "projects.totalAmount", defaultMessage: "Montant Total" })}</p>
               <p className="text-xl font-bold text-gray-900 dark:text-white mt-1">
                 {formatAmount(stats.totalAmount, "USD")}
               </p>
@@ -217,9 +223,9 @@ export default function ProjectsPage() {
         <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Emplois Crees</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "projects.jobsCreated", defaultMessage: "Emplois Créés" })}</p>
               <p className="text-2xl font-bold text-orange-600 dark:text-orange-400 mt-1">
-                {(stats.totalJobs || 0).toLocaleString("fr-FR")}
+                {(stats.totalJobs || 0).toLocaleString(locale)}
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
@@ -236,7 +242,7 @@ export default function ProjectsPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Rechercher par code, nom ou investisseur..."
+              placeholder={intl.formatMessage({ id: "projects.searchPlaceholder", defaultMessage: "Rechercher par code, nom ou investisseur..." })}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -248,7 +254,7 @@ export default function ProjectsPage() {
               onChange={(e) => setSectorFilter(e.target.value)}
               className="px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
-              <option value="all">Tous les secteurs</option>
+              <option value="all">{intl.formatMessage({ id: "projects.allSectors", defaultMessage: "Tous les secteurs" })}</option>
               {sectors.map((sector) => (
                 <option key={sector} value={sector}>{sector}</option>
               ))}
@@ -258,7 +264,7 @@ export default function ProjectsPage() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
-              <option value="all">Tous les statuts</option>
+              <option value="all">{intl.formatMessage({ id: "projects.allStatuses", defaultMessage: "Tous les statuts" })}</option>
               {Object.entries(statusConfig).map(([key, value]) => (
                 <option key={key} value={key}>{value.label}</option>
               ))}
@@ -299,7 +305,7 @@ export default function ProjectsPage() {
             onClick={fetchProjects}
             className="ml-auto text-red-600 hover:text-red-700 font-medium text-sm"
           >
-            Reessayer
+            {intl.formatMessage({ id: "projects.retry", defaultMessage: "Réessayer" })}
           </button>
         </div>
       )}
@@ -308,7 +314,7 @@ export default function ProjectsPage() {
       {loading && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 flex flex-col items-center justify-center">
           <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">Chargement des projets...</p>
+          <p className="text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "projects.loadingProjects", defaultMessage: "Chargement des projets..." })}</p>
         </div>
       )}
 
@@ -355,7 +361,7 @@ export default function ProjectsPage() {
                   <div className="flex items-center gap-2 mb-4 text-sm">
                     <Building2 className="w-4 h-4 text-gray-400" />
                     <span className="text-gray-600 dark:text-gray-300">
-                      {project.investor?.name || 'Non assigne'}
+                      {project.investor?.name || intl.formatMessage({ id: "projects.notAssigned", defaultMessage: "Non assigné" })}
                     </span>
                   </div>
 
@@ -363,7 +369,7 @@ export default function ProjectsPage() {
                   {project.progress > 0 && (
                     <div className="mb-4">
                       <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="text-gray-500 dark:text-gray-400">Progression</span>
+                        <span className="text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "projects.progression", defaultMessage: "Progression" })}</span>
                         <span className="font-medium text-gray-700 dark:text-gray-300">{project.progress}%</span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
@@ -382,7 +388,7 @@ export default function ProjectsPage() {
                     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-1">
                         <DollarSign className="w-4 h-4 text-green-500" />
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Montant</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "projects.amount", defaultMessage: "Montant" })}</span>
                       </div>
                       <p className="font-semibold text-gray-900 dark:text-white text-sm">
                         {formatAmount(project.amount, project.currency)}
@@ -391,10 +397,10 @@ export default function ProjectsPage() {
                     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-1">
                         <Users className="w-4 h-4 text-blue-500" />
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Emplois</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "projects.jobs", defaultMessage: "Emplois" })}</span>
                       </div>
                       <p className="font-semibold text-gray-900 dark:text-white text-sm">
-                        {(project.jobsCreated || 0).toLocaleString("fr-FR")}
+                        {(project.jobsCreated || 0).toLocaleString(locale)}
                       </p>
                     </div>
                   </div>
@@ -417,7 +423,7 @@ export default function ProjectsPage() {
                       href={`/investments/projects/${project.id}`}
                       className="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium"
                     >
-                      Details
+                      {intl.formatMessage({ id: "projects.details", defaultMessage: "Détails" })}
                       <ArrowUpRight className="w-4 h-4 ml-1" />
                     </Link>
                   </div>
@@ -435,12 +441,12 @@ export default function ProjectsPage() {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Projet</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Investisseur</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Secteur</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Montant</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Statut</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{intl.formatMessage({ id: "projects.project", defaultMessage: "Projet" })}</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{intl.formatMessage({ id: "projects.investor", defaultMessage: "Investisseur" })}</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{intl.formatMessage({ id: "projects.sector", defaultMessage: "Secteur" })}</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{intl.formatMessage({ id: "projects.amount", defaultMessage: "Montant" })}</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{intl.formatMessage({ id: "projects.status", defaultMessage: "Statut" })}</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{intl.formatMessage({ id: "projects.actions", defaultMessage: "Actions" })}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -457,7 +463,7 @@ export default function ProjectsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                        {project.investor?.name || 'Non assigne'}
+                        {project.investor?.name || intl.formatMessage({ id: "projects.notAssigned", defaultMessage: "Non assigné" })}
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm text-gray-600 dark:text-gray-300">{project.sector || '-'}</span>
@@ -465,7 +471,7 @@ export default function ProjectsPage() {
                       </td>
                       <td className="px-6 py-4">
                         <p className="font-semibold text-gray-900 dark:text-white">{formatAmount(project.amount, project.currency)}</p>
-                        <p className="text-xs text-gray-500">{project.jobsCreated || 0} emplois</p>
+                        <p className="text-xs text-gray-500">{project.jobsCreated || 0} {intl.formatMessage({ id: "projects.jobs", defaultMessage: "emplois" })}</p>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${status.bgColor} ${status.color}`}>
@@ -495,9 +501,9 @@ export default function ProjectsPage() {
       {!loading && projects.length === 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
           <TrendingUp className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">Aucun projet trouve</p>
+          <p className="text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "projects.noProjectsFound", defaultMessage: "Aucun projet trouvé" })}</p>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-            Essayez de modifier vos filtres de recherche
+            {intl.formatMessage({ id: "projects.tryModifyFilters", defaultMessage: "Essayez de modifier vos filtres de recherche" })}
           </p>
         </div>
       )}
@@ -506,8 +512,8 @@ export default function ProjectsPage() {
       {!loading && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Affichage de <span className="font-medium">{projects.length}</span> sur{" "}
-            <span className="font-medium">{pagination.total}</span> projets
+            {intl.formatMessage({ id: "projects.showing", defaultMessage: "Affichage de" })} <span className="font-medium">{projects.length}</span> {intl.formatMessage({ id: "projects.of", defaultMessage: "sur" })}{" "}
+            <span className="font-medium">{pagination.total}</span> {intl.formatMessage({ id: "projects.projectsLabel", defaultMessage: "projets" })}
           </p>
           <div className="flex items-center gap-2">
             <button

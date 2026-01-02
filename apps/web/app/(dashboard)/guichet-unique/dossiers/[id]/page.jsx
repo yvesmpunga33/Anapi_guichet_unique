@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Swal from "sweetalert2";
 import {
   ArrowLeft,
   FolderOpen,
@@ -46,6 +47,17 @@ const statusConfig = {
   APPROVED: { label: "Approuve", color: "text-green-600", bgColor: "bg-green-100", icon: CheckCircle2 },
   REJECTED: { label: "Rejete", color: "text-red-600", bgColor: "bg-red-100", icon: XCircle },
   COMPLETED: { label: "Termine", color: "text-purple-600", bgColor: "bg-purple-100", icon: CheckCircle2 },
+};
+
+// Configuration des catégories de documents
+const documentCategoryConfig = {
+  RCCM: { label: "RCCM", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+  ID_NATIONAL: { label: "ID National", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
+  NIF: { label: "NIF", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
+  BUSINESS_PLAN: { label: "Business Plan", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+  FINANCIAL_PROOF: { label: "Preuve Financière", color: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400" },
+  TECHNICAL_STUDY: { label: "Étude Technique", color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400" },
+  OTHER: { label: "Autre", color: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300" },
 };
 
 const mockDossier = {
@@ -116,6 +128,17 @@ export default function DossierDetailPage() {
   const [selectedStep, setSelectedStep] = useState(null);
   const [stepNote, setStepNote] = useState('');
   const [validatingStep, setValidatingStep] = useState(false);
+  const [ministries, setMinistries] = useState([]);
+  const [editFormData, setEditFormData] = useState({});
+  const [saving, setSaving] = useState(false);
+
+  // États pour les données géographiques du modal d'édition
+  const [provinces, setProvinces] = useState([]);
+  const [loadingProvinces, setLoadingProvinces] = useState(true);
+  const [editCities, setEditCities] = useState([]);
+  const [loadingEditCities, setLoadingEditCities] = useState(false);
+  const [editCommunes, setEditCommunes] = useState([]);
+  const [loadingEditCommunes, setLoadingEditCommunes] = useState(false);
 
   // Fonction pour uploader un document
   const handleUploadDocument = async () => {
@@ -162,13 +185,34 @@ export default function DossierDetailPage() {
         setUploadName('');
         setUploadDescription('');
         setUploadCategory('OTHER');
+
+        // Notification de succès
+        Swal.fire({
+          icon: 'success',
+          title: 'Document ajouté',
+          text: 'Le document a été uploadé avec succès.',
+          timer: 3000,
+          showConfirmButton: false,
+          toast: true,
+          position: 'top-end',
+        });
       } else {
         const error = await response.json();
-        alert(error.error || 'Erreur lors de l\'upload');
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: error.error || 'Erreur lors de l\'upload du document.',
+          confirmButtonColor: '#3B82F6',
+        });
       }
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Erreur lors de l\'upload du document');
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Une erreur est survenue lors de l\'upload du document.',
+        confirmButtonColor: '#3B82F6',
+      });
     } finally {
       setUploading(false);
     }
@@ -194,6 +238,89 @@ export default function DossierDetailPage() {
       window.open(`/api/documents/mock-${doc.name}/download`, '_blank');
     }
   };
+
+  // Charger les ministères
+  useEffect(() => {
+    const fetchMinistries = async () => {
+      try {
+        const response = await fetch('/api/referentiels/ministries');
+        if (response.ok) {
+          const data = await response.json();
+          setMinistries(data.ministries || data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching ministries:', error);
+      }
+    };
+    fetchMinistries();
+  }, []);
+
+  // Charger les provinces depuis l'API
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        setLoadingProvinces(true);
+        const response = await fetch('/api/referentiels/provinces?activeOnly=true');
+        if (response.ok) {
+          const data = await response.json();
+          setProvinces(data.provinces || []);
+        }
+      } catch (error) {
+        console.error('Error fetching provinces:', error);
+      } finally {
+        setLoadingProvinces(false);
+      }
+    };
+    fetchProvinces();
+  }, []);
+
+  // Charger les villes quand la province change dans le formulaire d'édition
+  useEffect(() => {
+    const fetchCities = async () => {
+      if (!editFormData.provinceId) {
+        setEditCities([]);
+        return;
+      }
+      try {
+        setLoadingEditCities(true);
+        const response = await fetch(`/api/referentiels/provinces/${editFormData.provinceId}/cities`);
+        if (response.ok) {
+          const data = await response.json();
+          setEditCities(data.cities || []);
+        }
+      } catch (error) {
+        console.error('Error fetching cities:', error);
+        setEditCities([]);
+      } finally {
+        setLoadingEditCities(false);
+      }
+    };
+    fetchCities();
+  }, [editFormData.provinceId]);
+
+  // Charger les communes quand la ville change dans le formulaire d'édition
+  useEffect(() => {
+    const fetchCommunes = async () => {
+      if (!editFormData.cityId) {
+        setEditCommunes([]);
+        return;
+      }
+      try {
+        setLoadingEditCommunes(true);
+        const response = await fetch(`/api/referentiels/cities/${editFormData.cityId}/communes`);
+        if (response.ok) {
+          const data = await response.json();
+          setEditCommunes(data.communes || []);
+        }
+      } catch (error) {
+        console.error('Error fetching communes:', error);
+        setEditCommunes([]);
+      } finally {
+        setLoadingEditCommunes(false);
+      }
+    };
+    fetchCommunes();
+  }, [editFormData.cityId]);
 
   // Charger les etapes de workflow depuis la configuration
   useEffect(() => {
@@ -229,6 +356,109 @@ export default function DossierDetailPage() {
     fetchWorkflowSteps();
   }, []);
 
+  // Ouvrir le modal d'édition avec les données du dossier
+  const openEditModal = () => {
+    setEditFormData({
+      projectName: dossier.projectName || '',
+      projectDescription: dossier.projectDescription || '',
+      amount: dossier.amount || 0,
+      status: dossier.status || 'DRAFT',
+      jobsCreated: dossier.jobsCreated || 0,
+      jobsIndirect: dossier.jobsIndirect || 0,
+      ministryId: dossier.ministry?.id || '',
+      sector: dossier.sector || '',
+      // Province, Ville, Commune avec IDs
+      provinceId: dossier.provinceId || '',
+      province: dossier.province || '',
+      cityId: dossier.cityId || '',
+      city: dossier.city || '',
+      communeId: dossier.communeId || '',
+      commune: dossier.commune || '',
+      startDate: dossier.startDate ? dossier.startDate.split('T')[0] : '',
+      endDate: dossier.endDate ? dossier.endDate.split('T')[0] : '',
+    });
+    setShowEditModal(true);
+  };
+
+  // Sauvegarder les modifications
+  const handleSaveEdit = async () => {
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/guichet-unique/dossiers/${params.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_details',
+          ...editFormData,
+          investmentAmount: editFormData.amount,
+          directJobs: editFormData.jobsCreated,
+          indirectJobs: editFormData.jobsIndirect,
+          // Province, Ville, Commune avec noms et IDs
+          projectProvince: editFormData.province,
+          projectProvinceId: editFormData.provinceId,
+          projectCity: editFormData.city,
+          projectCityId: editFormData.cityId,
+          projectCommune: editFormData.commune,
+          projectCommuneId: editFormData.communeId,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Mettre à jour le dossier local
+        setDossier(prev => ({
+          ...prev,
+          projectName: editFormData.projectName,
+          projectDescription: editFormData.projectDescription,
+          amount: editFormData.amount,
+          status: editFormData.status,
+          jobsCreated: editFormData.jobsCreated,
+          jobsIndirect: editFormData.jobsIndirect,
+          ministry: ministries.find(m => m.id === editFormData.ministryId) || null,
+          sector: editFormData.sector,
+          province: editFormData.province,
+          provinceId: editFormData.provinceId,
+          city: editFormData.city,
+          cityId: editFormData.cityId,
+          commune: editFormData.commune,
+          communeId: editFormData.communeId,
+          startDate: editFormData.startDate,
+          endDate: editFormData.endDate,
+        }));
+        setShowEditModal(false);
+
+        // Notification de succès
+        Swal.fire({
+          icon: 'success',
+          title: 'Modifications enregistrées',
+          text: 'Le dossier a été mis à jour avec succès.',
+          timer: 3000,
+          showConfirmButton: false,
+          toast: true,
+          position: 'top-end',
+        });
+      } else {
+        const error = await response.json();
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: error.error || 'Erreur lors de la mise à jour du dossier.',
+          confirmButtonColor: '#3B82F6',
+        });
+      }
+    } catch (error) {
+      console.error('Error updating dossier:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Une erreur est survenue lors de la mise à jour du dossier.',
+        confirmButtonColor: '#3B82F6',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   useEffect(() => {
     // Charger le dossier réel depuis l'API
     const fetchDossier = async () => {
@@ -252,7 +482,11 @@ export default function DossierDetailPage() {
             sector: apiDossier.sector || '',
             subSector: apiDossier.subSector || '',
             province: apiDossier.projectProvince || '',
+            provinceId: apiDossier.projectProvinceId || '',
             city: apiDossier.projectCity || '',
+            cityId: apiDossier.projectCityId || '',
+            commune: apiDossier.projectCommune || '',
+            communeId: apiDossier.projectCommuneId || '',
             status: apiDossier.status || 'DRAFT',
             submittedAt: apiDossier.submittedAt || apiDossier.createdAt,
             updatedAt: apiDossier.updatedAt,
@@ -372,25 +606,35 @@ export default function DossierDetailPage() {
         setSelectedStep(null);
         setStepNote('');
 
-        // Afficher une notification de succès (si SweetAlert2 est disponible)
-        if (typeof window !== 'undefined' && window.Swal) {
-          window.Swal.fire({
-            icon: 'success',
-            title: 'Étape validée',
-            text: isFinalStep
-              ? 'Le dossier a été approuvé avec succès!'
-              : `L'étape "${selectedStep.name}" a été validée avec succès.`,
-            timer: 3000,
-            showConfirmButton: false,
-          });
-        }
+        // Afficher une notification de succès
+        Swal.fire({
+          icon: 'success',
+          title: isFinalStep ? 'Dossier approuvé!' : 'Étape validée',
+          text: isFinalStep
+            ? 'Le dossier a été approuvé avec succès!'
+            : `L'étape "${selectedStep.name}" a été validée avec succès.`,
+          timer: 3000,
+          showConfirmButton: false,
+          toast: true,
+          position: 'top-end',
+        });
       } else {
         const error = await response.json();
-        alert(error.error || 'Erreur lors de la validation');
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: error.error || 'Erreur lors de la validation.',
+          confirmButtonColor: '#3B82F6',
+        });
       }
     } catch (error) {
       console.error('Error validating step:', error);
-      alert('Erreur lors de la validation de l\'étape');
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Une erreur est survenue lors de la validation de l\'étape.',
+        confirmButtonColor: '#3B82F6',
+      });
     } finally {
       setValidatingStep(false);
     }
@@ -499,7 +743,7 @@ export default function DossierDetailPage() {
             <Share2 className="w-5 h-5 text-gray-500" />
           </button>
           <button
-            onClick={() => setShowEditModal(true)}
+            onClick={openEditModal}
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Edit className="w-4 h-4 mr-2" />
@@ -834,47 +1078,55 @@ export default function DossierDetailPage() {
             </button>
           </div>
           <div className="divide-y divide-gray-100 dark:divide-gray-700">
-            {dossier.documents.map((doc, index) => (
-              <div key={index} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    doc.type === 'PDF' || doc.name.endsWith('.pdf')
-                      ? 'bg-red-100 dark:bg-red-900/30'
-                      : doc.type === 'XLSX' || doc.name.endsWith('.xlsx') || doc.name.endsWith('.xls')
-                      ? 'bg-green-100 dark:bg-green-900/30'
-                      : 'bg-blue-100 dark:bg-blue-900/30'
-                  }`}>
-                    <FileText className={`w-5 h-5 ${
+            {dossier.documents.map((doc, index) => {
+              const categoryInfo = documentCategoryConfig[doc.category] || documentCategoryConfig.OTHER;
+              return (
+                <div key={index} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                       doc.type === 'PDF' || doc.name.endsWith('.pdf')
-                        ? 'text-red-600 dark:text-red-400'
+                        ? 'bg-red-100 dark:bg-red-900/30'
                         : doc.type === 'XLSX' || doc.name.endsWith('.xlsx') || doc.name.endsWith('.xls')
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-blue-600 dark:text-blue-400'
-                    }`} />
+                        ? 'bg-green-100 dark:bg-green-900/30'
+                        : 'bg-blue-100 dark:bg-blue-900/30'
+                    }`}>
+                      <FileText className={`w-5 h-5 ${
+                        doc.type === 'PDF' || doc.name.endsWith('.pdf')
+                          ? 'text-red-600 dark:text-red-400'
+                          : doc.type === 'XLSX' || doc.name.endsWith('.xlsx') || doc.name.endsWith('.xls')
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-blue-600 dark:text-blue-400'
+                      }`} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-gray-900 dark:text-white">{doc.name}</p>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${categoryInfo.color}`}>
+                          {categoryInfo.label}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{doc.size} - {formatDate(doc.uploadedAt)}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">{doc.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{doc.size} - {formatDate(doc.uploadedAt)}</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openDocumentPreview(doc)}
+                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                      title="Visualiser"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => downloadDocument(doc)}
+                      className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                      title="Telecharger"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => openDocumentPreview(doc)}
-                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                    title="Visualiser"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => downloadDocument(doc)}
-                    className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
-                    title="Telecharger"
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -887,7 +1139,8 @@ export default function DossierDetailPage() {
               <div key={index} className="flex gap-4">
                 <div className="flex flex-col items-center">
                   <div className={`w-3 h-3 rounded-full ${
-                    event.status === "success" ? "bg-green-500" : "bg-blue-500"
+                    event.status === "success" ? "bg-green-500" :
+                    event.status === "error" ? "bg-red-500" : "bg-blue-500"
                   }`} />
                   {index < dossier.timeline.length - 1 && (
                     <div className="w-0.5 h-full bg-gray-200 dark:bg-gray-600 mt-2" />
@@ -896,10 +1149,15 @@ export default function DossierDetailPage() {
                 <div className="flex-1 pb-6">
                   <p className="text-sm text-gray-900 dark:text-white font-medium">{event.action}</p>
                   <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    <span>{event.user}</span>
+                    <span className="font-medium text-blue-600 dark:text-blue-400">{event.user}</span>
                     <span>•</span>
                     <span>{formatDate(event.date)}</span>
                   </div>
+                  {event.note && (
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 px-3 py-2 rounded-lg italic">
+                      "{event.note}"
+                    </p>
+                  )}
                 </div>
               </div>
             ))}
@@ -968,7 +1226,7 @@ export default function DossierDetailPage() {
       {/* Edit Modal */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Modifier le dossier</h2>
               <button
@@ -978,60 +1236,201 @@ export default function DossierDetailPage() {
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-5">
+              {/* Nom du projet */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Nom du projet
                 </label>
                 <input
                   type="text"
-                  defaultValue={dossier.projectName}
+                  value={editFormData.projectName || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, projectName: e.target.value })}
                   className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
               </div>
+
+              {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Description
                 </label>
                 <textarea
-                  defaultValue={dossier.projectDescription}
-                  rows={4}
+                  value={editFormData.projectDescription || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, projectDescription: e.target.value })}
+                  rows={3}
                   className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              {/* Ministère responsable - NOUVEAU */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <div className="flex items-center gap-2">
+                    <Landmark className="w-4 h-4 text-indigo-500" />
+                    <span>Ministère responsable</span>
+                  </div>
+                </label>
+                <select
+                  value={editFormData.ministryId || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, ministryId: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="">-- Aucun ministère assigné --</option>
+                  {ministries.map((ministry) => (
+                    <option key={ministry.id} value={ministry.id}>
+                      {ministry.name} {ministry.shortName ? `(${ministry.shortName})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Secteur */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Secteur
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.sector || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, sector: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+
+              {/* Province, Ville, Commune en cascade */}
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Province
+                  </label>
+                  <select
+                    value={editFormData.provinceId || ''}
+                    onChange={(e) => {
+                      const province = provinces.find(p => p.id === e.target.value);
+                      setEditFormData({
+                        ...editFormData,
+                        provinceId: e.target.value,
+                        province: province?.name || '',
+                        cityId: '',
+                        city: '',
+                        communeId: '',
+                        commune: '',
+                      });
+                      setEditCommunes([]);
+                    }}
+                    disabled={loadingProvinces}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
+                  >
+                    <option value="">
+                      {loadingProvinces ? 'Chargement...' : 'Selectionnez'}
+                    </option>
+                    {provinces.map((prov) => (
+                      <option key={prov.id} value={prov.id}>{prov.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Ville
+                  </label>
+                  <select
+                    value={editFormData.cityId || ''}
+                    onChange={(e) => {
+                      const city = editCities.find(c => c.id === e.target.value);
+                      setEditFormData({
+                        ...editFormData,
+                        cityId: e.target.value,
+                        city: city?.name || '',
+                        communeId: '',
+                        commune: '',
+                      });
+                    }}
+                    disabled={!editFormData.provinceId || loadingEditCities}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
+                  >
+                    <option value="">
+                      {loadingEditCities
+                        ? 'Chargement...'
+                        : !editFormData.provinceId
+                          ? 'Province d\'abord'
+                          : 'Selectionnez'}
+                    </option>
+                    {editCities.map((city) => (
+                      <option key={city.id} value={city.id}>{city.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Commune
+                  </label>
+                  <select
+                    value={editFormData.communeId || ''}
+                    onChange={(e) => {
+                      const commune = editCommunes.find(c => c.id === e.target.value);
+                      setEditFormData({
+                        ...editFormData,
+                        communeId: e.target.value,
+                        commune: commune?.name || '',
+                      });
+                    }}
+                    disabled={!editFormData.cityId || loadingEditCommunes}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
+                  >
+                    <option value="">
+                      {loadingEditCommunes
+                        ? 'Chargement...'
+                        : !editFormData.cityId
+                          ? 'Ville d\'abord'
+                          : editCommunes.length === 0
+                            ? 'Aucune commune'
+                            : 'Selectionnez'}
+                    </option>
+                    {editCommunes.map((commune) => (
+                      <option key={commune.id} value={commune.id}>{commune.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Statut */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Statut
+                </label>
+                <select
+                  value={editFormData.status || 'DRAFT'}
+                  onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  {Object.entries(statusConfig).map(([key, value]) => (
+                    <option key={key} value={key}>{value.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Montant et Emplois */}
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Montant (USD)
                   </label>
                   <input
                     type="number"
-                    defaultValue={dossier.amount}
+                    value={editFormData.amount || 0}
+                    onChange={(e) => setEditFormData({ ...editFormData, amount: parseFloat(e.target.value) || 0 })}
                     className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Statut
-                  </label>
-                  <select
-                    defaultValue={dossier.status}
-                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  >
-                    {Object.entries(statusConfig).map(([key, value]) => (
-                      <option key={key} value={key}>{value.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Emplois directs
                   </label>
                   <input
                     type="number"
-                    defaultValue={dossier.jobsCreated}
+                    value={editFormData.jobsCreated || 0}
+                    onChange={(e) => setEditFormData({ ...editFormData, jobsCreated: parseInt(e.target.value) || 0 })}
                     className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
@@ -1041,28 +1440,79 @@ export default function DossierDetailPage() {
                   </label>
                   <input
                     type="number"
-                    defaultValue={dossier.jobsIndirect}
+                    value={editFormData.jobsIndirect || 0}
+                    onChange={(e) => setEditFormData({ ...editFormData, jobsIndirect: parseInt(e.target.value) || 0 })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              {/* Dates */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Date de début
+                  </label>
+                  <input
+                    type="date"
+                    value={editFormData.startDate || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, startDate: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Date de fin prévue
+                  </label>
+                  <input
+                    type="date"
+                    value={editFormData.endDate || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, endDate: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
             </div>
-            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={() => {
-                  // Save logic here
-                  setShowEditModal(false);
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Enregistrer
-              </button>
+
+            {/* Footer avec barre de progression */}
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700">
+              {/* Progress bar when saving */}
+              {saving && (
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                      Enregistrement en cours...
+                    </span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Veuillez patienter</span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
+                    <div className="bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 h-2.5 rounded-full animate-progress-bar"></div>
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  disabled={saving}
+                  className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300 disabled:opacity-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={saving}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 inline-flex items-center min-w-[140px] justify-center"
+                >
+                  {saving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      Enregistrement...
+                    </>
+                  ) : (
+                    'Enregistrer'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

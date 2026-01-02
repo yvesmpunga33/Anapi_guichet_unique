@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useIntl } from "react-intl";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   Briefcase,
   Plus,
@@ -32,21 +34,24 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-const investorTypes = {
-  company: { label: "Societe", icon: Building2 },
-  individual: { label: "Individuel", icon: User },
-  organization: { label: "Organisation", icon: Globe },
-  government: { label: "Gouvernement", icon: Building2 },
-};
-
-const statusConfig = {
-  ACTIVE: { label: "Actif", color: "bg-green-100 text-green-700" },
-  PENDING: { label: "En attente", color: "bg-yellow-100 text-yellow-700" },
-  SUSPENDED: { label: "Suspendu", color: "bg-red-100 text-red-700" },
-  INACTIVE: { label: "Inactif", color: "bg-gray-100 text-gray-700" },
-};
-
 export default function InvestorsPage() {
+  const intl = useIntl();
+  const { locale } = useLanguage();
+
+  const investorTypes = {
+    company: { label: intl.formatMessage({ id: "investors.type.company", defaultMessage: "Societe" }), icon: Building2 },
+    individual: { label: intl.formatMessage({ id: "investors.type.individual", defaultMessage: "Individuel" }), icon: User },
+    organization: { label: intl.formatMessage({ id: "investors.type.organization", defaultMessage: "Organisation" }), icon: Globe },
+    government: { label: intl.formatMessage({ id: "investors.type.government", defaultMessage: "Gouvernement" }), icon: Building2 },
+  };
+
+  const statusConfig = {
+    ACTIVE: { label: intl.formatMessage({ id: "investors.status.active", defaultMessage: "Actif" }), color: "bg-green-100 text-green-700" },
+    PENDING: { label: intl.formatMessage({ id: "investors.status.pending", defaultMessage: "En attente" }), color: "bg-yellow-100 text-yellow-700" },
+    SUSPENDED: { label: intl.formatMessage({ id: "investors.status.suspended", defaultMessage: "Suspendu" }), color: "bg-red-100 text-red-700" },
+    INACTIVE: { label: intl.formatMessage({ id: "investors.status.inactive", defaultMessage: "Inactif" }), color: "bg-gray-100 text-gray-700" },
+  };
+
   const [investors, setInvestors] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -91,7 +96,7 @@ export default function InvestorsPage() {
       const response = await fetch(`/api/investments/investors?${params.toString()}`);
 
       if (!response.ok) {
-        throw new Error('Erreur lors du chargement des investisseurs');
+        throw new Error(intl.formatMessage({ id: "investors.error.loading", defaultMessage: "Erreur lors du chargement des investisseurs" }));
       }
 
       const data = await response.json();
@@ -130,7 +135,7 @@ export default function InvestorsPage() {
 
   // Delete investor
   const handleDelete = async (investor) => {
-    if (!confirm(`Etes-vous sur de vouloir supprimer l'investisseur "${investor.name}" ?`)) {
+    if (!confirm(intl.formatMessage({ id: "investors.confirm.delete", defaultMessage: "Etes-vous sur de vouloir supprimer l'investisseur \"{name}\" ?" }, { name: investor.name }))) {
       return;
     }
 
@@ -142,7 +147,7 @@ export default function InvestorsPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Erreur lors de la suppression');
+        throw new Error(data.error || intl.formatMessage({ id: "investors.error.delete", defaultMessage: "Erreur lors de la suppression" }));
       }
 
       // Refresh the list
@@ -155,7 +160,7 @@ export default function InvestorsPage() {
   };
 
   const formatAmount = (amount, currency = 'USD') => {
-    return new Intl.NumberFormat("fr-FR", {
+    return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: currency,
       minimumFractionDigits: 0,
@@ -165,7 +170,7 @@ export default function InvestorsPage() {
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString("fr-FR", {
+    return new Date(dateString).toLocaleDateString(locale, {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -181,10 +186,10 @@ export default function InvestorsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Investisseurs
+            {intl.formatMessage({ id: "investors.title", defaultMessage: "Investisseurs" })}
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Gestion du repertoire des investisseurs
+            {intl.formatMessage({ id: "investors.subtitle", defaultMessage: "Gestion du repertoire des investisseurs" })}
           </p>
         </div>
         <Link
@@ -192,7 +197,7 @@ export default function InvestorsPage() {
           className="inline-flex items-center px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
         >
           <Plus className="w-5 h-5 mr-2" />
-          Nouvel Investisseur
+          {intl.formatMessage({ id: "investors.newInvestor", defaultMessage: "Nouvel Investisseur" })}
         </Link>
       </div>
 
@@ -201,7 +206,7 @@ export default function InvestorsPage() {
         <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Investisseurs</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "investors.stats.total", defaultMessage: "Total Investisseurs" })}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stats.total}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
@@ -213,7 +218,7 @@ export default function InvestorsPage() {
         <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Actifs</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "investors.stats.active", defaultMessage: "Actifs" })}</p>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{stats.active}</p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
@@ -225,7 +230,7 @@ export default function InvestorsPage() {
         <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Verifies</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "investors.stats.verified", defaultMessage: "Verifies" })}</p>
               <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">{stats.verified}</p>
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
@@ -237,7 +242,7 @@ export default function InvestorsPage() {
         <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Investissements</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "investors.stats.investments", defaultMessage: "Investissements" })}</p>
               <p className="text-xl font-bold text-gray-900 dark:text-white mt-1">
                 {formatAmount(totalInvestmentsAmount, "USD")}
               </p>
@@ -256,7 +261,7 @@ export default function InvestorsPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Rechercher par code, nom ou email..."
+              placeholder={intl.formatMessage({ id: "investors.searchPlaceholder", defaultMessage: "Rechercher par code, nom ou email..." })}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -268,7 +273,7 @@ export default function InvestorsPage() {
               onChange={(e) => setTypeFilter(e.target.value)}
               className="px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
-              <option value="all">Tous les types</option>
+              <option value="all">{intl.formatMessage({ id: "investors.allTypes", defaultMessage: "Tous les types" })}</option>
               {Object.entries(investorTypes).map(([key, value]) => (
                 <option key={key} value={key}>{value.label}</option>
               ))}
@@ -278,7 +283,7 @@ export default function InvestorsPage() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
-              <option value="all">Tous les statuts</option>
+              <option value="all">{intl.formatMessage({ id: "investors.allStatuses", defaultMessage: "Tous les statuts" })}</option>
               {Object.entries(statusConfig).map(([key, value]) => (
                 <option key={key} value={key}>{value.label}</option>
               ))}
@@ -286,7 +291,7 @@ export default function InvestorsPage() {
             <button
               onClick={fetchInvestors}
               className="p-2.5 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              title="Actualiser"
+              title={intl.formatMessage({ id: "common.refresh", defaultMessage: "Actualiser" })}
             >
               <RefreshCw className={`w-5 h-5 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
             </button>
@@ -306,7 +311,7 @@ export default function InvestorsPage() {
             onClick={fetchInvestors}
             className="ml-auto text-red-600 hover:text-red-700 font-medium text-sm"
           >
-            Reessayer
+            {intl.formatMessage({ id: "investors.retry", defaultMessage: "Reessayer" })}
           </button>
         </div>
       )}
@@ -315,7 +320,7 @@ export default function InvestorsPage() {
       {loading && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 flex flex-col items-center justify-center">
           <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">Chargement des investisseurs...</p>
+          <p className="text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "investors.loading", defaultMessage: "Chargement des investisseurs..." })}</p>
         </div>
       )}
 
@@ -327,22 +332,22 @@ export default function InvestorsPage() {
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Investisseur
+                    {intl.formatMessage({ id: "investors.table.investor", defaultMessage: "Investisseur" })}
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Contact
+                    {intl.formatMessage({ id: "investors.table.contact", defaultMessage: "Contact" })}
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Localisation
+                    {intl.formatMessage({ id: "investors.table.location", defaultMessage: "Localisation" })}
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Investissements
+                    {intl.formatMessage({ id: "investors.table.investments", defaultMessage: "Investissements" })}
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Statut
+                    {intl.formatMessage({ id: "investors.table.status", defaultMessage: "Statut" })}
                   </th>
                   <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Actions
+                    {intl.formatMessage({ id: "investors.table.actions", defaultMessage: "Actions" })}
                   </th>
                 </tr>
               </thead>
@@ -421,7 +426,7 @@ export default function InvestorsPage() {
                           <div className="flex items-center gap-2">
                             <TrendingUp className="w-4 h-4 text-blue-500" />
                             <span className="font-semibold text-gray-900 dark:text-white">
-                              {investor.totalInvestments || 0} projets
+                              {investor.totalInvestments || 0} {intl.formatMessage({ id: "investors.projects", defaultMessage: "projets" })}
                             </span>
                           </div>
                           <p className="text-sm text-green-600 dark:text-green-400 font-medium mt-0.5">
@@ -435,7 +440,7 @@ export default function InvestorsPage() {
                             {status.label}
                           </span>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Inscrit le {formatDate(investor.createdAt)}
+                            {intl.formatMessage({ id: "investors.registeredOn", defaultMessage: "Inscrit le" })} {formatDate(investor.createdAt)}
                           </p>
                         </div>
                       </td>
@@ -444,14 +449,14 @@ export default function InvestorsPage() {
                           <Link
                             href={`/investments/investors/${investor.id}`}
                             className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                            title="Voir details"
+                            title={intl.formatMessage({ id: "investors.viewDetails", defaultMessage: "Voir details" })}
                           >
                             <Eye className="w-4 h-4" />
                           </Link>
                           <Link
                             href={`/investments/investors/${investor.id}?edit=true`}
                             className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
-                            title="Modifier"
+                            title={intl.formatMessage({ id: "common.edit", defaultMessage: "Modifier" })}
                           >
                             <Edit className="w-4 h-4" />
                           </Link>
@@ -459,7 +464,7 @@ export default function InvestorsPage() {
                             onClick={() => handleDelete(investor)}
                             disabled={deleting === investor.id}
                             className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50"
-                            title="Supprimer"
+                            title={intl.formatMessage({ id: "common.delete", defaultMessage: "Supprimer" })}
                           >
                             {deleting === investor.id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -479,9 +484,9 @@ export default function InvestorsPage() {
           {investors.length === 0 && !loading && (
             <div className="text-center py-12">
               <Users className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">Aucun investisseur trouve</p>
+              <p className="text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "investors.noInvestorsFound", defaultMessage: "Aucun investisseur trouve" })}</p>
               <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-                Essayez de modifier vos filtres de recherche ou ajoutez un nouvel investisseur
+                {intl.formatMessage({ id: "investors.tryModifyFilters", defaultMessage: "Essayez de modifier vos filtres de recherche ou ajoutez un nouvel investisseur" })}
               </p>
             </div>
           )}
@@ -489,8 +494,8 @@ export default function InvestorsPage() {
           {/* Pagination */}
           <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Affichage de <span className="font-medium">{investors.length}</span> sur{" "}
-              <span className="font-medium">{pagination.total}</span> investisseurs
+              {intl.formatMessage({ id: "investors.showing", defaultMessage: "Affichage de" })} <span className="font-medium">{investors.length}</span> {intl.formatMessage({ id: "investors.of", defaultMessage: "sur" })}{" "}
+              <span className="font-medium">{pagination.total}</span> {intl.formatMessage({ id: "investors.investorsLabel", defaultMessage: "investisseurs" })}
             </p>
             <div className="flex items-center gap-2">
               <button

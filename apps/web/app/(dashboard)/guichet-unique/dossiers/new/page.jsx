@@ -86,15 +86,7 @@ const dossierTypes = [
   },
 ];
 
-// Les secteurs sont maintenant chargés dynamiquement depuis l'API
-
-const provinces = [
-  "Kinshasa", "Kongo-Central", "Kwango", "Kwilu", "Mai-Ndombe",
-  "Equateur", "Mongala", "Nord-Ubangi", "Sud-Ubangi", "Tshuapa",
-  "Tshopo", "Bas-Uele", "Haut-Uele", "Ituri", "Nord-Kivu",
-  "Sud-Kivu", "Maniema", "Haut-Katanga", "Haut-Lomami", "Lualaba",
-  "Tanganyika", "Lomami", "Kasai", "Kasai-Central", "Kasai-Oriental", "Sankuru",
-];
+// Les secteurs, provinces, villes et communes sont chargés dynamiquement depuis l'API
 
 // Les documents requis sont maintenant chargés dynamiquement depuis l'API
 
@@ -157,6 +149,22 @@ function NewDossierForm() {
   const [requiredDocuments, setRequiredDocuments] = useState([]);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
 
+  // États pour les données géographiques
+  const [provinces, setProvinces] = useState([]);
+  const [loadingProvinces, setLoadingProvinces] = useState(true);
+
+  // Pour l'investisseur
+  const [investorCities, setInvestorCities] = useState([]);
+  const [loadingInvestorCities, setLoadingInvestorCities] = useState(false);
+  const [investorCommunes, setInvestorCommunes] = useState([]);
+  const [loadingInvestorCommunes, setLoadingInvestorCommunes] = useState(false);
+
+  // Pour le projet
+  const [projectCities, setProjectCities] = useState([]);
+  const [loadingProjectCities, setLoadingProjectCities] = useState(false);
+  const [projectCommunes, setProjectCommunes] = useState([]);
+  const [loadingProjectCommunes, setLoadingProjectCommunes] = useState(false);
+
   const [formData, setFormData] = useState({
     dossierType: typeFromUrl || "",
     investorType: "company",
@@ -168,14 +176,25 @@ function NewDossierForm() {
     phone: "",
     email: "",
     country: "RDC",
-    province: "",
-    city: "",
+    // Investisseur - Province, Ville, Commune
+    investorProvinceId: "",
+    investorProvince: "",
+    investorCityId: "",
+    investorCity: "",
+    investorCommuneId: "",
+    investorCommune: "",
+    // Projet
     projectName: "",
     projectDescription: "",
     sectors: [], // Multi-sélection des secteurs (tableau d'IDs)
     subSector: "",
+    // Projet - Province, Ville, Commune
+    projectProvinceId: "",
     projectProvince: "",
+    projectCityId: "",
     projectCity: "",
+    projectCommuneId: "",
+    projectCommune: "",
     projectAddress: "",
     investmentAmount: "",
     currency: "USD",
@@ -242,11 +261,190 @@ function NewDossierForm() {
     fetchRequiredDocuments();
   }, [formData.dossierType]);
 
+  // Charger les provinces depuis l'API
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        setLoadingProvinces(true);
+        const response = await fetch("/api/referentiels/provinces?activeOnly=true");
+        const result = await response.json();
+        setProvinces(result.provinces || []);
+      } catch (err) {
+        console.error("Erreur chargement provinces:", err);
+      } finally {
+        setLoadingProvinces(false);
+      }
+    };
+    fetchProvinces();
+  }, []);
+
+  // Charger les villes de l'investisseur quand la province change
+  useEffect(() => {
+    const fetchInvestorCities = async () => {
+      if (!formData.investorProvinceId) {
+        setInvestorCities([]);
+        return;
+      }
+      try {
+        setLoadingInvestorCities(true);
+        const response = await fetch(`/api/referentiels/provinces/${formData.investorProvinceId}/cities`);
+        const result = await response.json();
+        setInvestorCities(result.cities || []);
+      } catch (err) {
+        console.error("Erreur chargement villes investisseur:", err);
+        setInvestorCities([]);
+      } finally {
+        setLoadingInvestorCities(false);
+      }
+    };
+    fetchInvestorCities();
+  }, [formData.investorProvinceId]);
+
+  // Charger les communes de l'investisseur quand la ville change
+  useEffect(() => {
+    const fetchInvestorCommunes = async () => {
+      if (!formData.investorCityId) {
+        setInvestorCommunes([]);
+        return;
+      }
+      try {
+        setLoadingInvestorCommunes(true);
+        const response = await fetch(`/api/referentiels/cities/${formData.investorCityId}/communes`);
+        const result = await response.json();
+        setInvestorCommunes(result.communes || []);
+      } catch (err) {
+        console.error("Erreur chargement communes investisseur:", err);
+        setInvestorCommunes([]);
+      } finally {
+        setLoadingInvestorCommunes(false);
+      }
+    };
+    fetchInvestorCommunes();
+  }, [formData.investorCityId]);
+
+  // Charger les villes du projet quand la province change
+  useEffect(() => {
+    const fetchProjectCities = async () => {
+      if (!formData.projectProvinceId) {
+        setProjectCities([]);
+        return;
+      }
+      try {
+        setLoadingProjectCities(true);
+        const response = await fetch(`/api/referentiels/provinces/${formData.projectProvinceId}/cities`);
+        const result = await response.json();
+        setProjectCities(result.cities || []);
+      } catch (err) {
+        console.error("Erreur chargement villes projet:", err);
+        setProjectCities([]);
+      } finally {
+        setLoadingProjectCities(false);
+      }
+    };
+    fetchProjectCities();
+  }, [formData.projectProvinceId]);
+
+  // Charger les communes du projet quand la ville change
+  useEffect(() => {
+    const fetchProjectCommunes = async () => {
+      if (!formData.projectCityId) {
+        setProjectCommunes([]);
+        return;
+      }
+      try {
+        setLoadingProjectCommunes(true);
+        const response = await fetch(`/api/referentiels/cities/${formData.projectCityId}/communes`);
+        const result = await response.json();
+        setProjectCommunes(result.communes || []);
+      } catch (err) {
+        console.error("Erreur chargement communes projet:", err);
+        setProjectCommunes([]);
+      } finally {
+        setLoadingProjectCommunes(false);
+      }
+    };
+    fetchProjectCommunes();
+  }, [formData.projectCityId]);
+
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: null }));
     }
+  };
+
+  // Gestion des changements en cascade pour l'investisseur
+  const handleInvestorProvinceChange = (provinceId) => {
+    const province = provinces.find(p => p.id === provinceId);
+    setFormData(prev => ({
+      ...prev,
+      investorProvinceId: provinceId,
+      investorProvince: province?.name || "",
+      // Réinitialiser ville et commune
+      investorCityId: "",
+      investorCity: "",
+      investorCommuneId: "",
+      investorCommune: "",
+    }));
+    setInvestorCommunes([]);
+  };
+
+  const handleInvestorCityChange = (cityId) => {
+    const city = investorCities.find(c => c.id === cityId);
+    setFormData(prev => ({
+      ...prev,
+      investorCityId: cityId,
+      investorCity: city?.name || "",
+      // Réinitialiser commune
+      investorCommuneId: "",
+      investorCommune: "",
+    }));
+  };
+
+  const handleInvestorCommuneChange = (communeId) => {
+    const commune = investorCommunes.find(c => c.id === communeId);
+    setFormData(prev => ({
+      ...prev,
+      investorCommuneId: communeId,
+      investorCommune: commune?.name || "",
+    }));
+  };
+
+  // Gestion des changements en cascade pour le projet
+  const handleProjectProvinceChange = (provinceId) => {
+    const province = provinces.find(p => p.id === provinceId);
+    setFormData(prev => ({
+      ...prev,
+      projectProvinceId: provinceId,
+      projectProvince: province?.name || "",
+      // Réinitialiser ville et commune
+      projectCityId: "",
+      projectCity: "",
+      projectCommuneId: "",
+      projectCommune: "",
+    }));
+    setProjectCommunes([]);
+  };
+
+  const handleProjectCityChange = (cityId) => {
+    const city = projectCities.find(c => c.id === cityId);
+    setFormData(prev => ({
+      ...prev,
+      projectCityId: cityId,
+      projectCity: city?.name || "",
+      // Réinitialiser commune
+      projectCommuneId: "",
+      projectCommune: "",
+    }));
+  };
+
+  const handleProjectCommuneChange = (communeId) => {
+    const commune = projectCommunes.find(c => c.id === communeId);
+    setFormData(prev => ({
+      ...prev,
+      projectCommuneId: communeId,
+      projectCommune: commune?.name || "",
+    }));
   };
 
   // Upload un fichier pour un type de document spécifique
@@ -698,28 +896,86 @@ function NewDossierForm() {
                     error={errors.phone}
                   />
 
-                  <SelectField
-                    label="Province"
-                    value={formData.province}
-                    onChange={(e) => handleChange("province", e.target.value)}
-                    options={provinces}
-                    placeholder="Selectionnez"
-                  />
-                  <InputField
-                    label="Ville"
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => handleChange("city", e.target.value)}
-                    placeholder="Ex: Kinshasa"
-                  />
+                  {/* Province, Ville, Commune en cascade */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Province
+                    </label>
+                    <select
+                      value={formData.investorProvinceId}
+                      onChange={(e) => handleInvestorProvinceChange(e.target.value)}
+                      disabled={loadingProvinces}
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50"
+                    >
+                      <option value="" className="bg-gray-800">
+                        {loadingProvinces ? "Chargement..." : "Selectionnez une province"}
+                      </option>
+                      {provinces.map((prov) => (
+                        <option key={prov.id} value={prov.id} className="bg-gray-800">
+                          {prov.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Ville
+                    </label>
+                    <select
+                      value={formData.investorCityId}
+                      onChange={(e) => handleInvestorCityChange(e.target.value)}
+                      disabled={!formData.investorProvinceId || loadingInvestorCities}
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50"
+                    >
+                      <option value="" className="bg-gray-800">
+                        {loadingInvestorCities
+                          ? "Chargement..."
+                          : !formData.investorProvinceId
+                            ? "Selectionnez d'abord une province"
+                            : "Selectionnez une ville"}
+                      </option>
+                      {investorCities.map((city) => (
+                        <option key={city.id} value={city.id} className="bg-gray-800">
+                          {city.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Commune
+                    </label>
+                    <select
+                      value={formData.investorCommuneId}
+                      onChange={(e) => handleInvestorCommuneChange(e.target.value)}
+                      disabled={!formData.investorCityId || loadingInvestorCommunes}
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50"
+                    >
+                      <option value="" className="bg-gray-800">
+                        {loadingInvestorCommunes
+                          ? "Chargement..."
+                          : !formData.investorCityId
+                            ? "Selectionnez d'abord une ville"
+                            : investorCommunes.length === 0
+                              ? "Aucune commune disponible"
+                              : "Selectionnez une commune"}
+                      </option>
+                      {investorCommunes.map((commune) => (
+                        <option key={commune.id} value={commune.id} className="bg-gray-800">
+                          {commune.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
                   <InputField
                     label="Adresse complete"
                     type="text"
                     value={formData.address}
                     onChange={(e) => handleChange("address", e.target.value)}
-                    placeholder="Numero, Avenue, Commune"
-                    className="col-span-2"
+                    placeholder="Numero, Avenue"
                   />
                 </div>
               </div>
@@ -853,22 +1109,86 @@ function NewDossierForm() {
                     className="col-span-2"
                   />
 
-                  <SelectField
-                    label="Province du projet"
-                    required
-                    value={formData.projectProvince}
-                    onChange={(e) => handleChange("projectProvince", e.target.value)}
-                    options={provinces}
-                    placeholder="Selectionnez"
-                    error={errors.projectProvince}
-                  />
-                  <InputField
-                    label="Ville du projet"
-                    type="text"
-                    value={formData.projectCity}
-                    onChange={(e) => handleChange("projectCity", e.target.value)}
-                    placeholder="Ex: Kolwezi"
-                  />
+                  {/* Province, Ville, Commune du projet en cascade */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Province du projet <span className="text-orange-500">*</span>
+                    </label>
+                    <select
+                      value={formData.projectProvinceId}
+                      onChange={(e) => handleProjectProvinceChange(e.target.value)}
+                      disabled={loadingProvinces}
+                      className={`w-full px-4 py-3 bg-gray-800/50 border rounded-xl text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50 ${
+                        errors.projectProvince ? "border-red-500" : "border-gray-700"
+                      }`}
+                    >
+                      <option value="" className="bg-gray-800">
+                        {loadingProvinces ? "Chargement..." : "Selectionnez une province"}
+                      </option>
+                      {provinces.map((prov) => (
+                        <option key={prov.id} value={prov.id} className="bg-gray-800">
+                          {prov.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.projectProvince && (
+                      <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {errors.projectProvince}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Ville du projet
+                    </label>
+                    <select
+                      value={formData.projectCityId}
+                      onChange={(e) => handleProjectCityChange(e.target.value)}
+                      disabled={!formData.projectProvinceId || loadingProjectCities}
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50"
+                    >
+                      <option value="" className="bg-gray-800">
+                        {loadingProjectCities
+                          ? "Chargement..."
+                          : !formData.projectProvinceId
+                            ? "Selectionnez d'abord une province"
+                            : "Selectionnez une ville"}
+                      </option>
+                      {projectCities.map((city) => (
+                        <option key={city.id} value={city.id} className="bg-gray-800">
+                          {city.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Commune du projet
+                    </label>
+                    <select
+                      value={formData.projectCommuneId}
+                      onChange={(e) => handleProjectCommuneChange(e.target.value)}
+                      disabled={!formData.projectCityId || loadingProjectCommunes}
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50"
+                    >
+                      <option value="" className="bg-gray-800">
+                        {loadingProjectCommunes
+                          ? "Chargement..."
+                          : !formData.projectCityId
+                            ? "Selectionnez d'abord une ville"
+                            : projectCommunes.length === 0
+                              ? "Aucune commune disponible"
+                              : "Selectionnez une commune"}
+                      </option>
+                      {projectCommunes.map((commune) => (
+                        <option key={commune.id} value={commune.id} className="bg-gray-800">
+                          {commune.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
                   <InputField
                     label="Adresse du site"
@@ -876,7 +1196,6 @@ function NewDossierForm() {
                     value={formData.projectAddress}
                     onChange={(e) => handleChange("projectAddress", e.target.value)}
                     placeholder="Localisation exacte"
-                    className="col-span-2"
                   />
 
                   <div className="col-span-2">
@@ -1212,7 +1531,15 @@ function NewDossierForm() {
                       </div>
                       <div>
                         <span className="text-gray-500">Province:</span>
-                        <span className="text-white ml-2">{formData.province || "-"}</span>
+                        <span className="text-white ml-2">{formData.investorProvince || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Ville:</span>
+                        <span className="text-white ml-2">{formData.investorCity || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Commune:</span>
+                        <span className="text-white ml-2">{formData.investorCommune || "-"}</span>
                       </div>
                     </div>
                   </div>
@@ -1230,6 +1557,14 @@ function NewDossierForm() {
                         <span className="text-white ml-2">{formData.projectProvince || "-"}</span>
                       </div>
                       <div>
+                        <span className="text-gray-500">Ville:</span>
+                        <span className="text-white ml-2">{formData.projectCity || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Commune:</span>
+                        <span className="text-white ml-2">{formData.projectCommune || "-"}</span>
+                      </div>
+                      <div className="col-span-2">
                         <span className="text-gray-500">Investissement:</span>
                         <span className="text-white ml-2">{formData.investmentAmount ? `${formData.investmentAmount} ${formData.currency}` : "-"}</span>
                       </div>

@@ -63,9 +63,28 @@ Dossier.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    investorProvinceId: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Reference vers la province de l\'investisseur',
+    },
     investorCity: {
       type: DataTypes.STRING,
       allowNull: true,
+    },
+    investorCityId: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Reference vers la ville de l\'investisseur',
+    },
+    investorCommune: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    investorCommuneId: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Reference vers la commune de l\'investisseur',
     },
     investorAddress: {
       type: DataTypes.TEXT,
@@ -96,9 +115,28 @@ Dossier.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    projectProvinceId: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Reference vers la province du projet',
+    },
     projectCity: {
       type: DataTypes.STRING,
       allowNull: true,
+    },
+    projectCityId: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Reference vers la ville du projet',
+    },
+    projectCommune: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    projectCommuneId: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Reference vers la commune du projet',
     },
     projectAddress: {
       type: DataTypes.TEXT,

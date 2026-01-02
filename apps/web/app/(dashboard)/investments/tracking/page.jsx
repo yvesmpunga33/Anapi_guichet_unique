@@ -29,30 +29,36 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { useIntl } from "react-intl";
+import { useLanguage } from "@/contexts/LanguageContext";
 
-// Statuts de projet (workflow d'approbation)
-const projectStatusConfig = {
-  DRAFT: { label: "Brouillon", color: "text-gray-600", bgColor: "bg-gray-100", icon: Clock },
-  SUBMITTED: { label: "Soumis", color: "text-blue-600", bgColor: "bg-blue-100", icon: Clock },
-  UNDER_REVIEW: { label: "En examen", color: "text-yellow-600", bgColor: "bg-yellow-100", icon: AlertCircle },
-  APPROVED: { label: "Approuve", color: "text-green-600", bgColor: "bg-green-100", icon: CheckCircle2 },
-  REJECTED: { label: "Rejete", color: "text-red-600", bgColor: "bg-red-100", icon: XCircle },
-  IN_PROGRESS: { label: "En cours", color: "text-purple-600", bgColor: "bg-purple-100", icon: TrendingUp },
-  COMPLETED: { label: "Termine", color: "text-emerald-600", bgColor: "bg-emerald-100", icon: CheckCircle2 },
-  CANCELLED: { label: "Annule", color: "text-gray-600", bgColor: "bg-gray-100", icon: XCircle },
-};
+// Statuts de projet (workflow d'approbation) - fonction dynamique pour l'internationalisation
+const getProjectStatusConfig = (intl) => ({
+  DRAFT: { label: intl.formatMessage({ id: "status.draft", defaultMessage: "Brouillon" }), color: "text-gray-600", bgColor: "bg-gray-100", icon: Clock },
+  SUBMITTED: { label: intl.formatMessage({ id: "status.submitted", defaultMessage: "Soumis" }), color: "text-blue-600", bgColor: "bg-blue-100", icon: Clock },
+  UNDER_REVIEW: { label: intl.formatMessage({ id: "status.underReview", defaultMessage: "En examen" }), color: "text-yellow-600", bgColor: "bg-yellow-100", icon: AlertCircle },
+  APPROVED: { label: intl.formatMessage({ id: "status.approved", defaultMessage: "Approuvé" }), color: "text-green-600", bgColor: "bg-green-100", icon: CheckCircle2 },
+  REJECTED: { label: intl.formatMessage({ id: "status.rejected", defaultMessage: "Rejeté" }), color: "text-red-600", bgColor: "bg-red-100", icon: XCircle },
+  IN_PROGRESS: { label: intl.formatMessage({ id: "status.inProgress", defaultMessage: "En cours" }), color: "text-purple-600", bgColor: "bg-purple-100", icon: TrendingUp },
+  COMPLETED: { label: intl.formatMessage({ id: "status.completed", defaultMessage: "Terminé" }), color: "text-emerald-600", bgColor: "bg-emerald-100", icon: CheckCircle2 },
+  CANCELLED: { label: intl.formatMessage({ id: "status.cancelled", defaultMessage: "Annulé" }), color: "text-gray-600", bgColor: "bg-gray-100", icon: XCircle },
+});
 
-// Statuts de suivi (progression)
-const trackingStatusConfig = {
-  ON_TRACK: { label: "Dans les temps", color: "text-green-600", bgColor: "bg-green-100" },
-  AT_RISK: { label: "A risque", color: "text-yellow-600", bgColor: "bg-yellow-100" },
-  DELAYED: { label: "En retard", color: "text-red-600", bgColor: "bg-red-100" },
-  AHEAD: { label: "En avance", color: "text-blue-600", bgColor: "bg-blue-100" },
-  COMPLETED: { label: "Termine", color: "text-emerald-600", bgColor: "bg-emerald-100" },
-  NOT_STARTED: { label: "Non demarre", color: "text-gray-600", bgColor: "bg-gray-100" },
-};
+// Statuts de suivi (progression) - fonction dynamique pour l'internationalisation
+const getTrackingStatusConfig = (intl) => ({
+  ON_TRACK: { label: intl.formatMessage({ id: "trackingStatus.onTrack", defaultMessage: "Dans les temps" }), color: "text-green-600", bgColor: "bg-green-100" },
+  AT_RISK: { label: intl.formatMessage({ id: "trackingStatus.atRisk", defaultMessage: "À risque" }), color: "text-yellow-600", bgColor: "bg-yellow-100" },
+  DELAYED: { label: intl.formatMessage({ id: "trackingStatus.delayed", defaultMessage: "En retard" }), color: "text-red-600", bgColor: "bg-red-100" },
+  AHEAD: { label: intl.formatMessage({ id: "trackingStatus.ahead", defaultMessage: "En avance" }), color: "text-blue-600", bgColor: "bg-blue-100" },
+  COMPLETED: { label: intl.formatMessage({ id: "trackingStatus.completed", defaultMessage: "Terminé" }), color: "text-emerald-600", bgColor: "bg-emerald-100" },
+  NOT_STARTED: { label: intl.formatMessage({ id: "trackingStatus.notStarted", defaultMessage: "Non démarré" }), color: "text-gray-600", bgColor: "bg-gray-100" },
+});
 
 export default function TrackingPage() {
+  const intl = useIntl();
+  const { locale } = useLanguage();
+  const projectStatusConfig = getProjectStatusConfig(intl);
+  const trackingStatusConfig = getTrackingStatusConfig(intl);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -104,7 +110,7 @@ export default function TrackingPage() {
   }, [searchTerm]);
 
   const formatAmount = (amount, currency = "USD") => {
-    return new Intl.NumberFormat("fr-FR", {
+    return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: currency,
       minimumFractionDigits: 0,
@@ -113,7 +119,7 @@ export default function TrackingPage() {
 
   const formatDate = (dateString) => {
     if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString("fr-FR", {
+    return new Date(dateString).toLocaleDateString(locale, {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -285,10 +291,10 @@ export default function TrackingPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Suivi des Projets
+            {intl.formatMessage({ id: "tracking.title", defaultMessage: "Suivi des Projets" })}
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Tableau de bord de progression et statut des investissements
+            {intl.formatMessage({ id: "tracking.subtitle", defaultMessage: "Tableau de bord de progression et statut des investissements" })}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -297,14 +303,14 @@ export default function TrackingPage() {
             className="inline-flex items-center px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
           >
             <Eye className="w-5 h-5 mr-2" />
-            Visualiser PDF
+            {intl.formatMessage({ id: "tracking.viewPdf", defaultMessage: "Visualiser PDF" })}
           </button>
           <button
             onClick={printContent}
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Printer className="w-5 h-5 mr-2" />
-            Imprimer
+            {intl.formatMessage({ id: "tracking.print", defaultMessage: "Imprimer" })}
           </button>
         </div>
       </div>
@@ -319,7 +325,7 @@ export default function TrackingPage() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "tracking.total", defaultMessage: "Total" })}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stats.total}</p>
             </div>
             <ClipboardList className="w-6 h-6 text-blue-600" />
@@ -334,7 +340,7 @@ export default function TrackingPage() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Approuves</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "tracking.approved", defaultMessage: "Approuvés" })}</p>
               <p className="text-2xl font-bold text-green-600 mt-1">{stats.approved}</p>
             </div>
             <CheckCircle2 className="w-6 h-6 text-green-600" />
@@ -349,7 +355,7 @@ export default function TrackingPage() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">En Cours</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "tracking.inProgress", defaultMessage: "En Cours" })}</p>
               <p className="text-2xl font-bold text-purple-600 mt-1">{stats.inProgress}</p>
             </div>
             <TrendingUp className="w-6 h-6 text-purple-600" />
@@ -364,7 +370,7 @@ export default function TrackingPage() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">En Examen</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "tracking.underReview", defaultMessage: "En Examen" })}</p>
               <p className="text-2xl font-bold text-yellow-600 mt-1">{stats.underReview}</p>
             </div>
             <AlertCircle className="w-6 h-6 text-yellow-600" />
@@ -379,7 +385,7 @@ export default function TrackingPage() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Rejetes</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "tracking.rejected", defaultMessage: "Rejetés" })}</p>
               <p className="text-2xl font-bold text-red-600 mt-1">{stats.rejected}</p>
             </div>
             <XCircle className="w-6 h-6 text-red-600" />
@@ -394,7 +400,7 @@ export default function TrackingPage() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Termines</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "tracking.completed", defaultMessage: "Terminés" })}</p>
               <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.completed}</p>
             </div>
             <CheckCircle2 className="w-6 h-6 text-emerald-600" />
@@ -409,7 +415,7 @@ export default function TrackingPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Rechercher par code, nom ou investisseur..."
+              placeholder={intl.formatMessage({ id: "tracking.searchPlaceholder", defaultMessage: "Rechercher par code, nom ou investisseur..." })}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -420,7 +426,7 @@ export default function TrackingPage() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           >
-            <option value="all">Tous les statuts</option>
+            <option value="all">{intl.formatMessage({ id: "tracking.allStatuses", defaultMessage: "Tous les statuts" })}</option>
             {Object.entries(projectStatusConfig).map(([key, value]) => (
               <option key={key} value={key}>{value.label}</option>
             ))}
@@ -443,7 +449,7 @@ export default function TrackingPage() {
             onClick={fetchProjects}
             className="ml-auto text-red-600 hover:text-red-700 font-medium text-sm"
           >
-            Reessayer
+            {intl.formatMessage({ id: "tracking.retry", defaultMessage: "Réessayer" })}
           </button>
         </div>
       )}
@@ -452,7 +458,7 @@ export default function TrackingPage() {
       {loading && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 flex flex-col items-center justify-center">
           <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">Chargement des projets...</p>
+          <p className="text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "tracking.loadingProjects", defaultMessage: "Chargement des projets..." })}</p>
         </div>
       )}
 
@@ -529,7 +535,7 @@ export default function TrackingPage() {
                         </p>
                         {project.progress > 0 && (
                           <p className={`text-xs font-medium ${progressDiff.color}`}>
-                            {progressDiff.text} vs plan
+                            {progressDiff.text} {intl.formatMessage({ id: "tracking.vsPlan", defaultMessage: "vs plan" })}
                           </p>
                         )}
                       </div>
@@ -546,16 +552,16 @@ export default function TrackingPage() {
                   {(project.progress > 0 || project.status === "IN_PROGRESS") && (
                     <div className="mb-4">
                       <div className="flex items-center justify-between text-xs mb-2">
-                        <span className="text-gray-500 dark:text-gray-400">Progression</span>
+                        <span className="text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "tracking.progression", defaultMessage: "Progression" })}</span>
                         <div className="flex items-center gap-4">
                           <span className="flex items-center gap-1">
                             <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                            Reel: {project.progress || 0}%
+                            {intl.formatMessage({ id: "tracking.actual", defaultMessage: "Réel" })}: {project.progress || 0}%
                           </span>
                           {expectedProgress > 0 && (
                             <span className="flex items-center gap-1">
                               <span className="w-3 h-3 rounded-full bg-gray-300"></span>
-                              Attendu: {expectedProgress}%
+                              {intl.formatMessage({ id: "tracking.expected", defaultMessage: "Attendu" })}: {expectedProgress}%
                             </span>
                           )}
                         </div>
@@ -583,7 +589,7 @@ export default function TrackingPage() {
                   {project.status === "REJECTED" && project.rejectionReason && (
                     <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                       <p className="text-sm text-red-700 dark:text-red-400">
-                        <strong>Motif de rejet:</strong> {project.rejectionReason}
+                        <strong>{intl.formatMessage({ id: "tracking.rejectionReason", defaultMessage: "Motif de rejet" })}:</strong> {project.rejectionReason}
                       </p>
                     </div>
                   )}
@@ -609,13 +615,13 @@ export default function TrackingPage() {
                     {project.jobsCreated > 0 && (
                       <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                         <Users className="w-4 h-4 text-gray-400" />
-                        <span>{project.jobsCreated} emplois</span>
+                        <span>{project.jobsCreated} {intl.formatMessage({ id: "tracking.jobs", defaultMessage: "emplois" })}</span>
                       </div>
                     )}
                     {project.approvalDate && (
                       <div className="flex items-center gap-2 text-green-600">
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>Approuve le {formatDate(project.approvalDate)}</span>
+                        <span>{intl.formatMessage({ id: "tracking.approvedOn", defaultMessage: "Approuvé le" })} {formatDate(project.approvalDate)}</span>
                       </div>
                     )}
                   </div>
@@ -638,11 +644,11 @@ export default function TrackingPage() {
       {!loading && projects.length === 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
           <ClipboardList className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">Aucun projet trouve</p>
+          <p className="text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "tracking.noProjectsFound", defaultMessage: "Aucun projet trouvé" })}</p>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
             {statusFilter !== "all"
-              ? `Aucun projet avec le statut "${projectStatusConfig[statusFilter]?.label}"`
-              : "Essayez de modifier vos filtres de recherche"
+              ? intl.formatMessage({ id: "tracking.noProjectsWithStatus", defaultMessage: "Aucun projet avec le statut \"{status}\"" }, { status: projectStatusConfig[statusFilter]?.label })
+              : intl.formatMessage({ id: "tracking.tryModifyFilters", defaultMessage: "Essayez de modifier vos filtres de recherche" })
             }
           </p>
           {statusFilter !== "all" && (
@@ -650,7 +656,7 @@ export default function TrackingPage() {
               onClick={() => setStatusFilter("all")}
               className="mt-4 text-blue-600 hover:text-blue-700 text-sm font-medium"
             >
-              Voir tous les projets
+              {intl.formatMessage({ id: "tracking.viewAllProjects", defaultMessage: "Voir tous les projets" })}
             </button>
           )}
         </div>
@@ -662,7 +668,7 @@ export default function TrackingPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Apercu - Liste des Projets
+                {intl.formatMessage({ id: "tracking.preview", defaultMessage: "Aperçu - Liste des Projets" })}
               </h3>
               <div className="flex items-center gap-2">
                 <button
@@ -670,7 +676,7 @@ export default function TrackingPage() {
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                 >
                   <Printer className="w-4 h-4 inline mr-2" />
-                  Imprimer
+                  {intl.formatMessage({ id: "tracking.print", defaultMessage: "Imprimer" })}
                 </button>
                 <button
                   onClick={() => setShowPdfViewer(false)}
@@ -684,10 +690,10 @@ export default function TrackingPage() {
               <div className="bg-white dark:bg-gray-800 shadow-lg mx-auto max-w-4xl p-8" ref={printRef}>
                 <div className="text-center mb-8">
                   <h1 className="text-2xl font-bold text-blue-800 dark:text-blue-400">
-                    ANAPI - Agence Nationale pour la Promotion des Investissements
+                    ANAPI - {intl.formatMessage({ id: "app.title", defaultMessage: "Agence Nationale pour la Promotion des Investissements" })}
                   </h1>
                   <h2 className="text-gray-500 mt-2">
-                    Liste des Projets d'Investissement - {new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    {intl.formatMessage({ id: "tracking.projectsList", defaultMessage: "Liste des Projets d'Investissement" })} - {new Date().toLocaleDateString(locale, { day: '2-digit', month: 'long', year: 'numeric' })}
                   </h2>
                 </div>
 
@@ -695,27 +701,27 @@ export default function TrackingPage() {
                 <div className="grid grid-cols-6 gap-4 mb-8 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div className="text-center">
                     <p className="text-2xl font-bold text-blue-600">{stats.total}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-200">Total</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-200">{intl.formatMessage({ id: "tracking.total", defaultMessage: "Total" })}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-200">Approuves</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-200">{intl.formatMessage({ id: "tracking.approved", defaultMessage: "Approuvés" })}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-purple-600">{stats.inProgress}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-200">En Cours</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-200">{intl.formatMessage({ id: "tracking.inProgress", defaultMessage: "En Cours" })}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-yellow-600">{stats.underReview}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-200">En Examen</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-200">{intl.formatMessage({ id: "tracking.underReview", defaultMessage: "En Examen" })}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-red-600">{stats.rejected}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-200">Rejetes</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-200">{intl.formatMessage({ id: "tracking.rejected", defaultMessage: "Rejetés" })}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-emerald-600">{stats.completed}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-200">Termines</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-200">{intl.formatMessage({ id: "tracking.completed", defaultMessage: "Terminés" })}</p>
                   </div>
                 </div>
 
@@ -723,13 +729,13 @@ export default function TrackingPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-blue-800 text-white">
-                      <th className="px-3 py-2 text-left">Code</th>
-                      <th className="px-3 py-2 text-left">Projet</th>
-                      <th className="px-3 py-2 text-left">Investisseur</th>
-                      <th className="px-3 py-2 text-left">Secteur</th>
-                      <th className="px-3 py-2 text-right">Montant</th>
-                      <th className="px-3 py-2 text-center">Progress</th>
-                      <th className="px-3 py-2 text-center">Statut</th>
+                      <th className="px-3 py-2 text-left">{intl.formatMessage({ id: "tracking.code", defaultMessage: "Code" })}</th>
+                      <th className="px-3 py-2 text-left">{intl.formatMessage({ id: "tracking.project", defaultMessage: "Projet" })}</th>
+                      <th className="px-3 py-2 text-left">{intl.formatMessage({ id: "tracking.investor", defaultMessage: "Investisseur" })}</th>
+                      <th className="px-3 py-2 text-left">{intl.formatMessage({ id: "tracking.sector", defaultMessage: "Secteur" })}</th>
+                      <th className="px-3 py-2 text-right">{intl.formatMessage({ id: "tracking.amount", defaultMessage: "Montant" })}</th>
+                      <th className="px-3 py-2 text-center">{intl.formatMessage({ id: "tracking.progress", defaultMessage: "Progression" })}</th>
+                      <th className="px-3 py-2 text-center">{intl.formatMessage({ id: "tracking.status", defaultMessage: "Statut" })}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -762,7 +768,7 @@ export default function TrackingPage() {
                 </table>
 
                 <div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700 text-center text-xs text-gray-400">
-                  Document genere automatiquement par le systeme ANAPI - {new Date().toLocaleString('fr-FR')}
+                  {intl.formatMessage({ id: "tracking.generatedBy", defaultMessage: "Document généré automatiquement par le système ANAPI" })} - {new Date().toLocaleString(locale)}
                 </div>
               </div>
             </div>

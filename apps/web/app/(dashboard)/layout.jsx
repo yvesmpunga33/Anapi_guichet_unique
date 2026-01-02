@@ -2,10 +2,13 @@
 
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useIntl } from "react-intl";
 import {
   LayoutDashboard,
   Users,
+  Building,
   Building2,
   FileText,
   TrendingUp,
@@ -35,85 +38,188 @@ import {
   FileBadge,
   Award,
   ScrollText,
+  Mail,
+  Sun,
+  Moon,
+  Home,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import MessageNotifications from "../../components/notifications/MessageNotifications";
+import LanguageSelector from "../../components/LanguageSelector";
 
-const navigation = [
+// Avatar component with error handling and zoom capability
+function UserAvatar({ src, name, size = 40, onClick }) {
+  const [imageError, setImageError] = useState(false);
+  const initial = name?.charAt(0)?.toUpperCase() || "U";
+
+  if (!src || imageError) {
+    return (
+      <div
+        className="rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border-2 border-white/20 hover:border-white/40 transition-colors cursor-pointer"
+        style={{ width: size, height: size }}
+        onClick={onClick}
+      >
+        <span className="text-white font-semibold text-sm">{initial}</span>
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      src={src}
+      alt={name || "User"}
+      width={size}
+      height={size}
+      className="rounded-full border-2 border-white/20 hover:border-white/40 transition-colors cursor-pointer object-cover"
+      onError={() => setImageError(true)}
+      onClick={onClick}
+      unoptimized
+    />
+  );
+}
+
+// Photo zoom modal component
+function PhotoZoomModal({ isOpen, onClose, src, name }) {
+  const initial = name?.charAt(0)?.toUpperCase() || "U";
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative max-w-md w-full mx-4 animate-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute -top-12 right-0 p-2 text-white/80 hover:text-white transition-colors"
+        >
+          <X className="w-8 h-8" />
+        </button>
+
+        {/* Photo container */}
+        <div className="bg-slate-800 rounded-2xl p-6 shadow-2xl">
+          <div className="flex flex-col items-center">
+            {src ? (
+              <Image
+                src={src}
+                alt={name || "User"}
+                width={280}
+                height={280}
+                className="rounded-full border-4 border-white/20 object-cover shadow-xl"
+                unoptimized
+              />
+            ) : (
+              <div className="w-[280px] h-[280px] rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border-4 border-white/20 shadow-xl">
+                <span className="text-white font-bold text-7xl">{initial}</span>
+              </div>
+            )}
+
+            {/* User info */}
+            <div className="mt-6 text-center">
+              <h3 className="text-xl font-semibold text-white">{name || "Utilisateur"}</h3>
+              <p className="text-sm text-slate-400 mt-1">Cliquez ailleurs pour fermer</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Navigation structure with translation keys
+const getNavigation = (intl) => [
   {
+    titleKey: "nav.principal",
     title: "PRINCIPAL",
     items: [
-      { name: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
+      { nameKey: "nav.dashboard", name: intl.formatMessage({ id: "nav.dashboard", defaultMessage: "Tableau de bord" }), href: "/dashboard", icon: LayoutDashboard },
+      { nameKey: "nav.messages", name: intl.formatMessage({ id: "nav.messages", defaultMessage: "Messages" }), href: "/messages", icon: Mail },
     ],
   },
   {
-    title: "GUICHET UNIQUE",
+    titleKey: "nav.guichetUnique",
+    title: intl.formatMessage({ id: "nav.guichetUnique", defaultMessage: "GUICHET UNIQUE" }),
     items: [
-      { name: "Tous les dossiers", href: "/guichet-unique/dossiers", icon: FolderOpen },
-      { name: "Agréments", href: "/guichet-unique/agrements", icon: FileCheck },
-      { name: "Licences", href: "/guichet-unique/licences", icon: Award },
-      { name: "Permis", href: "/guichet-unique/permis", icon: ScrollText },
-      { name: "Autorisations", href: "/guichet-unique/autorisations", icon: FileBadge },
+      { name: intl.formatMessage({ id: "nav.allFiles", defaultMessage: "Tous les dossiers" }), href: "/guichet-unique/dossiers", icon: FolderOpen },
+      { name: intl.formatMessage({ id: "nav.approvals", defaultMessage: "Agréments" }), href: "/guichet-unique/agrements", icon: FileCheck },
+      { name: intl.formatMessage({ id: "nav.licenses", defaultMessage: "Licences" }), href: "/guichet-unique/licences", icon: Award },
+      { name: intl.formatMessage({ id: "nav.permits", defaultMessage: "Permis" }), href: "/guichet-unique/permis", icon: ScrollText },
+      { name: intl.formatMessage({ id: "nav.authorizations", defaultMessage: "Autorisations" }), href: "/guichet-unique/autorisations", icon: FileBadge },
     ],
   },
   {
-    title: "GESTION DES INVESTISSEMENTS",
+    titleKey: "nav.investments",
+    title: intl.formatMessage({ id: "nav.investments", defaultMessage: "GESTION DES INVESTISSEMENTS" }),
     items: [
-      { name: "Investisseurs", href: "/investments/investors", icon: Briefcase },
-      { name: "Projets d'investissement", href: "/investments/projects", icon: TrendingUp },
-      { name: "Suivi des projets", href: "/investments/tracking", icon: ClipboardList },
+      { name: intl.formatMessage({ id: "nav.investors", defaultMessage: "Investisseurs" }), href: "/investments/investors", icon: Briefcase },
+      { name: intl.formatMessage({ id: "nav.investmentProjects", defaultMessage: "Projets d'investissement" }), href: "/investments/projects", icon: TrendingUp },
+      { name: intl.formatMessage({ id: "nav.projectTracking", defaultMessage: "Suivi des projets" }), href: "/investments/tracking", icon: ClipboardList },
     ],
   },
   {
-    title: "RÉFÉRENTIELS",
+    titleKey: "nav.referentials",
+    title: intl.formatMessage({ id: "nav.referentials", defaultMessage: "RÉFÉRENTIELS" }),
     items: [
-      { name: "Provinces", href: "/referentiels/provinces", icon: MapPin },
-      { name: "Secteurs d'activité", href: "/referentiels/sectors", icon: Factory },
-      { name: "Ministères", href: "/referentiels/ministries", icon: Building2 },
+      { name: intl.formatMessage({ id: "nav.provinces", defaultMessage: "Provinces" }), href: "/referentiels/provinces", icon: MapPin },
+      { name: intl.formatMessage({ id: "nav.cities", defaultMessage: "Villes" }), href: "/referentiels/villes", icon: Building },
+      { name: intl.formatMessage({ id: "nav.communes", defaultMessage: "Communes" }), href: "/referentiels/communes", icon: Home },
+      { name: intl.formatMessage({ id: "nav.sectors", defaultMessage: "Secteurs d'activité" }), href: "/referentiels/sectors", icon: Factory },
+      { name: intl.formatMessage({ id: "nav.ministries", defaultMessage: "Ministères" }), href: "/referentiels/ministries", icon: Building2 },
     ],
   },
   {
-    title: "MINISTÈRES",
+    titleKey: "nav.ministries",
+    title: intl.formatMessage({ id: "nav.ministries", defaultMessage: "MINISTÈRES" }),
     items: [
-      { name: "Liste des ministères", href: "/ministries", icon: Landmark },
-      { name: "Autorisations", href: "/ministries/autorisations", icon: FileBadge },
-      { name: "Licences", href: "/ministries/licences", icon: Award },
-      { name: "Permis", href: "/ministries/permis", icon: ScrollText },
+      { name: intl.formatMessage({ id: "nav.ministriesList", defaultMessage: "Liste des ministères" }), href: "/ministries", icon: Landmark },
+      { name: intl.formatMessage({ id: "nav.authorizations", defaultMessage: "Autorisations" }), href: "/ministries/autorisations", icon: FileBadge },
+      { name: intl.formatMessage({ id: "nav.licenses", defaultMessage: "Licences" }), href: "/ministries/licences", icon: Award },
+      { name: intl.formatMessage({ id: "nav.permits", defaultMessage: "Permis" }), href: "/ministries/permis", icon: ScrollText },
     ],
   },
   {
-    title: "CONFIGURATION",
+    titleKey: "nav.configuration",
+    title: intl.formatMessage({ id: "nav.configuration", defaultMessage: "CONFIGURATION" }),
     items: [
-      { name: "Actes administratifs", href: "/configuration/actes-administratifs", icon: FileCheck },
-      { name: "Étapes de workflow", href: "/configuration/workflow-steps", icon: Workflow },
-      { name: "Workflows ministères", href: "/configuration/ministry-workflows", icon: Cog },
+      { name: intl.formatMessage({ id: "nav.adminActs", defaultMessage: "Actes administratifs" }), href: "/configuration/actes-administratifs", icon: FileCheck },
+      { name: intl.formatMessage({ id: "nav.workflowSteps", defaultMessage: "Étapes de workflow" }), href: "/configuration/workflow-steps", icon: Workflow },
+      { name: intl.formatMessage({ id: "nav.ministryWorkflows", defaultMessage: "Workflows ministères" }), href: "/configuration/ministry-workflows", icon: Cog },
     ],
   },
   {
-    title: "ANALYSES & RAPPORTS",
+    titleKey: "nav.reports",
+    title: intl.formatMessage({ id: "nav.reports", defaultMessage: "ANALYSES & RAPPORTS" }),
     items: [
-      { name: "Statistiques", href: "/reports/statistics", icon: BarChart3 },
-      { name: "Rapports", href: "/reports/list", icon: FileText },
+      { name: intl.formatMessage({ id: "nav.statistics", defaultMessage: "Statistiques" }), href: "/reports/statistics", icon: BarChart3 },
+      { name: intl.formatMessage({ id: "nav.reportsList", defaultMessage: "Rapports" }), href: "/reports/list", icon: FileText },
     ],
   },
   {
-    title: "RESSOURCES HUMAINES",
+    titleKey: "nav.hr",
+    title: intl.formatMessage({ id: "nav.hr", defaultMessage: "RESSOURCES HUMAINES" }),
     items: [
-      { name: "Employés", href: "/hr/employees", icon: Users },
-      { name: "Départements", href: "/hr/departments", icon: Building2 },
-      { name: "Postes", href: "/hr/positions", icon: Briefcase },
-      { name: "Grades salariaux", href: "/hr/grades", icon: GraduationCap },
-      { name: "Catégories", href: "/hr/categories", icon: Layers },
-      { name: "Types de congés", href: "/hr/leave-types", icon: Calendar },
-      { name: "Gestion des congés", href: "/hr/leaves", icon: Calendar },
-      { name: "Paie", href: "/hr/payroll", icon: DollarSign },
+      { name: intl.formatMessage({ id: "nav.employees", defaultMessage: "Employés" }), href: "/hr/employees", icon: Users },
+      { name: intl.formatMessage({ id: "nav.departments", defaultMessage: "Départements" }), href: "/hr/departments", icon: Building2 },
+      { name: intl.formatMessage({ id: "nav.positions", defaultMessage: "Postes" }), href: "/hr/positions", icon: Briefcase },
+      { name: intl.formatMessage({ id: "nav.salaryGrades", defaultMessage: "Grades salariaux" }), href: "/hr/grades", icon: GraduationCap },
+      { name: intl.formatMessage({ id: "nav.categories", defaultMessage: "Catégories" }), href: "/hr/categories", icon: Layers },
+      { name: intl.formatMessage({ id: "nav.leaveTypes", defaultMessage: "Types de congés" }), href: "/hr/leave-types", icon: Calendar },
+      { name: intl.formatMessage({ id: "nav.leaveManagement", defaultMessage: "Gestion des congés" }), href: "/hr/leaves", icon: Calendar },
+      { name: intl.formatMessage({ id: "nav.payroll", defaultMessage: "Paie" }), href: "/hr/payroll", icon: DollarSign },
     ],
   },
   {
-    title: "ADMINISTRATION",
+    titleKey: "nav.admin",
+    title: intl.formatMessage({ id: "nav.admin", defaultMessage: "ADMINISTRATION" }),
     items: [
-      { name: "Utilisateurs", href: "/admin/users", icon: UserCog },
-      { name: "Rôles & Permissions", href: "/admin/roles", icon: Shield },
-      { name: "Paramètres", href: "/admin/settings", icon: Settings },
+      { name: intl.formatMessage({ id: "nav.users", defaultMessage: "Utilisateurs" }), href: "/admin/users", icon: UserCog },
+      { name: intl.formatMessage({ id: "nav.rolesPermissions", defaultMessage: "Rôles & Permissions" }), href: "/admin/roles", icon: Shield },
+      { name: intl.formatMessage({ id: "nav.settings", defaultMessage: "Paramètres" }), href: "/admin/settings", icon: Settings },
     ],
   },
 ];
@@ -121,10 +227,32 @@ const navigation = [
 export default function DashboardLayout({ children }) {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const intl = useIntl();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [photoZoomOpen, setPhotoZoomOpen] = useState(false);
+
+  // Get navigation with translations
+  const navigation = getNavigation(intl);
+
   const [expandedSections, setExpandedSections] = useState(
     navigation.map((s) => s.title)
   );
+
+  // Dark mode toggle
+  useEffect(() => {
+    const savedMode = localStorage.getItem("anapi-dark-mode");
+    if (savedMode === "true") {
+      setDarkMode(true);
+      document.documentElement.classList.add("dark");
+    }
+  }, []);
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+    document.documentElement.classList.toggle("dark");
+    localStorage.setItem("anapi-dark-mode", (!darkMode).toString());
+  };
 
   const toggleSection = (title) => {
     setExpandedSections((prev) =>
@@ -219,11 +347,12 @@ export default function DashboardLayout({ children }) {
         {/* User section at bottom */}
         <div className="flex-shrink-0 border-t border-slate-700 p-4">
           <div className="flex items-center space-x-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <span className="text-white font-medium text-sm">
-                {session?.user?.name?.charAt(0) || "U"}
-              </span>
-            </div>
+            <UserAvatar
+              src={session?.user?.image}
+              name={session?.user?.name}
+              size={40}
+              onClick={() => setPhotoZoomOpen(true)}
+            />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">
                 {session?.user?.name || "Utilisateur"}
@@ -245,41 +374,62 @@ export default function DashboardLayout({ children }) {
 
       {/* Main content */}
       <div className="lg:pl-72">
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        {/* Top bar - Professional Header */}
+        <header className="sticky top-0 z-30 bg-slate-800 dark:bg-slate-900 shadow-lg">
           <div className="flex items-center justify-between h-16 px-4 lg:px-6">
+            {/* Left side - Mobile menu & Page title */}
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="lg:hidden p-2 rounded-lg hover:bg-slate-700 text-white"
               >
-                <Menu className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                <Menu className="w-5 h-5" />
               </button>
 
-              {/* Breadcrumb or page title can go here */}
               <div className="hidden sm:block">
-                <h1 className="text-lg font-semibold text-gray-800 dark:text-white">
-                  {navigation.flatMap(s => s.items).find(i => i.href && isActiveLink(i.href))?.name || "Dashboard"}
+                <h1 className="text-lg font-semibold text-white">
+                  {navigation.flatMap(s => s.items).find(i => i.href && isActiveLink(i.href))?.name || intl.formatMessage({ id: "nav.dashboard", defaultMessage: "Dashboard" })}
                 </h1>
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
-              {/* Notifications, search, etc. can be added here */}
-              <div className="hidden md:flex items-center space-x-3">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {session?.user?.name || "Utilisateur"}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {session?.user?.role || "Administrateur"}
-                  </p>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                  <span className="text-white font-medium">
-                    {session?.user?.name?.charAt(0) || "U"}
-                  </span>
-                </div>
+            {/* Right side - Actions */}
+            <div className="flex items-center space-x-2">
+              {/* Language Selector */}
+              <LanguageSelector variant="compact" />
+
+              {/* Dark Mode Toggle */}
+              <button
+                onClick={toggleDarkMode}
+                className="p-2.5 rounded-lg hover:bg-slate-700 text-white transition-colors"
+                title={darkMode ? "Mode clair" : "Mode sombre"}
+              >
+                {darkMode ? (
+                  <Sun className="w-5 h-5" />
+                ) : (
+                  <Moon className="w-5 h-5" />
+                )}
+              </button>
+
+              {/* Messages Notifications */}
+              <MessageNotifications />
+
+              {/* Settings */}
+              <button
+                className="p-2.5 rounded-lg hover:bg-slate-700 text-white transition-colors"
+                title={intl.formatMessage({ id: "header.settings", defaultMessage: "Paramètres" })}
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+
+              {/* User Profile with Photo */}
+              <div className="flex items-center ml-2">
+                <UserAvatar
+                  src={session?.user?.image}
+                  name={session?.user?.name}
+                  size={40}
+                  onClick={() => setPhotoZoomOpen(true)}
+                />
               </div>
             </div>
           </div>
@@ -288,6 +438,14 @@ export default function DashboardLayout({ children }) {
         {/* Page content */}
         <main className="p-4 lg:p-6 min-h-[calc(100vh-4rem)]">{children}</main>
       </div>
+
+      {/* Photo Zoom Modal */}
+      <PhotoZoomModal
+        isOpen={photoZoomOpen}
+        onClose={() => setPhotoZoomOpen(false)}
+        src={session?.user?.image}
+        name={session?.user?.name}
+      />
 
       {/* Custom scrollbar styles */}
       <style jsx global>{`

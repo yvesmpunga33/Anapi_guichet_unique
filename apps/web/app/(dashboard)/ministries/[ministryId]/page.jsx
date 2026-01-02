@@ -50,6 +50,22 @@ const requestTypeConfig = {
     bgLight: "bg-orange-50 dark:bg-orange-900/20",
     textColor: "text-orange-600 dark:text-orange-400",
   },
+  AGREMENT: {
+    label: "Agrément",
+    icon: FileCheck,
+    color: "green",
+    gradient: "from-green-500 to-green-600",
+    bgLight: "bg-green-50 dark:bg-green-900/20",
+    textColor: "text-green-600 dark:text-green-400",
+  },
+  OTHER: {
+    label: "Autre",
+    icon: FileCheck,
+    color: "gray",
+    gradient: "from-gray-500 to-gray-600",
+    bgLight: "bg-gray-50 dark:bg-gray-900/20",
+    textColor: "text-gray-600 dark:text-gray-400",
+  },
 };
 
 const statusConfig = {
@@ -238,7 +254,7 @@ export default function MinistryDashboard({ params }) {
                     </div>
                   </div>
                   <Link
-                    href={`/ministries/${ministryId}/${type.toLowerCase()}s`}
+                    href={`/ministries/${ministryId}/${type === 'PERMIS' ? 'permis' : type.toLowerCase() + 's'}`}
                     className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
                   >
                     <ArrowRight className="w-5 h-5 text-white" />
@@ -349,8 +365,8 @@ export default function MinistryDashboard({ params }) {
           <div className="divide-y divide-gray-100 dark:divide-gray-700 max-h-[400px] overflow-y-auto">
             {data.recentRequests?.length > 0 ? (
               data.recentRequests.map((request) => {
-                const typeConfig = requestTypeConfig[request.requestType];
-                const status = statusConfig[request.status];
+                const typeConfig = requestTypeConfig[request.requestType] || requestTypeConfig.OTHER;
+                const status = statusConfig[request.status] || statusConfig.DRAFT;
 
                 return (
                   <Link

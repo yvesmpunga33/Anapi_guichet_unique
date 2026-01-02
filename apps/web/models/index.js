@@ -38,6 +38,14 @@ import MinistryRequestDocument from './MinistryRequestDocument.js';
 import DossierSector from './DossierSector.js';
 import RequiredDocument from './RequiredDocument.js';
 import DossierStepValidation from './DossierStepValidation.js';
+// Communication interne
+import Message from './Message.js';
+import MessageRecipient from './MessageRecipient.js';
+import MessageAttachment from './MessageAttachment.js';
+// Référentiels
+import Province from './Province.js';
+import City from './City.js';
+import Commune from './Commune.js';
 
 // ==================== ASSOCIATIONS ====================
 
@@ -48,6 +56,10 @@ Account.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 // User - Session
 User.hasMany(Session, { foreignKey: 'userId', as: 'sessions' });
 Session.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+// User - Ministry (utilisateur appartient à un ministère)
+User.belongsTo(Ministry, { foreignKey: 'ministryId', as: 'ministry' });
+Ministry.hasMany(User, { foreignKey: 'ministryId', as: 'users' });
 
 // HRDepartment - Self reference (hierarchy)
 HRDepartment.belongsTo(HRDepartment, { foreignKey: 'parentId', as: 'parent' });
@@ -203,6 +215,24 @@ DossierStepValidation.belongsTo(Dossier, { foreignKey: 'dossierId', as: 'dossier
 // DossierStepValidation - User (validatedBy)
 DossierStepValidation.belongsTo(User, { foreignKey: 'validatedById', as: 'validatedBy' });
 
+// ==================== COMMUNICATION INTERNE ASSOCIATIONS ====================
+
+// Message - User (sender)
+Message.belongsTo(User, { foreignKey: 'senderId', as: 'sender' });
+User.hasMany(Message, { foreignKey: 'senderId', as: 'sentMessages' });
+
+// Message - MessageRecipient
+Message.hasMany(MessageRecipient, { foreignKey: 'messageId', as: 'recipients', onDelete: 'CASCADE' });
+MessageRecipient.belongsTo(Message, { foreignKey: 'messageId', as: 'message' });
+
+// MessageRecipient - User (recipient)
+MessageRecipient.belongsTo(User, { foreignKey: 'recipientId', as: 'recipient' });
+User.hasMany(MessageRecipient, { foreignKey: 'recipientId', as: 'receivedMessages' });
+
+// Message - MessageAttachment
+Message.hasMany(MessageAttachment, { foreignKey: 'messageId', as: 'attachments', onDelete: 'CASCADE' });
+MessageAttachment.belongsTo(Message, { foreignKey: 'messageId', as: 'message' });
+
 // ==================== MINISTRY REQUESTS ASSOCIATIONS ====================
 
 // MinistryWorkflow - Ministry
@@ -228,6 +258,28 @@ MinistryRequest.hasMany(MinistryRequestHistory, { foreignKey: 'requestId', as: '
 // MinistryRequestDocument - MinistryRequest
 MinistryRequestDocument.belongsTo(MinistryRequest, { foreignKey: 'requestId', as: 'request' });
 MinistryRequest.hasMany(MinistryRequestDocument, { foreignKey: 'requestId', as: 'documents', onDelete: 'CASCADE' });
+
+// ==================== REFERENTIELS ASSOCIATIONS ====================
+
+// Province - City
+Province.hasMany(City, { foreignKey: 'provinceId', as: 'cities' });
+City.belongsTo(Province, { foreignKey: 'provinceId', as: 'province' });
+
+// Dossier - Province/City (investisseur)
+Dossier.belongsTo(Province, { foreignKey: 'investorProvinceId', as: 'investorProvinceRef' });
+Dossier.belongsTo(City, { foreignKey: 'investorCityId', as: 'investorCityRef' });
+
+// Dossier - Province/City (projet)
+Dossier.belongsTo(Province, { foreignKey: 'projectProvinceId', as: 'projectProvinceRef' });
+Dossier.belongsTo(City, { foreignKey: 'projectCityId', as: 'projectCityRef' });
+
+// City - Commune
+City.hasMany(Commune, { foreignKey: 'cityId', as: 'communes' });
+Commune.belongsTo(City, { foreignKey: 'cityId', as: 'city' });
+
+// Dossier - Commune (investisseur et projet)
+Dossier.belongsTo(Commune, { foreignKey: 'investorCommuneId', as: 'investorCommuneRef' });
+Dossier.belongsTo(Commune, { foreignKey: 'projectCommuneId', as: 'projectCommuneRef' });
 
 // Export all models
 export {
@@ -271,6 +323,14 @@ export {
   MinistryRequestDocument,
   // Configuration
   RequiredDocument,
+  // Communication interne
+  Message,
+  MessageRecipient,
+  MessageAttachment,
+  // Référentiels
+  Province,
+  City,
+  Commune,
 };
 
 export default {
@@ -314,4 +374,12 @@ export default {
   MinistryRequestDocument,
   // Configuration
   RequiredDocument,
+  // Communication interne
+  Message,
+  MessageRecipient,
+  MessageAttachment,
+  // Référentiels
+  Province,
+  City,
+  Commune,
 };

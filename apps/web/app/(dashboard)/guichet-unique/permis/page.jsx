@@ -426,13 +426,23 @@ export default function PermisPage() {
                       <span>{dossier.projectProvince || "Province non specifiee"}</span>
                     </div>
 
+                    {/* Sector */}
+                    {dossier.sector && (
+                      <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <Building2 className="w-4 h-4 mr-2 text-gray-400" />
+                        <span className="truncate">{dossier.sector}</span>
+                      </div>
+                    )}
+
                     {/* Ministry */}
-                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                      <Landmark className="w-4 h-4 mr-2 text-indigo-500" />
-                      <span className="truncate">
-                        {dossier.ministry?.shortName || dossier.ministry?.name || "Non assigné"}
-                      </span>
-                    </div>
+                    {dossier.ministry && (
+                      <div className="flex items-center text-sm">
+                        <Landmark className="w-4 h-4 mr-2 text-indigo-500" />
+                        <span className="truncate font-medium text-indigo-600 dark:text-indigo-400">
+                          {dossier.ministry.shortName || dossier.ministry.name}
+                        </span>
+                      </div>
+                    )}
 
                     <div className="flex items-center text-sm">
                       <DollarSign className="w-4 h-4 mr-2 text-gray-400" />

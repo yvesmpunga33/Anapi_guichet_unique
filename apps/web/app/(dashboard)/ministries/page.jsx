@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useIntl } from "react-intl";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   Landmark,
   ChevronDown,
@@ -20,6 +22,8 @@ import {
 } from "lucide-react";
 
 export default function MinistriesListPage() {
+  const intl = useIntl();
+  const { locale } = useLanguage();
   const [allMinistries, setAllMinistries] = useState([]);
   const [filteredMinistries, setFilteredMinistries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -97,9 +101,9 @@ export default function MinistriesListPage() {
             <Landmark className="w-8 h-8" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">Ministères</h1>
+            <h1 className="text-3xl font-bold">{intl.formatMessage({ id: "ministries.title", defaultMessage: "Ministères" })}</h1>
             <p className="text-indigo-100 mt-1">
-              Accédez aux dashboards et gérez les demandes par ministère
+              {intl.formatMessage({ id: "ministries.subtitle", defaultMessage: "Accédez aux dashboards et gérez les demandes par ministère" })}
             </p>
           </div>
         </div>
@@ -115,7 +119,7 @@ export default function MinistriesListPage() {
               onChange={(e) => setSelectedMinistry(e.target.value)}
               className="w-full pl-10 pr-10 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white appearance-none cursor-pointer"
             >
-              <option value="">Tous les ministeres</option>
+              <option value="">{intl.formatMessage({ id: "ministries.allMinistries", defaultMessage: "Tous les ministères" })}</option>
               {allMinistries.map((ministry) => (
                 <option key={ministry.id} value={ministry.id}>
                   {ministry.shortName || ministry.name}
@@ -129,7 +133,7 @@ export default function MinistriesListPage() {
             className="inline-flex items-center px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
             <Settings className="w-5 h-5 mr-2" />
-            Configurer Workflows
+            {intl.formatMessage({ id: "ministries.configureWorkflows", defaultMessage: "Configurer Workflows" })}
           </Link>
         </div>
       </div>
@@ -142,7 +146,7 @@ export default function MinistriesListPage() {
       ) : filteredMinistries.length === 0 ? (
         <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-xl">
           <Landmark className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400 text-lg">Aucun ministere trouve</p>
+          <p className="text-gray-500 dark:text-gray-400 text-lg">{intl.formatMessage({ id: "ministries.noMinistryFound", defaultMessage: "Aucun ministère trouvé" })}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -180,34 +184,34 @@ export default function MinistriesListPage() {
                         <div className="flex items-center justify-center w-8 h-8 bg-blue-100 dark:bg-blue-900/50 rounded-lg mx-auto mb-1">
                           <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <p className="text-lg font-bold text-gray-900 dark:text-white">{ministryStats.total || 0}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-300">Total</p>
+                        <p className="text-lg font-bold text-gray-900 dark:text-white">{(ministryStats.total || 0).toLocaleString(locale)}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-300">{intl.formatMessage({ id: "ministries.total", defaultMessage: "Total" })}</p>
                       </div>
                       <div className="text-center">
                         <div className="flex items-center justify-center w-8 h-8 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg mx-auto mb-1">
                           <Clock className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
                         </div>
-                        <p className="text-lg font-bold text-gray-900 dark:text-white">{ministryStats.pending || 0}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-300">En attente</p>
+                        <p className="text-lg font-bold text-gray-900 dark:text-white">{(ministryStats.pending || 0).toLocaleString(locale)}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-300">{intl.formatMessage({ id: "ministries.pending", defaultMessage: "En attente" })}</p>
                       </div>
                       <div className="text-center">
                         <div className="flex items-center justify-center w-8 h-8 bg-green-100 dark:bg-green-900/50 rounded-lg mx-auto mb-1">
                           <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
                         </div>
-                        <p className="text-lg font-bold text-gray-900 dark:text-white">{ministryStats.approved || 0}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-300">Approuvées</p>
+                        <p className="text-lg font-bold text-gray-900 dark:text-white">{(ministryStats.approved || 0).toLocaleString(locale)}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-300">{intl.formatMessage({ id: "ministries.approved", defaultMessage: "Approuvées" })}</p>
                       </div>
                       <div className="text-center">
                         <div className="flex items-center justify-center w-8 h-8 bg-red-100 dark:bg-red-900/50 rounded-lg mx-auto mb-1">
                           <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
                         </div>
-                        <p className="text-lg font-bold text-gray-900 dark:text-white">{ministryStats.rejected || 0}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-300">Rejetées</p>
+                        <p className="text-lg font-bold text-gray-900 dark:text-white">{(ministryStats.rejected || 0).toLocaleString(locale)}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-300">{intl.formatMessage({ id: "ministries.rejected", defaultMessage: "Rejetées" })}</p>
                       </div>
                     </div>
                   ) : (
                     <div className="text-center py-4 mb-6">
-                      <p className="text-sm text-gray-400">Statistiques indisponibles</p>
+                      <p className="text-sm text-gray-400">{intl.formatMessage({ id: "ministries.statsUnavailable", defaultMessage: "Statistiques indisponibles" })}</p>
                     </div>
                   )}
 
@@ -219,7 +223,7 @@ export default function MinistriesListPage() {
                     >
                       <div className="flex items-center gap-3">
                         <LayoutDashboard className="w-5 h-5 text-indigo-500" />
-                        <span className="font-medium text-gray-700 dark:text-gray-300">Dashboard</span>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">{intl.formatMessage({ id: "ministries.dashboard", defaultMessage: "Dashboard" })}</span>
                       </div>
                       <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
                     </Link>
@@ -230,21 +234,21 @@ export default function MinistriesListPage() {
                         className="flex flex-col items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
                       >
                         <FileBadge className="w-5 h-5 text-blue-600 dark:text-blue-400 mb-1" />
-                        <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Autorisations</span>
+                        <span className="text-xs font-medium text-blue-700 dark:text-blue-300">{intl.formatMessage({ id: "ministries.authorizations", defaultMessage: "Autorisations" })}</span>
                       </Link>
                       <Link
                         href={`/ministries/${ministry.id}/licences`}
                         className="flex flex-col items-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
                       >
                         <Award className="w-5 h-5 text-purple-600 dark:text-purple-400 mb-1" />
-                        <span className="text-xs font-medium text-purple-700 dark:text-purple-300">Licences</span>
+                        <span className="text-xs font-medium text-purple-700 dark:text-purple-300">{intl.formatMessage({ id: "ministries.licenses", defaultMessage: "Licences" })}</span>
                       </Link>
                       <Link
                         href={`/ministries/${ministry.id}/permis`}
                         className="flex flex-col items-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
                       >
                         <ScrollText className="w-5 h-5 text-orange-600 dark:text-orange-400 mb-1" />
-                        <span className="text-xs font-medium text-orange-700 dark:text-orange-300">Permis</span>
+                        <span className="text-xs font-medium text-orange-700 dark:text-orange-300">{intl.formatMessage({ id: "ministries.permits", defaultMessage: "Permis" })}</span>
                       </Link>
                     </div>
                   </div>

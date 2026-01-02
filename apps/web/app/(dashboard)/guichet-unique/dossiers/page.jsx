@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useIntl } from "react-intl";
+import { useLanguage } from "@/contexts/LanguageContext";
 import * as LucideIcons from "lucide-react";
 import {
   FolderOpen,
@@ -32,6 +34,7 @@ import {
   Building2,
   Circle,
   Landmark,
+  Paperclip,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -42,20 +45,20 @@ const getIcon = (iconName) => {
   return LucideIcons[iconName] || Circle;
 };
 
-// Configuration des types de dossiers
-const dossierTypes = {
-  // Agréments
+// Configuration des types de dossiers - labels will be translated in component
+const dossierTypesConfig = {
+  // Agrements
   AGREMENT_REGIME: {
-    label: "Agrément au Régime",
-    shortLabel: "Agrément",
+    labelKey: "guichet.type.agrementRegime",
+    shortLabelKey: "guichet.type.agrement",
     icon: FileCheck,
     color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
     borderColor: "border-blue-500",
     bgGradient: "from-blue-500 to-blue-600",
   },
   AGREMENT: {
-    label: "Agrément",
-    shortLabel: "Agrément",
+    labelKey: "guichet.type.agrement",
+    shortLabelKey: "guichet.type.agrement",
     icon: FileCheck,
     color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
     borderColor: "border-blue-500",
@@ -63,16 +66,16 @@ const dossierTypes = {
   },
   // Licences
   LICENCE_EXPLOITATION: {
-    label: "Licence d'Exploitation",
-    shortLabel: "Licence",
+    labelKey: "guichet.type.licenceExploitation",
+    shortLabelKey: "guichet.type.licence",
     icon: Award,
     color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
     borderColor: "border-purple-500",
     bgGradient: "from-purple-500 to-purple-600",
   },
   LICENCE: {
-    label: "Licence",
-    shortLabel: "Licence",
+    labelKey: "guichet.type.licence",
+    shortLabelKey: "guichet.type.licence",
     icon: Award,
     color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
     borderColor: "border-purple-500",
@@ -80,16 +83,16 @@ const dossierTypes = {
   },
   // Permis
   PERMIS_CONSTRUCTION: {
-    label: "Permis de Construire",
-    shortLabel: "Permis",
+    labelKey: "guichet.type.permisConstruction",
+    shortLabelKey: "guichet.type.permis",
     icon: ScrollText,
     color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
     borderColor: "border-amber-500",
     bgGradient: "from-amber-500 to-amber-600",
   },
   PERMIS: {
-    label: "Permis",
-    shortLabel: "Permis",
+    labelKey: "guichet.type.permis",
+    shortLabelKey: "guichet.type.permis",
     icon: ScrollText,
     color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
     borderColor: "border-amber-500",
@@ -97,34 +100,34 @@ const dossierTypes = {
   },
   // Autorisations
   AUTORISATION_ACTIVITE: {
-    label: "Autorisation d'Activité",
-    shortLabel: "Autorisation",
+    labelKey: "guichet.type.autorisationActivite",
+    shortLabelKey: "guichet.type.autorisation",
     icon: FileBadge,
     color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
     borderColor: "border-emerald-500",
     bgGradient: "from-emerald-500 to-emerald-600",
   },
   AUTORISATION: {
-    label: "Autorisation",
-    shortLabel: "Autorisation",
+    labelKey: "guichet.type.autorisation",
+    shortLabelKey: "guichet.type.autorisation",
     icon: FileBadge,
     color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
     borderColor: "border-emerald-500",
     bgGradient: "from-emerald-500 to-emerald-600",
   },
-  // Déclarations d'investissement
+  // Declarations d'investissement
   DECLARATION_INVESTISSEMENT: {
-    label: "Déclaration d'Investissement",
-    shortLabel: "Déclaration",
+    labelKey: "guichet.type.declarationInvestissement",
+    shortLabelKey: "guichet.type.declaration",
     icon: FileText,
     color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400",
     borderColor: "border-cyan-500",
     bgGradient: "from-cyan-500 to-cyan-600",
   },
-  // Exonérations
+  // Exonerations
   EXONERATION_FISCALE: {
-    label: "Exonération Fiscale",
-    shortLabel: "Exonération",
+    labelKey: "guichet.type.exonerationFiscale",
+    shortLabelKey: "guichet.type.exoneration",
     icon: DollarSign,
     color: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
     borderColor: "border-teal-500",
@@ -132,8 +135,8 @@ const dossierTypes = {
   },
   // Autres
   AUTRE: {
-    label: "Autre",
-    shortLabel: "Autre",
+    labelKey: "guichet.type.autre",
+    shortLabelKey: "guichet.type.autre",
     icon: FolderOpen,
     color: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
     borderColor: "border-gray-400",
@@ -141,64 +144,75 @@ const dossierTypes = {
   },
 };
 
-const statusConfig = {
+// Configuration des catégories de documents
+const documentCategoryConfig = {
+  RCCM: { label: "RCCM", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+  ID_NATIONAL: { label: "ID National", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
+  NIF: { label: "NIF", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
+  BUSINESS_PLAN: { label: "Business Plan", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+  FINANCIAL_PROOF: { label: "Preuve Financière", color: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400" },
+  TECHNICAL_STUDY: { label: "Étude Technique", color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400" },
+  OTHER: { label: "Autre", color: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300" },
+};
+
+const statusConfigBase = {
   DRAFT: {
-    label: "Brouillon",
+    labelKey: "status.draft",
     color: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
     icon: FileText,
     step: 0,
   },
   SUBMITTED: {
-    label: "Soumis",
+    labelKey: "status.submitted",
     color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
     icon: Clock,
     step: 1,
   },
   IN_REVIEW: {
-    label: "En examen",
+    labelKey: "status.underReview",
     color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
     icon: AlertCircle,
     step: 2,
   },
   UNDER_REVIEW: {
-    label: "En examen",
+    labelKey: "status.underReview",
     color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
     icon: AlertCircle,
     step: 2,
   },
   PENDING_DOCUMENTS: {
-    label: "Documents requis",
+    labelKey: "guichet.status.pendingDocuments",
     color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
     icon: FileText,
     step: 2,
   },
   MINISTRY_REVIEW: {
-    label: "Examen ministère",
+    labelKey: "guichet.status.ministryReview",
     color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
     icon: Building2,
     step: 3,
   },
   APPROVED: {
-    label: "Approuvé",
+    labelKey: "status.approved",
     color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
     icon: CheckCircle2,
     step: 5,
   },
   REJECTED: {
-    label: "Rejeté",
+    labelKey: "status.rejected",
     color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
     icon: XCircle,
     step: -1,
   },
   COMPLETED: {
-    label: "Terminé",
+    labelKey: "status.completed",
     color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
     icon: CheckCircle2,
     step: 5,
   },
 };
 
-// Calcul de la progression basé sur currentStep et les étapes dynamiques
+// Calcul de la progression base sur currentStep et les etapes dynamiques
 const getProgressFromStep = (currentStep, totalSteps) => {
   if (!currentStep || !totalSteps || totalSteps === 0) return 0;
   return Math.round((currentStep / totalSteps) * 100);
@@ -222,6 +236,9 @@ const getProgressFromStatus = (status, totalSteps) => {
 
 export default function DossiersPage() {
   const router = useRouter();
+  const intl = useIntl();
+  const { locale } = useLanguage();
+
   const [dossiers, setDossiers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -267,14 +284,14 @@ export default function DossiersPage() {
       console.error('Error fetching workflow steps:', error);
       // Fallback to default steps if API fails
       setWorkflowSteps([
-        { id: 1, stepNumber: 1, name: "Soumission" },
-        { id: 2, stepNumber: 2, name: "Verification documentaire" },
-        { id: 3, stepNumber: 3, name: "Analyse ANAPI" },
-        { id: 4, stepNumber: 4, name: "Transmission Ministere" },
-        { id: 5, stepNumber: 5, name: "Examen Ministere" },
-        { id: 6, stepNumber: 6, name: "Commission Interministerielle" },
-        { id: 7, stepNumber: 7, name: "Signature DG" },
-        { id: 8, stepNumber: 8, name: "Delivrance" },
+        { id: 1, stepNumber: 1, name: intl.formatMessage({ id: "guichet.step.submission", defaultMessage: "Soumission" }) },
+        { id: 2, stepNumber: 2, name: intl.formatMessage({ id: "guichet.step.documentVerification", defaultMessage: "Verification documentaire" }) },
+        { id: 3, stepNumber: 3, name: intl.formatMessage({ id: "guichet.step.anapiAnalysis", defaultMessage: "Analyse ANAPI" }) },
+        { id: 4, stepNumber: 4, name: intl.formatMessage({ id: "guichet.step.ministryTransmission", defaultMessage: "Transmission Ministere" }) },
+        { id: 5, stepNumber: 5, name: intl.formatMessage({ id: "guichet.step.ministryReview", defaultMessage: "Examen Ministere" }) },
+        { id: 6, stepNumber: 6, name: intl.formatMessage({ id: "guichet.step.interministerialCommission", defaultMessage: "Commission Interministerielle" }) },
+        { id: 7, stepNumber: 7, name: intl.formatMessage({ id: "guichet.step.dgSignature", defaultMessage: "Signature DG" }) },
+        { id: 8, stepNumber: 8, name: intl.formatMessage({ id: "guichet.step.delivery", defaultMessage: "Delivrance" }) },
       ]);
     }
   };
@@ -344,7 +361,7 @@ export default function DossiersPage() {
   }, [searchTerm]);
 
   const formatAmount = (amount, currency = 'USD') => {
-    return new Intl.NumberFormat("fr-FR", {
+    return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: currency,
       minimumFractionDigits: 0,
@@ -353,7 +370,7 @@ export default function DossiersPage() {
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString("fr-FR", {
+    return new Date(dateString).toLocaleDateString(locale, {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -371,14 +388,17 @@ export default function DossiersPage() {
 
   const handleDelete = async (dossier) => {
     const result = await Swal.fire({
-      title: 'Confirmer la suppression',
-      text: `Êtes-vous sûr de vouloir supprimer le dossier ${dossier.dossierNumber} ?`,
+      title: intl.formatMessage({ id: "guichet.confirmDelete", defaultMessage: "Confirmer la suppression" }),
+      text: intl.formatMessage(
+        { id: "guichet.confirmDeleteText", defaultMessage: "Etes-vous sur de vouloir supprimer le dossier {dossierNumber} ?" },
+        { dossierNumber: dossier.dossierNumber }
+      ),
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#dc2626',
       cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Oui, supprimer',
-      cancelButtonText: 'Annuler',
+      confirmButtonText: intl.formatMessage({ id: "guichet.yesDelete", defaultMessage: "Oui, supprimer" }),
+      cancelButtonText: intl.formatMessage({ id: "common.cancel", defaultMessage: "Annuler" }),
     });
 
     if (result.isConfirmed) {
@@ -390,8 +410,8 @@ export default function DossiersPage() {
         if (response.ok) {
           Swal.fire({
             icon: 'success',
-            title: 'Supprimé',
-            text: 'Dossier supprimé avec succès',
+            title: intl.formatMessage({ id: "guichet.deleted", defaultMessage: "Supprime" }),
+            text: intl.formatMessage({ id: "guichet.deleteSuccess", defaultMessage: "Dossier supprime avec succes" }),
             timer: 3000,
             showConfirmButton: false,
           });
@@ -400,16 +420,16 @@ export default function DossiersPage() {
           const data = await response.json();
           Swal.fire({
             icon: 'error',
-            title: 'Erreur',
-            text: data.error || 'Erreur lors de la suppression',
+            title: intl.formatMessage({ id: "error.generic", defaultMessage: "Erreur" }),
+            text: data.error || intl.formatMessage({ id: "guichet.deleteError", defaultMessage: "Erreur lors de la suppression" }),
           });
         }
       } catch (error) {
         console.error('Error deleting dossier:', error);
         Swal.fire({
           icon: 'error',
-          title: 'Erreur',
-          text: 'Erreur lors de la suppression',
+          title: intl.formatMessage({ id: "error.generic", defaultMessage: "Erreur" }),
+          text: intl.formatMessage({ id: "guichet.deleteError", defaultMessage: "Erreur lors de la suppression" }),
         });
       }
     }
@@ -417,14 +437,22 @@ export default function DossiersPage() {
 
   const pendingCount = (stats.submitted || 0) + (stats.inReview || 0);
 
-  // Get dossier type info
+  // Get dossier type info with translations
   const getDossierTypeInfo = (type) => {
-    return dossierTypes[type] || {
-      label: type || "Non défini",
-      shortLabel: type || "N/A",
-      icon: FolderOpen,
-      color: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
-      borderColor: "border-gray-400",
+    const config = dossierTypesConfig[type] || dossierTypesConfig.AUTRE;
+    return {
+      ...config,
+      label: intl.formatMessage({ id: config.labelKey, defaultMessage: type || "Non defini" }),
+      shortLabel: intl.formatMessage({ id: config.shortLabelKey, defaultMessage: type || "N/A" }),
+    };
+  };
+
+  // Get status config with translations
+  const getStatusConfig = (statusKey) => {
+    const config = statusConfigBase[statusKey] || statusConfigBase.DRAFT;
+    return {
+      ...config,
+      label: intl.formatMessage({ id: config.labelKey, defaultMessage: statusKey }),
     };
   };
 
@@ -434,10 +462,10 @@ export default function DossiersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Guichet Unique - Tous les Dossiers
+            {intl.formatMessage({ id: "guichet.title", defaultMessage: "Guichet Unique - Tous les Dossiers" })}
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Vue d'ensemble de tous les dossiers d'investissement
+            {intl.formatMessage({ id: "guichet.subtitle", defaultMessage: "Vue d'ensemble de tous les dossiers d'investissement" })}
           </p>
         </div>
         <Link
@@ -445,7 +473,7 @@ export default function DossiersPage() {
           className="inline-flex items-center px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
         >
           <Plus className="w-5 h-5 mr-2" />
-          Nouveau Dossier
+          {intl.formatMessage({ id: "guichet.newDossier", defaultMessage: "Nouveau Dossier" })}
         </Link>
       </div>
 
@@ -458,7 +486,7 @@ export default function DossiersPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "guichet.stats.total", defaultMessage: "Total" })}</p>
             </div>
           </div>
         </div>
@@ -470,7 +498,7 @@ export default function DossiersPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-600 dark:text-gray-300">{stats.draft}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Brouillons</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "guichet.stats.drafts", defaultMessage: "Brouillons" })}</p>
             </div>
           </div>
         </div>
@@ -482,7 +510,7 @@ export default function DossiersPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.submitted}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Soumis</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "guichet.stats.submitted", defaultMessage: "Soumis" })}</p>
             </div>
           </div>
         </div>
@@ -494,7 +522,7 @@ export default function DossiersPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.inReview}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">En examen</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "guichet.stats.inReview", defaultMessage: "En examen" })}</p>
             </div>
           </div>
         </div>
@@ -506,7 +534,7 @@ export default function DossiersPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.approved}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Approuvés</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "guichet.stats.approved", defaultMessage: "Approuves" })}</p>
             </div>
           </div>
         </div>
@@ -518,7 +546,7 @@ export default function DossiersPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.rejected}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Rejetés</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "guichet.stats.rejected", defaultMessage: "Rejetes" })}</p>
             </div>
           </div>
         </div>
@@ -532,7 +560,7 @@ export default function DossiersPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Rechercher par référence, investisseur ou projet..."
+              placeholder={intl.formatMessage({ id: "guichet.searchPlaceholder", defaultMessage: "Rechercher par reference, investisseur ou projet..." })}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -541,7 +569,7 @@ export default function DossiersPage() {
 
           {/* Type Filter - Types principaux uniquement */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400 mr-2">Type:</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400 mr-2">{intl.formatMessage({ id: "guichet.filterType", defaultMessage: "Type:" })}</span>
             <button
               onClick={() => setTypeFilter("all")}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
@@ -550,14 +578,14 @@ export default function DossiersPage() {
                   : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
               }`}
             >
-              Tous
+              {intl.formatMessage({ id: "common.all", defaultMessage: "Tous" })}
             </button>
             {/* Types principaux pour les filtres */}
             {[
-              { key: "AGREMENT", config: dossierTypes.AGREMENT },
-              { key: "LICENCE", config: dossierTypes.LICENCE },
-              { key: "PERMIS", config: dossierTypes.PERMIS },
-              { key: "AUTORISATION", config: dossierTypes.AUTORISATION },
+              { key: "AGREMENT", config: dossierTypesConfig.AGREMENT },
+              { key: "LICENCE", config: dossierTypesConfig.LICENCE },
+              { key: "PERMIS", config: dossierTypesConfig.PERMIS },
+              { key: "AUTORISATION", config: dossierTypesConfig.AUTORISATION },
             ].map(({ key, config }) => {
               const Icon = config.icon;
               return (
@@ -571,7 +599,7 @@ export default function DossiersPage() {
                   }`}
                 >
                   <Icon className="w-4 h-4" />
-                  {config.shortLabel}
+                  {intl.formatMessage({ id: config.shortLabelKey, defaultMessage: key })}
                 </button>
               );
             })}
@@ -585,13 +613,13 @@ export default function DossiersPage() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
-              <option value="all">Tous les statuts</option>
-              <option value="DRAFT">Brouillon</option>
-              <option value="SUBMITTED">Soumis</option>
-              <option value="IN_REVIEW">En examen</option>
-              <option value="PENDING_DOCUMENTS">Documents requis</option>
-              <option value="APPROVED">Approuvé</option>
-              <option value="REJECTED">Rejeté</option>
+              <option value="all">{intl.formatMessage({ id: "guichet.allStatuses", defaultMessage: "Tous les statuts" })}</option>
+              <option value="DRAFT">{intl.formatMessage({ id: "status.draft", defaultMessage: "Brouillon" })}</option>
+              <option value="SUBMITTED">{intl.formatMessage({ id: "status.submitted", defaultMessage: "Soumis" })}</option>
+              <option value="IN_REVIEW">{intl.formatMessage({ id: "status.underReview", defaultMessage: "En examen" })}</option>
+              <option value="PENDING_DOCUMENTS">{intl.formatMessage({ id: "guichet.status.pendingDocuments", defaultMessage: "Documents requis" })}</option>
+              <option value="APPROVED">{intl.formatMessage({ id: "status.approved", defaultMessage: "Approuve" })}</option>
+              <option value="REJECTED">{intl.formatMessage({ id: "status.rejected", defaultMessage: "Rejete" })}</option>
             </select>
           </div>
 
@@ -605,16 +633,16 @@ export default function DossiersPage() {
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-          <span className="ml-3 text-gray-500">Chargement...</span>
+          <span className="ml-3 text-gray-500">{intl.formatMessage({ id: "common.loading", defaultMessage: "Chargement..." })}</span>
         </div>
       ) : dossiers.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
           <FolderOpen className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <p className="text-xl font-medium text-gray-500 dark:text-gray-400">Aucun dossier trouvé</p>
+          <p className="text-xl font-medium text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "guichet.noDossiersFound", defaultMessage: "Aucun dossier trouve" })}</p>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
             {searchTerm || statusFilter !== 'all' || typeFilter !== 'all'
-              ? "Essayez de modifier vos filtres de recherche"
-              : "Commencez par créer un nouveau dossier"}
+              ? intl.formatMessage({ id: "guichet.tryModifyFilters", defaultMessage: "Essayez de modifier vos filtres de recherche" })
+              : intl.formatMessage({ id: "guichet.startByCreating", defaultMessage: "Commencez par creer un nouveau dossier" })}
           </p>
           {!searchTerm && statusFilter === 'all' && typeFilter === 'all' && (
             <Link
@@ -622,7 +650,7 @@ export default function DossiersPage() {
               className="inline-flex items-center px-4 py-2 mt-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Plus className="w-5 h-5 mr-2" />
-              Créer un dossier
+              {intl.formatMessage({ id: "guichet.createDossier", defaultMessage: "Creer un dossier" })}
             </Link>
           )}
         </div>
@@ -630,7 +658,7 @@ export default function DossiersPage() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {dossiers.map((dossier) => {
-              const status = statusConfig[dossier.status] || statusConfig.DRAFT;
+              const status = getStatusConfig(dossier.status);
               const StatusIcon = status.icon;
               const typeInfo = getDossierTypeInfo(dossier.dossierType);
               const TypeIcon = typeInfo.icon;
@@ -676,26 +704,26 @@ export default function DossiersPage() {
                   <div className="p-4 space-y-3">
                     {/* Project Name */}
                     <h4 className="font-medium text-gray-900 dark:text-white line-clamp-1">
-                      {dossier.projectName || "Projet non défini"}
+                      {dossier.projectName || intl.formatMessage({ id: "guichet.projectNotDefined", defaultMessage: "Projet non defini" })}
                     </h4>
 
                     {/* Investor */}
                     <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                       <User className="w-4 h-4 mr-2 text-gray-400" />
-                      <span className="truncate">{dossier.investorName || "Non spécifié"}</span>
+                      <span className="truncate">{dossier.investorName || intl.formatMessage({ id: "guichet.notSpecified", defaultMessage: "Non specifie" })}</span>
                     </div>
 
                     {/* Location */}
                     <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                       <MapPin className="w-4 h-4 mr-2 text-gray-400" />
-                      <span>{dossier.projectProvince || "Province non spécifiée"}</span>
+                      <span>{dossier.projectProvince || intl.formatMessage({ id: "guichet.provinceNotSpecified", defaultMessage: "Province non specifiee" })}</span>
                     </div>
 
                     {/* Ministry */}
                     <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                       <Landmark className="w-4 h-4 mr-2 text-indigo-500" />
                       <span className="truncate">
-                        {dossier.ministry?.shortName || dossier.ministry?.name || "Non assigné"}
+                        {dossier.ministry?.shortName || dossier.ministry?.name || intl.formatMessage({ id: "guichet.notAssigned", defaultMessage: "Non assigne" })}
                       </span>
                     </div>
 
@@ -726,11 +754,49 @@ export default function DossiersPage() {
                       </div>
                     )}
 
+                    {/* Documents */}
+                    {dossier.documents && dossier.documents.length > 0 && (
+                      <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Paperclip className="w-4 h-4 text-gray-400" />
+                          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                            {intl.formatMessage(
+                              { id: "guichet.documentsCount", defaultMessage: "{count} document{plural}" },
+                              { count: dossier.documents.length, plural: dossier.documents.length > 1 ? 's' : '' }
+                            )}
+                          </span>
+                        </div>
+                        <div className="space-y-1.5 max-h-24 overflow-y-auto">
+                          {dossier.documents.slice(0, 3).map((doc) => {
+                            const categoryInfo = documentCategoryConfig[doc.category] || documentCategoryConfig.OTHER;
+                            return (
+                              <div
+                                key={doc.id}
+                                className="flex items-center justify-between gap-2 px-2 py-1 bg-gray-50 dark:bg-gray-700/50 rounded text-xs"
+                              >
+                                <span className="truncate flex-1 text-gray-700 dark:text-gray-300" title={doc.name}>
+                                  {doc.name}
+                                </span>
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap ${categoryInfo.color}`}>
+                                  {categoryInfo.label}
+                                </span>
+                              </div>
+                            );
+                          })}
+                          {dossier.documents.length > 3 && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                              +{dossier.documents.length - 3} {intl.formatMessage({ id: "guichet.otherDocuments", defaultMessage: "autres documents" })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Progress Bar */}
                     <div className="pt-2">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                          Progression
+                          {intl.formatMessage({ id: "guichet.progression", defaultMessage: "Progression" })}
                         </span>
                         <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                           {currentStepName}
@@ -780,8 +846,11 @@ export default function DossiersPage() {
                       </div>
                       {dossier.status !== 'DRAFT' && dossier.status !== 'APPROVED' && dossier.status !== 'REJECTED' && (
                         <span className={`text-xs font-medium ${isUrgent ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
-                          {daysSinceSubmission} jour{daysSinceSubmission > 1 ? 's' : ''}
-                          {isUrgent && ' ⚠️'}
+                          {intl.formatMessage(
+                            { id: "guichet.daysCount", defaultMessage: "{count} jour{plural}" },
+                            { count: daysSinceSubmission, plural: daysSinceSubmission > 1 ? 's' : '' }
+                          )}
+                          {isUrgent && ' !'}
                         </span>
                       )}
                     </div>
@@ -793,14 +862,14 @@ export default function DossiersPage() {
                       <Link
                         href={`/guichet-unique/dossiers/${dossier.id}`}
                         className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                        title="Voir détails"
+                        title={intl.formatMessage({ id: "guichet.viewDetails", defaultMessage: "Voir details" })}
                       >
                         <Eye className="w-4 h-4" />
                       </Link>
                       <Link
                         href={`/guichet-unique/dossiers/${dossier.id}/edit`}
                         className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
-                        title="Modifier"
+                        title={intl.formatMessage({ id: "common.edit", defaultMessage: "Modifier" })}
                       >
                         <Edit className="w-4 h-4" />
                       </Link>
@@ -808,7 +877,7 @@ export default function DossiersPage() {
                         <button
                           onClick={() => handleDelete(dossier)}
                           className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                          title="Supprimer"
+                          title={intl.formatMessage({ id: "common.delete", defaultMessage: "Supprimer" })}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -818,7 +887,7 @@ export default function DossiersPage() {
                       href={`/guichet-unique/dossiers/${dossier.id}`}
                       className="inline-flex items-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 font-medium"
                     >
-                      Voir plus
+                      {intl.formatMessage({ id: "guichet.viewMore", defaultMessage: "Voir plus" })}
                       <ArrowRight className="w-4 h-4 ml-1" />
                     </Link>
                   </div>
@@ -830,8 +899,10 @@ export default function DossiersPage() {
           {/* Pagination */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Affichage de <span className="font-medium">{dossiers.length}</span> sur{" "}
-              <span className="font-medium">{pagination.total}</span> dossiers
+              {intl.formatMessage(
+                { id: "guichet.showingOf", defaultMessage: "Affichage de {count} sur {total} dossiers" },
+                { count: dossiers.length, total: pagination.total }
+              )}
             </p>
             <div className="flex items-center gap-2">
               <button

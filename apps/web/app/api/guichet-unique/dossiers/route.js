@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../lib/auth.js';
-import { Dossier, DossierDocument, DossierSector, Sector, Ministry, Investor, User, sequelize } from '../../../../models/index.js';
+import { Dossier, DossierDocument, DossierSector, Sector, Ministry, Investor, User, Province, City, sequelize } from '../../../../models/index.js';
 import { Op } from 'sequelize';
 
 // Generer un numero de dossier unique
@@ -37,6 +37,8 @@ export async function GET(request) {
     const status = searchParams.get('status');
     const dossierType = searchParams.get('type');
     const province = searchParams.get('province');
+    const provinceId = searchParams.get('provinceId');
+    const cityId = searchParams.get('cityId');
     const ministryId = searchParams.get('ministryId');
     const offset = (page - 1) * limit;
 
@@ -76,6 +78,14 @@ export async function GET(request) {
       where.projectProvince = province;
     }
 
+    if (provinceId) {
+      where.projectProvinceId = provinceId;
+    }
+
+    if (cityId) {
+      where.projectCityId = cityId;
+    }
+
     if (ministryId) {
       where.ministryId = ministryId;
     }
@@ -98,6 +108,23 @@ export async function GET(request) {
           model: Ministry,
           as: 'ministry',
           attributes: ['id', 'name', 'shortName', 'code'],
+        },
+        {
+          model: DossierDocument,
+          as: 'documents',
+          attributes: ['id', 'name', 'fileName', 'category', 'mimeType', 'fileSize', 'createdAt'],
+          separate: true,
+          order: [['createdAt', 'DESC']],
+        },
+        {
+          model: Province,
+          as: 'projectProvinceRef',
+          attributes: ['id', 'code', 'name'],
+        },
+        {
+          model: City,
+          as: 'projectCityRef',
+          attributes: ['id', 'code', 'name'],
         },
       ],
     });
@@ -216,8 +243,12 @@ export async function POST(request) {
       nif: data.nif,
       investorEmail: data.email,
       investorPhone: data.phone,
-      investorProvince: data.province,
-      investorCity: data.city,
+      investorProvince: data.investorProvince || null,
+      investorProvinceId: data.investorProvinceId || null,
+      investorCity: data.investorCity || null,
+      investorCityId: data.investorCityId || null,
+      investorCommune: data.investorCommune || null,
+      investorCommuneId: data.investorCommuneId || null,
       investorAddress: data.address,
       investorCountry: data.country || 'RDC',
       // Project info
@@ -225,8 +256,12 @@ export async function POST(request) {
       projectDescription: data.projectDescription,
       sector: sectorName, // Champ legacy pour compatibilité
       subSector: data.subSector,
-      projectProvince: data.projectProvince,
-      projectCity: data.projectCity,
+      projectProvince: data.projectProvince || null,
+      projectProvinceId: data.projectProvinceId || null,
+      projectCity: data.projectCity || null,
+      projectCityId: data.projectCityId || null,
+      projectCommune: data.projectCommune || null,
+      projectCommuneId: data.projectCommuneId || null,
       projectAddress: data.projectAddress,
       // Financial info
       investmentAmount: parseFloat(String(data.investmentAmount || '0').replace(/[^0-9.-]/g, '')) || 0,

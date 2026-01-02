@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useIntl } from "react-intl";
 import {
   Users,
   TrendingUp,
@@ -29,16 +30,16 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-const statusConfig = {
-  DRAFT: { label: "Brouillon", color: "bg-gray-500", textColor: "text-gray-600", bgLight: "bg-gray-100" },
-  SUBMITTED: { label: "Soumis", color: "bg-blue-500", textColor: "text-blue-600", bgLight: "bg-blue-100" },
-  UNDER_REVIEW: { label: "En examen", color: "bg-yellow-500", textColor: "text-yellow-600", bgLight: "bg-yellow-100" },
-  APPROVED: { label: "Approuve", color: "bg-green-500", textColor: "text-green-600", bgLight: "bg-green-100" },
-  REJECTED: { label: "Rejete", color: "bg-red-500", textColor: "text-red-600", bgLight: "bg-red-100" },
-  IN_PROGRESS: { label: "En cours", color: "bg-purple-500", textColor: "text-purple-600", bgLight: "bg-purple-100" },
-  COMPLETED: { label: "Termine", color: "bg-emerald-500", textColor: "text-emerald-600", bgLight: "bg-emerald-100" },
-  CANCELLED: { label: "Annule", color: "bg-gray-500", textColor: "text-gray-600", bgLight: "bg-gray-100" },
-};
+const getStatusConfig = (intl) => ({
+  DRAFT: { label: intl.formatMessage({ id: "status.draft", defaultMessage: "Brouillon" }), color: "bg-gray-500", textColor: "text-gray-600", bgLight: "bg-gray-100" },
+  SUBMITTED: { label: intl.formatMessage({ id: "status.submitted", defaultMessage: "Soumis" }), color: "bg-blue-500", textColor: "text-blue-600", bgLight: "bg-blue-100" },
+  UNDER_REVIEW: { label: intl.formatMessage({ id: "status.underReview", defaultMessage: "En examen" }), color: "bg-yellow-500", textColor: "text-yellow-600", bgLight: "bg-yellow-100" },
+  APPROVED: { label: intl.formatMessage({ id: "status.approved", defaultMessage: "Approuvé" }), color: "bg-green-500", textColor: "text-green-600", bgLight: "bg-green-100" },
+  REJECTED: { label: intl.formatMessage({ id: "status.rejected", defaultMessage: "Rejeté" }), color: "bg-red-500", textColor: "text-red-600", bgLight: "bg-red-100" },
+  IN_PROGRESS: { label: intl.formatMessage({ id: "status.inProgress", defaultMessage: "En cours" }), color: "bg-purple-500", textColor: "text-purple-600", bgLight: "bg-purple-100" },
+  COMPLETED: { label: intl.formatMessage({ id: "status.completed", defaultMessage: "Terminé" }), color: "bg-emerald-500", textColor: "text-emerald-600", bgLight: "bg-emerald-100" },
+  CANCELLED: { label: intl.formatMessage({ id: "status.cancelled", defaultMessage: "Annulé" }), color: "bg-gray-500", textColor: "text-gray-600", bgLight: "bg-gray-100" },
+});
 
 const sectorColors = {
   "Mines": "#F59E0B",
@@ -52,9 +53,11 @@ const sectorColors = {
 };
 
 export default function DashboardPage() {
+  const intl = useIntl();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const statusConfig = getStatusConfig(intl);
 
   useEffect(() => {
     fetchStats();
@@ -102,7 +105,9 @@ export default function DashboardPage() {
       <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Chargement du tableau de bord...</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            {intl.formatMessage({ id: "dashboard.loading", defaultMessage: "Chargement du tableau de bord..." })}
+          </p>
         </div>
       </div>
     );
@@ -116,19 +121,19 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Tableau de bord
+            {intl.formatMessage({ id: "dashboard.title", defaultMessage: "Tableau de bord" })}
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Vue d'ensemble des investissements en RDC
+            {intl.formatMessage({ id: "dashboard.subtitle", defaultMessage: "Vue d'ensemble des investissements en RDC" })}
           </p>
         </div>
         <button
           onClick={() => fetchStats(true)}
           disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm text-gray-700 dark:text-gray-200"
         >
           <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-          Actualiser
+          {intl.formatMessage({ id: "common.refresh", defaultMessage: "Actualiser" })}
         </button>
       </div>
 
@@ -150,10 +155,10 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-            <p className="text-blue-100 text-sm mb-1">Investissements totaux</p>
+            <p className="text-blue-100 text-sm mb-1">{intl.formatMessage({ id: "dashboard.totalInvestments", defaultMessage: "Investissements totaux" })}</p>
             <p className="text-3xl font-bold">{formatCurrency(stats?.summary?.totalAmount || 0)}</p>
             <p className="text-blue-200 text-sm mt-2">
-              {stats?.summary?.totalInvestments || 0} projets
+              {stats?.summary?.totalInvestments || 0} {intl.formatMessage({ id: "dashboard.projects", defaultMessage: "projets" })}
             </p>
           </div>
         </div>
@@ -169,13 +174,13 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center gap-1 text-sm text-emerald-200">
                 <Activity className="w-4 h-4" />
-                {stats?.summary?.activeInvestors || 0} actifs
+                {stats?.summary?.activeInvestors || 0} {intl.formatMessage({ id: "dashboard.active", defaultMessage: "actifs" })}
               </div>
             </div>
-            <p className="text-emerald-100 text-sm mb-1">Investisseurs</p>
+            <p className="text-emerald-100 text-sm mb-1">{intl.formatMessage({ id: "dashboard.investors", defaultMessage: "Investisseurs" })}</p>
             <p className="text-3xl font-bold">{stats?.summary?.totalInvestors || 0}</p>
             <p className="text-emerald-200 text-sm mt-2">
-              Partenaires enregistres
+              {intl.formatMessage({ id: "dashboard.registeredPartners", defaultMessage: "Partenaires enregistrés" })}
             </p>
           </div>
         </div>
@@ -191,14 +196,14 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center gap-1 text-sm text-purple-200">
                 <Target className="w-4 h-4" />
-                Impact social
+                {intl.formatMessage({ id: "dashboard.socialImpact", defaultMessage: "Impact social" })}
               </div>
             </div>
-            <p className="text-purple-100 text-sm mb-1">Emplois a creer</p>
+            <p className="text-purple-100 text-sm mb-1">{intl.formatMessage({ id: "dashboard.jobsToCreate", defaultMessage: "Emplois à créer" })}</p>
             <p className="text-3xl font-bold">{formatNumber(totalJobs)}</p>
             <div className="flex gap-4 mt-2 text-purple-200 text-sm">
-              <span>{formatNumber(stats?.summary?.totalJobs)} directs</span>
-              <span>{formatNumber(stats?.summary?.totalJobsIndirect)} indirects</span>
+              <span>{formatNumber(stats?.summary?.totalJobs)} {intl.formatMessage({ id: "dashboard.directJobs", defaultMessage: "directs" })}</span>
+              <span>{formatNumber(stats?.summary?.totalJobsIndirect)} {intl.formatMessage({ id: "dashboard.indirectJobs", defaultMessage: "indirects" })}</span>
             </div>
           </div>
         </div>
@@ -214,13 +219,13 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center gap-1 text-sm text-orange-200">
                 <CheckCircle2 className="w-4 h-4" />
-                {stats?.summary?.approvedThisMonth || 0} ce mois
+                {stats?.summary?.approvedThisMonth || 0} {intl.formatMessage({ id: "dashboard.thisMonth", defaultMessage: "ce mois" })}
               </div>
             </div>
-            <p className="text-orange-100 text-sm mb-1">En attente</p>
+            <p className="text-orange-100 text-sm mb-1">{intl.formatMessage({ id: "dashboard.pending", defaultMessage: "En attente" })}</p>
             <p className="text-3xl font-bold">{stats?.summary?.pendingApprovals || 0}</p>
             <p className="text-orange-200 text-sm mt-2">
-              Dossiers a traiter
+              {intl.formatMessage({ id: "dashboard.filesToProcess", defaultMessage: "Dossiers à traiter" })}
             </p>
           </div>
         </div>
@@ -233,9 +238,9 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Evolution des investissements
+                {intl.formatMessage({ id: "dashboard.investmentEvolution", defaultMessage: "Évolution des investissements" })}
               </h3>
-              <p className="text-sm text-gray-500">Annee {new Date().getFullYear()}</p>
+              <p className="text-sm text-gray-500">{intl.formatMessage({ id: "dashboard.year", defaultMessage: "Année" })} {new Date().getFullYear()}</p>
             </div>
             <div className="flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-gray-400" />
@@ -279,7 +284,7 @@ export default function DashboardPage() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Statut des projets
+              {intl.formatMessage({ id: "dashboard.projectStatus", defaultMessage: "Statut des projets" })}
             </h3>
             <PieChart className="w-5 h-5 text-gray-400" />
           </div>
@@ -310,7 +315,7 @@ export default function DashboardPage() {
             })}
 
             {(!stats?.charts?.statusDistribution || stats.charts.statusDistribution.length === 0) && (
-              <p className="text-gray-500 text-center py-8">Aucune donnee</p>
+              <p className="text-gray-500 text-center py-8">{intl.formatMessage({ id: "common.noData", defaultMessage: "Aucune donnée" })}</p>
             )}
           </div>
         </div>
@@ -323,9 +328,9 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Repartition par secteur
+                {intl.formatMessage({ id: "dashboard.sectorDistribution", defaultMessage: "Répartition par secteur" })}
               </h3>
-              <p className="text-sm text-gray-500">Top secteurs d'activite</p>
+              <p className="text-sm text-gray-500">{intl.formatMessage({ id: "dashboard.topSectors", defaultMessage: "Top secteurs d'activité" })}</p>
             </div>
             <Factory className="w-5 h-5 text-gray-400" />
           </div>
@@ -359,7 +364,7 @@ export default function DashboardPage() {
             })}
 
             {(!stats?.charts?.sectorDistribution || stats.charts.sectorDistribution.length === 0) && (
-              <p className="text-gray-500 text-center py-8">Aucune donnee</p>
+              <p className="text-gray-500 text-center py-8">{intl.formatMessage({ id: "common.noData", defaultMessage: "Aucune donnée" })}</p>
             )}
           </div>
         </div>
@@ -369,9 +374,9 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Repartition geographique
+                {intl.formatMessage({ id: "dashboard.geographicDistribution", defaultMessage: "Répartition géographique" })}
               </h3>
-              <p className="text-sm text-gray-500">Par province</p>
+              <p className="text-sm text-gray-500">{intl.formatMessage({ id: "dashboard.byProvince", defaultMessage: "Par province" })}</p>
             </div>
             <MapPin className="w-5 h-5 text-gray-400" />
           </div>
@@ -408,7 +413,7 @@ export default function DashboardPage() {
             })}
 
             {(!stats?.charts?.provinceDistribution || stats.charts.provinceDistribution.length === 0) && (
-              <p className="text-gray-500 text-center py-8">Aucune donnee</p>
+              <p className="text-gray-500 text-center py-8">{intl.formatMessage({ id: "common.noData", defaultMessage: "Aucune donnée" })}</p>
             )}
           </div>
         </div>
@@ -419,15 +424,15 @@ export default function DashboardPage() {
         <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Investissements recents
+              {intl.formatMessage({ id: "dashboard.recentInvestments", defaultMessage: "Investissements récents" })}
             </h3>
-            <p className="text-sm text-gray-500">Derniers projets enregistres</p>
+            <p className="text-sm text-gray-500">{intl.formatMessage({ id: "dashboard.latestProjects", defaultMessage: "Derniers projets enregistrés" })}</p>
           </div>
           <Link
             href="/investments/projects"
             className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
           >
-            Voir tout
+            {intl.formatMessage({ id: "dashboard.viewAll", defaultMessage: "Voir tout" })}
             <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
@@ -438,25 +443,25 @@ export default function DashboardPage() {
               <thead className="bg-gray-50 dark:bg-gray-700/50">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Projet
+                    {intl.formatMessage({ id: "dashboard.project", defaultMessage: "Projet" })}
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Investisseur
+                    {intl.formatMessage({ id: "dashboard.investor", defaultMessage: "Investisseur" })}
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Secteur
+                    {intl.formatMessage({ id: "dashboard.sector", defaultMessage: "Secteur" })}
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Montant
+                    {intl.formatMessage({ id: "dashboard.amount", defaultMessage: "Montant" })}
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Progression
+                    {intl.formatMessage({ id: "dashboard.progress", defaultMessage: "Progression" })}
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Statut
+                    {intl.formatMessage({ id: "common.status", defaultMessage: "Statut" })}
                   </th>
                   <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Actions
+                    {intl.formatMessage({ id: "common.actions", defaultMessage: "Actions" })}
                   </th>
                 </tr>
               </thead>
@@ -512,7 +517,7 @@ export default function DashboardPage() {
                           className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         >
                           <Eye className="w-4 h-4" />
-                          Voir
+                          {intl.formatMessage({ id: "common.view", defaultMessage: "Voir" })}
                         </Link>
                       </td>
                     </tr>
@@ -524,7 +529,7 @@ export default function DashboardPage() {
         ) : (
           <div className="text-center py-12">
             <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">Aucun investissement recent</p>
+            <p className="text-gray-500">{intl.formatMessage({ id: "dashboard.noRecentInvestments", defaultMessage: "Aucun investissement récent" })}</p>
           </div>
         )}
       </div>
@@ -537,7 +542,7 @@ export default function DashboardPage() {
               <Globe className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Pays</p>
+              <p className="text-sm text-gray-500">{intl.formatMessage({ id: "dashboard.countries", defaultMessage: "Pays" })}</p>
               <p className="text-lg font-semibold text-gray-900 dark:text-white">
                 {stats?.charts?.countryDistribution?.length || 0}
               </p>
@@ -551,7 +556,7 @@ export default function DashboardPage() {
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Approuves</p>
+              <p className="text-sm text-gray-500">{intl.formatMessage({ id: "dashboard.approved", defaultMessage: "Approuvés" })}</p>
               <p className="text-lg font-semibold text-gray-900 dark:text-white">
                 {stats?.charts?.statusDistribution?.find(s => s.status === "APPROVED")?.count || 0}
               </p>
@@ -565,7 +570,7 @@ export default function DashboardPage() {
               <Activity className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">En cours</p>
+              <p className="text-sm text-gray-500">{intl.formatMessage({ id: "dashboard.inProgress", defaultMessage: "En cours" })}</p>
               <p className="text-lg font-semibold text-gray-900 dark:text-white">
                 {stats?.charts?.statusDistribution?.find(s => s.status === "IN_PROGRESS")?.count || 0}
               </p>
@@ -579,7 +584,7 @@ export default function DashboardPage() {
               <AlertCircle className="w-5 h-5 text-orange-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">En examen</p>
+              <p className="text-sm text-gray-500">{intl.formatMessage({ id: "dashboard.underReview", defaultMessage: "En examen" })}</p>
               <p className="text-lg font-semibold text-gray-900 dark:text-white">
                 {stats?.charts?.statusDistribution?.find(s => s.status === "UNDER_REVIEW")?.count || 0}
               </p>

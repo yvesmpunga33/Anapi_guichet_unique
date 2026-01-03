@@ -20,7 +20,9 @@ import Leave from './Leave.js';
 import Payslip from './Payslip.js';
 import Investor from './Investor.js';
 import Investment from './Investment.js';
+import ProjectHistory from './ProjectHistory.js';
 import ApprovalRequest from './ApprovalRequest.js';
+import ProjectDocument from './ProjectDocument.js';
 import LegalDocument from './LegalDocument.js';
 import WorkflowStep from './WorkflowStep.js';
 // Nouveaux modeles pour le Guichet Unique
@@ -57,6 +59,23 @@ import LegalAlert from './LegalAlert.js';
 import Currency from './Currency.js';
 // Pays
 import Country from './Country.js';
+// Configuration systeme
+import SystemConfig from './SystemConfig.js';
+// Passation de Marches
+import MinistryDepartment from './MinistryDepartment.js';
+import ProcurementDocumentType from './ProcurementDocumentType.js';
+import Tender from './Tender.js';
+import TenderLot from './TenderLot.js';
+import TenderDocument from './TenderDocument.js';
+import TenderHistory from './TenderHistory.js';
+import Bidder from './Bidder.js';
+import BidderDocument from './BidderDocument.js';
+import Bid from './Bid.js';
+import BidDocument from './BidDocument.js';
+import ProcurementContract from './ProcurementContract.js';
+import ContractExecution from './ContractExecution.js';
+import ContractDocument from './ContractDocument.js';
+import EvaluationCommittee from './EvaluationCommittee.js';
 
 // ==================== ASSOCIATIONS ====================
 
@@ -142,6 +161,14 @@ Employee.hasMany(Payslip, { foreignKey: 'employeeId', as: 'payslips' });
 // Investment associations
 Investment.belongsTo(Investor, { foreignKey: 'investorId', as: 'investor' });
 Investor.hasMany(Investment, { foreignKey: 'investorId', as: 'investments' });
+
+// ProjectHistory - Investment (historique des projets)
+ProjectHistory.belongsTo(Investment, { foreignKey: 'projectId', as: 'project' });
+Investment.hasMany(ProjectHistory, { foreignKey: 'projectId', as: 'history', onDelete: 'CASCADE' });
+
+// ProjectDocument - Investment
+ProjectDocument.belongsTo(Investment, { foreignKey: 'projectId', as: 'project' });
+Investment.hasMany(ProjectDocument, { foreignKey: 'projectId', as: 'documents', onDelete: 'CASCADE' });
 
 // ApprovalRequest associations
 ApprovalRequest.belongsTo(Investor, { foreignKey: 'investorId', as: 'investor' });
@@ -318,6 +345,135 @@ Contract.hasMany(LegalAlert, { foreignKey: 'contractId', as: 'alerts' });
 LegalAlert.belongsTo(JuridicalText, { foreignKey: 'documentId', as: 'document' });
 JuridicalText.hasMany(LegalAlert, { foreignKey: 'documentId', as: 'alerts' });
 
+// ==================== PASSATION DE MARCHES ASSOCIATIONS ====================
+
+// MinistryDepartment - Ministry
+MinistryDepartment.belongsTo(Ministry, { foreignKey: 'ministryId', as: 'ministry' });
+Ministry.hasMany(MinistryDepartment, { foreignKey: 'ministryId', as: 'departments' });
+
+// Tender - Ministry
+Tender.belongsTo(Ministry, { foreignKey: 'ministryId', as: 'ministry' });
+Ministry.hasMany(Tender, { foreignKey: 'ministryId', as: 'tenders' });
+
+// Tender - HRDepartment
+Tender.belongsTo(HRDepartment, { foreignKey: 'departmentId', as: 'department' });
+
+// Tender - User (createdBy, approvedBy, cancelledBy, archivedBy)
+Tender.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+Tender.belongsTo(User, { foreignKey: 'approvedById', as: 'approvedBy' });
+Tender.belongsTo(User, { foreignKey: 'cancelledById', as: 'cancelledBy' });
+Tender.belongsTo(User, { foreignKey: 'archivedById', as: 'archivedBy' });
+
+// Tender - TenderLot
+Tender.hasMany(TenderLot, { foreignKey: 'tenderId', as: 'lots', onDelete: 'CASCADE' });
+TenderLot.belongsTo(Tender, { foreignKey: 'tenderId', as: 'tender' });
+
+// TenderLot - Bidder (awarded)
+TenderLot.belongsTo(Bidder, { foreignKey: 'awardedBidderId', as: 'awardedBidder' });
+
+// Tender - TenderDocument
+Tender.hasMany(TenderDocument, { foreignKey: 'tenderId', as: 'documents', onDelete: 'CASCADE' });
+TenderDocument.belongsTo(Tender, { foreignKey: 'tenderId', as: 'tender' });
+
+// TenderDocument - ProcurementDocumentType
+TenderDocument.belongsTo(ProcurementDocumentType, { foreignKey: 'documentTypeId', as: 'documentType' });
+
+// TenderDocument - User (uploadedBy)
+TenderDocument.belongsTo(User, { foreignKey: 'uploadedById', as: 'uploadedBy' });
+
+// Tender - TenderHistory
+Tender.hasMany(TenderHistory, { foreignKey: 'tenderId', as: 'history', onDelete: 'CASCADE' });
+TenderHistory.belongsTo(Tender, { foreignKey: 'tenderId', as: 'tender' });
+TenderHistory.belongsTo(User, { foreignKey: 'performedById', as: 'performedBy' });
+
+// Tender - EvaluationCommittee
+Tender.hasMany(EvaluationCommittee, { foreignKey: 'tenderId', as: 'committee', onDelete: 'CASCADE' });
+EvaluationCommittee.belongsTo(Tender, { foreignKey: 'tenderId', as: 'tender' });
+EvaluationCommittee.belongsTo(User, { foreignKey: 'userId', as: 'member' });
+EvaluationCommittee.belongsTo(User, { foreignKey: 'nominatedById', as: 'nominatedBy' });
+
+// Bidder - Country
+Bidder.belongsTo(Country, { foreignKey: 'countryId', as: 'country' });
+
+// Bidder - Province/City
+Bidder.belongsTo(Province, { foreignKey: 'provinceId', as: 'province' });
+Bidder.belongsTo(City, { foreignKey: 'cityId', as: 'city' });
+
+// Bidder - User (createdBy, verifiedBy, blacklistedBy)
+Bidder.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+Bidder.belongsTo(User, { foreignKey: 'verifiedById', as: 'verifiedBy' });
+Bidder.belongsTo(User, { foreignKey: 'blacklistedById', as: 'blacklistedBy' });
+
+// Bidder - BidderDocument
+Bidder.hasMany(BidderDocument, { foreignKey: 'bidderId', as: 'documents', onDelete: 'CASCADE' });
+BidderDocument.belongsTo(Bidder, { foreignKey: 'bidderId', as: 'bidder' });
+BidderDocument.belongsTo(ProcurementDocumentType, { foreignKey: 'documentTypeId', as: 'documentType' });
+BidderDocument.belongsTo(User, { foreignKey: 'uploadedById', as: 'uploadedBy' });
+BidderDocument.belongsTo(User, { foreignKey: 'verifiedById', as: 'verifiedBy' });
+
+// Bid - Tender
+Bid.belongsTo(Tender, { foreignKey: 'tenderId', as: 'tender' });
+Tender.hasMany(Bid, { foreignKey: 'tenderId', as: 'bids', onDelete: 'CASCADE' });
+
+// Bid - Bidder
+Bid.belongsTo(Bidder, { foreignKey: 'bidderId', as: 'bidder' });
+Bidder.hasMany(Bid, { foreignKey: 'bidderId', as: 'bids' });
+
+// Bid - TenderLot
+Bid.belongsTo(TenderLot, { foreignKey: 'lotId', as: 'lot' });
+TenderLot.hasMany(Bid, { foreignKey: 'lotId', as: 'bids' });
+
+// Bid - User (evaluatedBy, receivedBy)
+Bid.belongsTo(User, { foreignKey: 'evaluatedById', as: 'evaluatedBy' });
+Bid.belongsTo(User, { foreignKey: 'receivedById', as: 'receivedBy' });
+
+// Bid - BidDocument
+Bid.hasMany(BidDocument, { foreignKey: 'bidId', as: 'documents', onDelete: 'CASCADE' });
+BidDocument.belongsTo(Bid, { foreignKey: 'bidId', as: 'bid' });
+BidDocument.belongsTo(ProcurementDocumentType, { foreignKey: 'documentTypeId', as: 'documentType' });
+BidDocument.belongsTo(User, { foreignKey: 'uploadedById', as: 'uploadedBy' });
+BidDocument.belongsTo(User, { foreignKey: 'checkedById', as: 'checkedBy' });
+
+// ProcurementContract - Tender
+ProcurementContract.belongsTo(Tender, { foreignKey: 'tenderId', as: 'tender' });
+Tender.hasMany(ProcurementContract, { foreignKey: 'tenderId', as: 'contracts' });
+
+// ProcurementContract - Bid
+ProcurementContract.belongsTo(Bid, { foreignKey: 'bidId', as: 'bid' });
+Bid.hasOne(ProcurementContract, { foreignKey: 'bidId', as: 'contract' });
+
+// ProcurementContract - Bidder
+ProcurementContract.belongsTo(Bidder, { foreignKey: 'bidderId', as: 'contractor' });
+Bidder.hasMany(ProcurementContract, { foreignKey: 'bidderId', as: 'contracts' });
+
+// ProcurementContract - TenderLot
+ProcurementContract.belongsTo(TenderLot, { foreignKey: 'lotId', as: 'lot' });
+
+// ProcurementContract - Ministry
+ProcurementContract.belongsTo(Ministry, { foreignKey: 'ministryId', as: 'ministry' });
+
+// ProcurementContract - User
+ProcurementContract.belongsTo(User, { foreignKey: 'managedById', as: 'manager' });
+ProcurementContract.belongsTo(User, { foreignKey: 'signedByClientId', as: 'signedByClient' });
+ProcurementContract.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+ProcurementContract.belongsTo(User, { foreignKey: 'certificateIssuedById', as: 'certificateIssuedBy' });
+
+// ProcurementContract - ContractExecution
+ProcurementContract.hasMany(ContractExecution, { foreignKey: 'contractId', as: 'executions', onDelete: 'CASCADE' });
+ContractExecution.belongsTo(ProcurementContract, { foreignKey: 'contractId', as: 'contract' });
+
+// ContractExecution - User
+ContractExecution.belongsTo(User, { foreignKey: 'inspectedById', as: 'inspectedBy' });
+ContractExecution.belongsTo(User, { foreignKey: 'approvedById', as: 'approvedBy' });
+ContractExecution.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+
+// ProcurementContract - ContractDocument
+ProcurementContract.hasMany(ContractDocument, { foreignKey: 'contractId', as: 'documents', onDelete: 'CASCADE' });
+ContractDocument.belongsTo(ProcurementContract, { foreignKey: 'contractId', as: 'contract' });
+ContractDocument.belongsTo(ContractExecution, { foreignKey: 'executionId', as: 'execution' });
+ContractDocument.belongsTo(ProcurementDocumentType, { foreignKey: 'documentTypeId', as: 'documentType' });
+ContractDocument.belongsTo(User, { foreignKey: 'uploadedById', as: 'uploadedBy' });
+
 // Export all models
 export {
   sequelize,
@@ -340,6 +496,8 @@ export {
   Payslip,
   Investor,
   Investment,
+  ProjectHistory,
+  ProjectDocument,
   ApprovalRequest,
   LegalDocument,
   WorkflowStep,
@@ -377,6 +535,23 @@ export {
   ContractType,
   Contract,
   LegalAlert,
+  // Configuration systeme
+  SystemConfig,
+  // Passation de Marches
+  MinistryDepartment,
+  ProcurementDocumentType,
+  Tender,
+  TenderLot,
+  TenderDocument,
+  TenderHistory,
+  Bidder,
+  BidderDocument,
+  Bid,
+  BidDocument,
+  ProcurementContract,
+  ContractExecution,
+  ContractDocument,
+  EvaluationCommittee,
 };
 
 export default {
@@ -400,6 +575,8 @@ export default {
   Payslip,
   Investor,
   Investment,
+  ProjectHistory,
+  ProjectDocument,
   ApprovalRequest,
   LegalDocument,
   WorkflowStep,
@@ -437,4 +614,21 @@ export default {
   ContractType,
   Contract,
   LegalAlert,
+  // Configuration systeme
+  SystemConfig,
+  // Passation de Marches
+  MinistryDepartment,
+  ProcurementDocumentType,
+  Tender,
+  TenderLot,
+  TenderDocument,
+  TenderHistory,
+  Bidder,
+  BidderDocument,
+  Bid,
+  BidDocument,
+  ProcurementContract,
+  ContractExecution,
+  ContractDocument,
+  EvaluationCommittee,
 };

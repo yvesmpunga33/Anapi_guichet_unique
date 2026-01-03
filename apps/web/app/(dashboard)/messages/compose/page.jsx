@@ -23,6 +23,8 @@ import {
   Search,
   Plus,
   Trash2,
+  Globe,
+  Building,
 } from "lucide-react";
 
 // Dynamic import for the rich text editor (client-side only)
@@ -48,10 +50,17 @@ export default function ComposeMessagePage() {
   const [recipientSearch, setRecipientSearch] = useState("");
   const [activeField, setActiveField] = useState("to"); // to, cc, bcc
 
+  // Type de message: interne ou externe
+  const [messageType, setMessageType] = useState("internal"); // internal, external
+  const [externalEmail, setExternalEmail] = useState("");
+  const [externalCcEmail, setExternalCcEmail] = useState("");
+
   const [formData, setFormData] = useState({
     to: [],
     cc: [],
     bcc: [],
+    externalTo: [],
+    externalCc: [],
     subject: "",
     body: "",
     priority: "NORMAL",
@@ -146,11 +155,54 @@ export default function ComposeMessagePage() {
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
+  // Ajouter un email externe
+  const handleAddExternalEmail = (field = "externalTo") => {
+    const email = field === "externalTo" ? externalEmail : externalCcEmail;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(email)) {
+      setErrors(prev => ({ ...prev, [field]: "Adresse email invalide" }));
+      return;
+    }
+
+    if (formData[field].includes(email)) {
+      setErrors(prev => ({ ...prev, [field]: "Email deja ajoute" }));
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      [field]: [...prev[field], email],
+    }));
+
+    if (field === "externalTo") {
+      setExternalEmail("");
+    } else {
+      setExternalCcEmail("");
+    }
+    setErrors(prev => ({ ...prev, [field]: null }));
+  };
+
+  const handleRemoveExternalEmail = (email, field) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: prev[field].filter(e => e !== email),
+    }));
+  };
+
   const validateForm = () => {
     const newErrors = {};
-    if (formData.to.length === 0) {
-      newErrors.to = "Veuillez sélectionner au moins un destinataire";
+
+    if (messageType === "internal") {
+      if (formData.to.length === 0) {
+        newErrors.to = "Veuillez selectionner au moins un destinataire";
+      }
+    } else {
+      if (formData.externalTo.length === 0 && !externalEmail.trim()) {
+        newErrors.externalTo = "Veuillez ajouter au moins une adresse email";
+      }
     }
+
     if (!formData.subject.trim()) {
       newErrors.subject = "L'objet est requis";
     }
@@ -173,20 +225,43 @@ export default function ComposeMessagePage() {
       submitData.append("subject", formData.subject);
       submitData.append("body", formData.body);
       submitData.append("priority", formData.priority);
-      submitData.append(
-        "recipients",
-        JSON.stringify([
-          ...formData.to.map((r) => ({ id: r.id, type: "TO" })),
-          ...formData.cc.map((r) => ({ id: r.id, type: "CC" })),
-          ...formData.bcc.map((r) => ({ id: r.id, type: "BCC" })),
-        ])
-      );
 
       formData.attachments.forEach((file) => {
         submitData.append("attachments", file);
       });
 
-      const response = await fetch("/api/messages", {
+      let apiUrl = "/api/messages";
+
+      if (messageType === "external") {
+        // Email externe - construire la liste finale des destinataires
+        apiUrl = "/api/messages/external";
+
+        // Inclure l'email saisi dans le champ s'il est valide
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        let finalExternalTo = [...formData.externalTo];
+        if (externalEmail.trim() && emailRegex.test(externalEmail.trim())) {
+          if (!finalExternalTo.includes(externalEmail.trim())) {
+            finalExternalTo.push(externalEmail.trim());
+          }
+        }
+
+        submitData.append("externalTo", JSON.stringify(finalExternalTo));
+        if (formData.externalCc.length > 0) {
+          submitData.append("externalCc", JSON.stringify(formData.externalCc));
+        }
+      } else {
+        // Message interne
+        submitData.append(
+          "recipients",
+          JSON.stringify([
+            ...formData.to.map((r) => ({ id: r.id, type: "TO" })),
+            ...formData.cc.map((r) => ({ id: r.id, type: "CC" })),
+            ...formData.bcc.map((r) => ({ id: r.id, type: "BCC" })),
+          ])
+        );
+      }
+
+      const response = await fetch(apiUrl, {
         method: "POST",
         body: submitData,
       });
@@ -311,41 +386,214 @@ export default function ComposeMessagePage() {
         onSubmit={handleSubmit}
         className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden"
       >
+        {/* Message Type Selector */}
+        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Type :</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setMessageType("internal")}
+                className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  messageType === "internal"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600"
+                }`}
+              >
+                <Building className="w-4 h-4 mr-2" />
+                Message interne
+              </button>
+              <button
+                type="button"
+                onClick={() => setMessageType("external")}
+                className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  messageType === "external"
+                    ? "bg-green-600 text-white"
+                    : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600"
+                }`}
+              >
+                <Globe className="w-4 h-4 mr-2" />
+                Email externe
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Recipients Section */}
         <div className="p-6 space-y-4 border-b border-gray-100 dark:border-gray-700">
-          {/* To Field */}
-          <RecipientField
-            field="to"
-            label="À :"
-            placeholder="Ajouter des destinataires..."
-          />
-
-          {/* CC/BCC Toggle */}
-          {!showCcBcc ? (
-            <button
-              type="button"
-              onClick={() => setShowCcBcc(true)}
-              className="ml-16 text-sm text-blue-600 dark:text-blue-400 hover:underline"
-            >
-              Ajouter Cc/Cci
-            </button>
+          {messageType === "internal" ? (
+            <>
+              {/* To Field - Internal */}
+              <RecipientField
+                field="to"
+                label="À :"
+                placeholder="Ajouter des destinataires..."
+              />
+            </>
           ) : (
             <>
-              <RecipientField
-                field="cc"
-                label="Cc :"
-                placeholder="Copie carbone..."
-              />
-              <RecipientField
-                field="bcc"
-                label="Cci :"
-                placeholder="Copie carbone invisible..."
-              />
+              {/* External Email Field */}
+              <div className="flex items-start gap-3">
+                <label className="w-16 pt-2.5 text-sm font-medium text-gray-600 dark:text-gray-400">
+                  À :
+                </label>
+                <div className="flex-1">
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={externalEmail}
+                      onChange={(e) => setExternalEmail(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddExternalEmail("externalTo");
+                        }
+                      }}
+                      placeholder="email@exemple.com"
+                      style={{
+                        color: '#ffffff',
+                        backgroundColor: '#1f2937',
+                      }}
+                      className={`flex-1 px-4 py-2.5 border rounded-lg placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none ${
+                        errors.externalTo
+                          ? "border-red-300"
+                          : "border-gray-600"
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddExternalEmail("externalTo")}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
+                  </div>
+                  {errors.externalTo && (
+                    <p className="mt-1 text-sm text-red-500">{errors.externalTo}</p>
+                  )}
+                  {formData.externalTo.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {formData.externalTo.map((email) => (
+                        <span
+                          key={email}
+                          className="inline-flex items-center px-3 py-1 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 rounded-full text-sm"
+                        >
+                          <Globe className="w-3.5 h-3.5 mr-1.5" />
+                          {email}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveExternalEmail(email, "externalTo")}
+                            className="ml-1.5 hover:text-red-500 transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </>
           )}
 
-          {/* Recipient Dropdown - toujours visible quand le champ est actif */}
-          {showRecipientDropdown && (
+          {/* CC/BCC Toggle */}
+          {messageType === "internal" && (
+            <>
+              {!showCcBcc ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCcBcc(true)}
+                  className="ml-16 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Ajouter Cc/Cci
+                </button>
+              ) : (
+                <>
+                  <RecipientField
+                    field="cc"
+                    label="Cc :"
+                    placeholder="Copie carbone..."
+                  />
+                  <RecipientField
+                    field="bcc"
+                    label="Cci :"
+                    placeholder="Copie carbone invisible..."
+                  />
+                </>
+              )}
+            </>
+          )}
+
+          {/* CC for external emails */}
+          {messageType === "external" && (
+            <>
+              {!showCcBcc ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCcBcc(true)}
+                  className="ml-16 text-sm text-green-600 dark:text-green-400 hover:underline"
+                >
+                  Ajouter Cc
+                </button>
+              ) : (
+                <div className="flex items-start gap-3">
+                  <label className="w-16 pt-2.5 text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Cc :
+                  </label>
+                  <div className="flex-1">
+                    <div className="flex gap-2">
+                      <input
+                        type="email"
+                        value={externalCcEmail}
+                        onChange={(e) => setExternalCcEmail(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddExternalEmail("externalCc");
+                          }
+                        }}
+                        placeholder="cc@exemple.com"
+                        style={{
+                          color: '#ffffff',
+                          backgroundColor: '#1f2937',
+                        }}
+                        className="flex-1 px-4 py-2.5 border border-gray-600 rounded-lg placeholder-gray-400 focus:ring-2 focus:ring-green-500 outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddExternalEmail("externalCc")}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                      >
+                        <Plus className="w-5 h-5" />
+                      </button>
+                    </div>
+                    {formData.externalCc.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {formData.externalCc.map((email) => (
+                          <span
+                            key={email}
+                            className="inline-flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm"
+                          >
+                            {email}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveExternalEmail(email, "externalCc")}
+                              className="ml-1.5 hover:text-red-500 transition-colors"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Recipient Dropdown - only for internal messages */}
+          {messageType === "internal" && showRecipientDropdown && (
             <div className="ml-16 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-72 overflow-y-auto z-50 relative">
               {/* Search Header */}
               <div className="sticky top-0 bg-white dark:bg-gray-700 p-3 border-b border-gray-200 dark:border-gray-600">
@@ -589,12 +837,21 @@ export default function ComposeMessagePage() {
           <button
             type="submit"
             disabled={loading}
-            className="inline-flex items-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`inline-flex items-center px-6 py-2.5 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              messageType === "external"
+                ? "bg-green-600 hover:bg-green-700"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
           >
             {loading ? (
               <>
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                 Envoi en cours...
+              </>
+            ) : messageType === "external" ? (
+              <>
+                <Globe className="w-5 h-5 mr-2" />
+                Envoyer l'email
               </>
             ) : (
               <>

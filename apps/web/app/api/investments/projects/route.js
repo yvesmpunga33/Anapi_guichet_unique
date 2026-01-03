@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '../../../lib/auth.js';
 import Investment from '../../../../models/Investment.js';
 import Investor from '../../../../models/Investor.js';
+import ProjectHistory from '../../../../models/ProjectHistory.js';
 import { Op } from 'sequelize';
 
 // GET - Liste des projets d'investissement
@@ -125,6 +126,20 @@ export async function POST(request) {
       projectCode,
       createdById: session?.user?.id || null,
     });
+
+    // Enregistrer la creation dans l'historique
+    try {
+      await ProjectHistory.create({
+        projectId: project.id,
+        action: 'CREATED',
+        newStatus: project.status || 'DRAFT',
+        description: `Projet "${project.projectName}" cree avec le code ${projectCode}`,
+        performedById: session?.user?.id || null,
+        performedByName: session?.user?.name || 'Systeme',
+      });
+    } catch (historyError) {
+      console.error('Error logging project creation:', historyError);
+    }
 
     return NextResponse.json(project, { status: 201 });
   } catch (error) {

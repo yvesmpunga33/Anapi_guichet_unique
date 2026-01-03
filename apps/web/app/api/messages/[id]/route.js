@@ -55,16 +55,19 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Message non trouve' }, { status: 404 });
     }
 
+    // Pour les emails externes, tout utilisateur connecte peut les voir
+    const isExternalEmail = message.messageType === 'EXTERNAL_IN' || message.messageType === 'EXTERNAL_OUT';
+
     // Verifier que l'utilisateur a acces au message
     const isRecipient = message.recipients.some(r => r.recipientId === session.user.id);
     const isSender = message.senderId === session.user.id;
 
-    if (!isRecipient && !isSender) {
+    if (!isRecipient && !isSender && !isExternalEmail) {
       return NextResponse.json({ error: 'Acces refuse' }, { status: 403 });
     }
 
-    // Marquer comme lu si c'est un destinataire
-    if (isRecipient) {
+    // Marquer comme lu si c'est un destinataire (messages internes)
+    if (isRecipient && !isExternalEmail) {
       await MessageRecipient.update(
         { readAt: new Date() },
         {
@@ -77,12 +80,25 @@ export async function GET(request, { params }) {
       );
     }
 
+    // Pour les emails externes entrants, retourner les infos de l'expediteur externe
+    const responseData = message.toJSON();
+    if (message.messageType === 'EXTERNAL_IN') {
+      responseData.sender = {
+        name: message.externalFrom,
+        email: message.externalFrom,
+        isExternal: true,
+      };
+      responseData.externalTo = message.externalTo ? JSON.parse(message.externalTo) : [];
+      responseData.externalCc = message.externalCc ? JSON.parse(message.externalCc) : [];
+    }
+
     return NextResponse.json({
       success: true,
-      message: {
-        ...message.toJSON(),
+      data: {
+        ...responseData,
         isRecipient,
         isSender,
+        isExternalEmail,
       },
     });
   } catch (error) {

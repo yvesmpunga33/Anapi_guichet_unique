@@ -82,6 +82,8 @@ export default function ProjectDetailPage() {
   const [docDescription, setDocDescription] = useState("");
   const [docCategory, setDocCategory] = useState("other");
   const [selectedFile, setSelectedFile] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Check if edit mode is requested via URL parameter
   useEffect(() => {
@@ -219,6 +221,29 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     if (activeTab === "documents" && params.id) {
       fetchDocuments();
+    }
+  }, [activeTab, params.id]);
+
+  // Fetch project history
+  const fetchHistory = async () => {
+    try {
+      setLoadingHistory(true);
+      const response = await fetch(`/api/investments/projects/${params.id}/history`);
+      if (response.ok) {
+        const data = await response.json();
+        setHistory(data.history || []);
+      }
+    } catch (err) {
+      console.error("Error fetching history:", err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // Load history when tab changes to history
+  useEffect(() => {
+    if (activeTab === "history" && params.id) {
+      fetchHistory();
     }
   }, [activeTab, params.id]);
 
@@ -1415,59 +1440,94 @@ export default function ProjectDetailPage() {
 
       {activeTab === "history" && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+          <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Historique
+              Historique des modifications
             </h3>
+            <button
+              onClick={fetchHistory}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 ${loadingHistory ? 'animate-spin' : ''}`} />
+            </button>
           </div>
           <div className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                  <Clock className="w-4 h-4 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-gray-900 dark:text-white font-medium">Projet cree</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(project.createdAt)}</p>
+            {loadingHistory ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+              </div>
+            ) : history.length > 0 ? (
+              <div className="relative">
+                <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700" />
+                <div className="space-y-6">
+                  {history.map((entry, index) => {
+                    const actionConfig = {
+                      CREATED: { icon: Clock, color: "bg-blue-100 text-blue-600", label: "Creation" },
+                      UPDATED: { icon: Edit, color: "bg-gray-100 text-gray-600", label: "Modification" },
+                      STATUS_CHANGED: { icon: RefreshCw, color: "bg-purple-100 text-purple-600", label: "Statut" },
+                      APPROVED: { icon: CheckCircle2, color: "bg-green-100 text-green-600", label: "Approuve" },
+                      REJECTED: { icon: XCircle, color: "bg-red-100 text-red-600", label: "Rejete" },
+                      STARTED: { icon: TrendingUp, color: "bg-purple-100 text-purple-600", label: "Demarre" },
+                      COMPLETED: { icon: CheckCircle2, color: "bg-emerald-100 text-emerald-600", label: "Termine" },
+                      CANCELLED: { icon: XCircle, color: "bg-gray-100 text-gray-600", label: "Annule" },
+                      DOCUMENT_UPLOADED: { icon: Upload, color: "bg-blue-100 text-blue-600", label: "Document" },
+                      DOCUMENT_DELETED: { icon: Trash2, color: "bg-red-100 text-red-600", label: "Suppression" },
+                      AMOUNT_UPDATED: { icon: DollarSign, color: "bg-green-100 text-green-600", label: "Montant" },
+                      INVESTOR_CHANGED: { icon: Building2, color: "bg-orange-100 text-orange-600", label: "Investisseur" },
+                      COMMENT_ADDED: { icon: FileText, color: "bg-yellow-100 text-yellow-600", label: "Commentaire" },
+                      MILESTONE_REACHED: { icon: CheckCircle2, color: "bg-teal-100 text-teal-600", label: "Jalon" },
+                    };
+                    const config = actionConfig[entry.action] || actionConfig.UPDATED;
+                    const IconComponent = config.icon;
+
+                    return (
+                      <div key={entry.id} className="relative pl-10">
+                        <div className={`absolute left-0 w-8 h-8 rounded-full flex items-center justify-center ${config.color}`}>
+                          <IconComponent className="w-4 h-4" />
+                        </div>
+                        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className={`px-2 py-0.5 text-xs rounded-full ${config.color}`}>
+                              {config.label}
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {new Date(entry.createdAt).toLocaleString('fr-FR', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
+                          <p className="text-gray-900 dark:text-white font-medium">
+                            {entry.description || `Action: ${entry.action}`}
+                          </p>
+                          {entry.performedByName && (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              Par: {entry.performedByName}
+                            </p>
+                          )}
+                          {entry.previousStatus && entry.newStatus && (
+                            <div className="mt-2 flex items-center gap-2 text-sm">
+                              <span className="text-gray-500">{entry.previousStatus}</span>
+                              <ArrowUpRight className="w-4 h-4 text-gray-400" />
+                              <span className="font-medium text-gray-700 dark:text-gray-300">{entry.newStatus}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-              {project.approvalDate && (
-                <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                    <CheckCircle2 className="w-4 h-4 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-gray-900 dark:text-white font-medium">Projet approuve</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(project.approvalDate)}</p>
-                  </div>
-                </div>
-              )}
-              {project.rejectionDate && (
-                <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-                    <XCircle className="w-4 h-4 text-red-600" />
-                  </div>
-                  <div>
-                    <p className="text-gray-900 dark:text-white font-medium">Projet rejete</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(project.rejectionDate)}</p>
-                    {project.rejectionReason && (
-                      <p className="text-sm text-red-500 mt-1">Motif: {project.rejectionReason}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-              {project.updatedAt !== project.createdAt && (
-                <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                    <Edit className="w-4 h-4 text-gray-600" />
-                  </div>
-                  <div>
-                    <p className="text-gray-900 dark:text-white font-medium">Derniere modification</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(project.updatedAt)}</p>
-                  </div>
-                </div>
-              )}
-            </div>
+            ) : (
+              <div className="text-center py-8">
+                <History className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">Aucun historique disponible</p>
+                <p className="text-sm text-gray-400 mt-1">Les modifications seront enregistrees ici</p>
+              </div>
+            )}
           </div>
         </div>
       )}

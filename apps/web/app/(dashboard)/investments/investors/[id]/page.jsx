@@ -728,17 +728,28 @@ export default function InvestorDetailPage() {
 
       {activeTab === "investments" && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+          <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Projets d'Investissement ({investor.investments?.length || 0})
             </h3>
+            <Link
+              href={`/investments/projects/new?investorId=${investor.id}&investorName=${encodeURIComponent(investor.name)}`}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
+            >
+              <Briefcase className="w-4 h-4" />
+              Nouveau Projet
+            </Link>
           </div>
           {investor.investments && investor.investments.length > 0 ? (
             <div className="divide-y divide-gray-100 dark:divide-gray-700">
               {investor.investments.map((investment) => {
                 const invStatus = investmentStatusConfig[investment.status] || investmentStatusConfig.PENDING;
                 return (
-                  <div key={investment.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <Link
+                    key={investment.id}
+                    href={`/investments/projects/${investment.id}`}
+                    className="block p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
@@ -788,7 +799,7 @@ export default function InvestorDetailPage() {
                         )}
                       </div>
                     )}
-                  </div>
+                  </Link>
                 );
               })}
             </div>
@@ -796,6 +807,13 @@ export default function InvestorDetailPage() {
             <div className="text-center py-12">
               <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500">Aucun investissement enregistre</p>
+              <Link
+                href={`/investments/projects/new?investorId=${investor.id}&investorName=${encodeURIComponent(investor.name)}`}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              >
+                <Briefcase className="w-4 h-4" />
+                Creer le premier projet
+              </Link>
             </div>
           )}
         </div>

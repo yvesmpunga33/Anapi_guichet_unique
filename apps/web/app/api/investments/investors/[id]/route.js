@@ -1,17 +1,13 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../../lib/auth.js';
 import Investor from '../../../../../models/Investor.js';
+import Investment from '../../../../../models/Investment.js';
 
-// GET - Obtenir un investisseur par ID
+// GET - Obtenir un investisseur par ID avec ses projets
 export async function GET(request, { params }) {
   try {
     const session = await auth();
     console.log('[API Investor Detail] Session:', session ? 'authenticated' : 'null');
-
-    // Temporairement desactive pour dev
-    // if (!session) {
-    //   return NextResponse.json({ error: 'Non autorise' }, { status: 401 });
-    // }
 
     const { id } = await params;
 
@@ -24,20 +20,27 @@ export async function GET(request, { params }) {
       );
     }
 
-    // Calculate totals (sans investments pour l'instant)
-    const investorData = investor.toJSON();
+    // Recuperer les investissements/projets lies a cet investisseur
+    const investments = await Investment.findAll({
+      where: { investorId: id },
+      order: [['createdAt', 'DESC']],
+    });
 
+    const investorData = investor.toJSON();
+    const investmentsData = investments.map(inv => inv.toJSON());
+
+    // Calculate stats from investments
     const stats = {
-      totalInvestments: 0,
-      totalAmount: 0,
-      activeProjects: 0,
-      completedProjects: 0,
-      totalJobsCreated: 0,
+      totalInvestments: investmentsData.length,
+      totalAmount: investmentsData.reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0),
+      activeProjects: investmentsData.filter(inv => inv.status === 'ACTIVE' || inv.status === 'IN_PROGRESS').length,
+      completedProjects: investmentsData.filter(inv => inv.status === 'COMPLETED').length,
+      totalJobsCreated: investmentsData.reduce((sum, inv) => sum + (inv.jobsCreated || 0), 0),
     };
 
     return NextResponse.json({
       ...investorData,
-      investments: [],
+      investments: investmentsData,
       stats,
     });
   } catch (error) {

@@ -35,6 +35,30 @@ body {
 /* Tiptap Rich Text Editor Styles */
 .ProseMirror {
   outline: none;
+  color: #111827; /* gray-900 */
+}
+
+.dark .ProseMirror,
+.dark .ProseMirror p,
+.dark .ProseMirror span,
+.dark .ProseMirror li,
+.dark .ProseMirror h1,
+.dark .ProseMirror h2,
+.dark .ProseMirror h3 {
+  color: #ffffff !important; /* Force white text in dark mode */
+}
+
+/* Also handle media query for system dark mode */
+@media (prefers-color-scheme: dark) {
+  .ProseMirror,
+  .ProseMirror p,
+  .ProseMirror span,
+  .ProseMirror li,
+  .ProseMirror h1,
+  .ProseMirror h2,
+  .ProseMirror h3 {
+    color: #ffffff !important;
+  }
 }
 
 .ProseMirror p.is-editor-empty:first-child::before {

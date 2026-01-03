@@ -15,6 +15,12 @@ import {
   Loader2,
   X,
   Plus,
+  Eye,
+  Download,
+  Maximize2,
+  Minimize2,
+  File,
+  FileImage,
 } from "lucide-react";
 
 export default function EditContractPage() {
@@ -24,10 +30,13 @@ export default function EditContractPage() {
   const [saving, setSaving] = useState(false);
   const [contractTypes, setContractTypes] = useState([]);
   const [currencies, setCurrencies] = useState([]);
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]); // Multiple files
   const [parties, setParties] = useState([]);
   const [newParty, setNewParty] = useState({ name: "", role: "", contact: "" });
-  const [existingFile, setExistingFile] = useState(null);
+  const [existingFiles, setExistingFiles] = useState([]); // Multiple existing files
+  const [showPdfModal, setShowPdfModal] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [previewFile, setPreviewFile] = useState(null); // File being previewed
 
   const [formData, setFormData] = useState({
     title: "",
@@ -90,12 +99,16 @@ export default function EditContractPage() {
 
         setParties(contract.parties || []);
 
-        if (contract.filePath) {
-          setExistingFile({
+        // Support multiple files - convert single file to array format
+        if (contract.files && contract.files.length > 0) {
+          setExistingFiles(contract.files);
+        } else if (contract.filePath) {
+          setExistingFiles([{
+            id: 'main',
             name: contract.fileName,
             path: contract.filePath,
             size: contract.fileSize,
-          });
+          }]);
         }
       } else {
         router.push("/legal/contracts");
@@ -112,23 +125,83 @@ export default function EditContractPage() {
   };
 
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      const allowedTypes = [
-        "application/pdf",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      ];
-      if (!allowedTypes.includes(selectedFile.type)) {
-        alert("Format non autorise. Utilisez PDF ou DOCX.");
-        return;
+    const selectedFiles = Array.from(e.target.files);
+    const allowedTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+    ];
+
+    const validFiles = [];
+    for (const file of selectedFiles) {
+      if (!allowedTypes.includes(file.type)) {
+        alert(`Format non autorise pour ${file.name}. Utilisez PDF, DOCX, ou images.`);
+        continue;
       }
-      if (selectedFile.size > 50 * 1024 * 1024) {
-        alert("Fichier trop volumineux. Maximum 50 MB.");
-        return;
+      if (file.size > 50 * 1024 * 1024) {
+        alert(`Fichier ${file.name} trop volumineux. Maximum 50 MB.`);
+        continue;
       }
-      setFile(selectedFile);
-      setExistingFile(null);
+      // Add preview URL for new files
+      validFiles.push({
+        file,
+        id: `new-${Date.now()}-${Math.random()}`,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        previewUrl: file.type.startsWith('image/') || file.type === 'application/pdf'
+          ? URL.createObjectURL(file)
+          : null,
+      });
     }
+
+    if (validFiles.length > 0) {
+      setFiles(prev => [...prev, ...validFiles]);
+    }
+    // Reset input to allow selecting same file again
+    e.target.value = '';
+  };
+
+  const removeNewFile = (fileId) => {
+    setFiles(prev => {
+      const fileToRemove = prev.find(f => f.id === fileId);
+      if (fileToRemove?.previewUrl) {
+        URL.revokeObjectURL(fileToRemove.previewUrl);
+      }
+      return prev.filter(f => f.id !== fileId);
+    });
+  };
+
+  const removeExistingFile = (fileId) => {
+    setExistingFiles(prev => prev.filter(f => f.id !== fileId));
+  };
+
+  const openPreview = (file, isExisting = false) => {
+    if (isExisting) {
+      setPreviewFile({ ...file, isExisting: true });
+    } else {
+      setPreviewFile({ ...file, isExisting: false });
+    }
+    setShowPdfModal(true);
+  };
+
+  const getFileIcon = (fileName, fileType) => {
+    if (fileType?.startsWith('image/') || fileName?.match(/\.(jpg|jpeg|png|gif)$/i)) {
+      return <FileImage className="w-8 h-8 text-blue-400" />;
+    }
+    if (fileType === 'application/pdf' || fileName?.endsWith('.pdf')) {
+      return <FileText className="w-8 h-8 text-red-400" />;
+    }
+    return <File className="w-8 h-8 text-gray-400" />;
+  };
+
+  const canPreview = (fileName, fileType) => {
+    return fileType?.startsWith('image/') ||
+           fileType === 'application/pdf' ||
+           fileName?.endsWith('.pdf') ||
+           fileName?.match(/\.(jpg|jpeg|png|gif)$/i);
   };
 
   const addParty = () => {
@@ -151,7 +224,7 @@ export default function EditContractPage() {
 
     setSaving(true);
     try {
-      // Utiliser FormData pour supporter l'upload de fichier
+      // Utiliser FormData pour supporter l'upload de fichiers multiples
       const submitFormData = new FormData();
       submitFormData.append(
         "data",
@@ -159,12 +232,14 @@ export default function EditContractPage() {
           ...formData,
           parties: parties.map(({ id, ...rest }) => rest),
           value: formData.value ? parseFloat(formData.value) : null,
-          removeFile: !existingFile && !file, // Supprimer le fichier existant
+          existingFileIds: existingFiles.map(f => f.id), // IDs des fichiers existants a garder
         })
       );
-      if (file) {
-        submitFormData.append("file", file);
-      }
+
+      // Add all new files
+      files.forEach((fileWrapper, index) => {
+        submitFormData.append(`files`, fileWrapper.file);
+      });
 
       const response = await fetch(`/api/legal/contracts/${params.id}`, {
         method: "PUT",
@@ -172,6 +247,10 @@ export default function EditContractPage() {
       });
 
       if (response.ok) {
+        // Clean up preview URLs
+        files.forEach(f => {
+          if (f.previewUrl) URL.revokeObjectURL(f.previewUrl);
+        });
         router.push(`/legal/contracts/${params.id}`);
       } else {
         const error = await response.json();
@@ -474,80 +553,135 @@ export default function EditContractPage() {
           </div>
         </div>
 
-        {/* Document existant */}
-        {existingFile && (
-          <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-green-500" />
-              Document actuel
-            </h2>
-            <div className="flex items-center gap-4 p-4 bg-slate-700/50 rounded-lg">
-              <FileText className="w-10 h-10 text-green-500" />
-              <div className="flex-1">
-                <p className="text-white font-medium">{existingFile.name}</p>
-                <p className="text-sm text-gray-400">
-                  {existingFile.size
-                    ? `${(existingFile.size / 1024 / 1024).toFixed(2)} MB`
-                    : ""}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setExistingFile(null)}
-                className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-red-400" />
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Documents du contrat */}
+        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-green-500" />
+            Documents du contrat
+            <span className="text-sm text-gray-400 font-normal ml-2">
+              ({existingFiles.length + files.length} fichier{existingFiles.length + files.length !== 1 ? 's' : ''})
+            </span>
+          </h2>
 
-        {/* Nouveau document */}
-        {!existingFile && (
-          <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-green-500" />
-              Document du contrat
-            </h2>
-            <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center">
-              {file ? (
-                <div className="flex items-center justify-center gap-4">
-                  <FileText className="w-12 h-12 text-green-500" />
-                  <div className="text-left">
-                    <p className="text-white font-medium">{file.name}</p>
-                    <p className="text-gray-400 text-sm">
-                      {(file.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setFile(null)}
-                    className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
+          {/* Documents existants */}
+          {existingFiles.length > 0 && (
+            <div className="mb-4">
+              <p className="text-sm text-gray-400 mb-2">Documents actuels:</p>
+              <div className="space-y-2">
+                {existingFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg group"
                   >
-                    <X className="w-5 h-5 text-red-400" />
-                  </button>
-                </div>
-              ) : (
-                <label className="cursor-pointer">
-                  <Upload className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-                  <p className="text-gray-400">
-                    Glisser un fichier ou{" "}
-                    <span className="text-green-400">cliquer pour telecharger</span>
-                  </p>
-                  <p className="text-gray-500 text-sm mt-2">
-                    Formats: PDF, DOCX | Max: 50 MB
-                  </p>
-                  <input
-                    type="file"
-                    accept=".pdf,.docx"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                </label>
-              )}
+                    {getFileIcon(file.name, file.type)}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-medium truncate">{file.name}</p>
+                      <p className="text-xs text-gray-400">
+                        {file.size ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : ''}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {canPreview(file.name, file.type) && (
+                        <button
+                          type="button"
+                          onClick={() => openPreview(file, true)}
+                          className="p-2 hover:bg-green-500/20 rounded-lg transition-colors"
+                          title="Visualiser"
+                        >
+                          <Eye className="w-4 h-4 text-green-400" />
+                        </button>
+                      )}
+                      {file.path && (
+                        <a
+                          href={file.path}
+                          download={file.name}
+                          className="p-2 hover:bg-blue-500/20 rounded-lg transition-colors"
+                          title="Telecharger"
+                        >
+                          <Download className="w-4 h-4 text-blue-400" />
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeExistingFile(file.id)}
+                        className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
+                        title="Supprimer"
+                      >
+                        <X className="w-4 h-4 text-red-400" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
+          )}
+
+          {/* Nouveaux documents a ajouter */}
+          {files.length > 0 && (
+            <div className="mb-4">
+              <p className="text-sm text-gray-400 mb-2">
+                Nouveaux documents a ajouter ({files.length}):
+              </p>
+              <div className="space-y-2">
+                {files.map((fileWrapper) => (
+                  <div
+                    key={fileWrapper.id}
+                    className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/30 rounded-lg"
+                  >
+                    {getFileIcon(fileWrapper.name, fileWrapper.type)}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-medium truncate">{fileWrapper.name}</p>
+                      <p className="text-xs text-gray-400">
+                        {(fileWrapper.size / 1024 / 1024).toFixed(2)} MB
+                        <span className="text-green-400 ml-2">• Nouveau</span>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {fileWrapper.previewUrl && canPreview(fileWrapper.name, fileWrapper.type) && (
+                        <button
+                          type="button"
+                          onClick={() => openPreview(fileWrapper, false)}
+                          className="p-2 hover:bg-green-500/20 rounded-lg transition-colors"
+                          title="Visualiser avant enregistrement"
+                        >
+                          <Eye className="w-4 h-4 text-green-400" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeNewFile(fileWrapper.id)}
+                        className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
+                        title="Retirer"
+                      >
+                        <X className="w-4 h-4 text-red-400" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Zone d'upload - toujours visible */}
+          <div className="border-2 border-dashed border-slate-600 rounded-lg p-6 text-center hover:border-green-500/50 transition-colors">
+            <label className="cursor-pointer block">
+              <Upload className="w-10 h-10 text-gray-500 mx-auto mb-3" />
+              <p className="text-gray-400">
+                <span className="text-green-400">Cliquer pour ajouter</span> un ou plusieurs documents
+              </p>
+              <p className="text-gray-500 text-sm mt-2">
+                Formats: PDF, DOCX, Images (JPG, PNG) | Max: 50 MB par fichier
+              </p>
+              <input
+                type="file"
+                accept=".pdf,.docx,.jpg,.jpeg,.png,.gif"
+                onChange={handleFileChange}
+                multiple
+                className="hidden"
+              />
+            </label>
           </div>
-        )}
+        </div>
 
         {/* Statut */}
         <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
@@ -590,6 +724,84 @@ export default function EditContractPage() {
           </button>
         </div>
       </form>
+
+      {/* Modal de visualisation PDF/Image */}
+      {showPdfModal && previewFile && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className={`bg-slate-800 rounded-xl shadow-2xl flex flex-col ${isFullscreen ? 'w-full h-full' : 'w-full max-w-5xl h-[85vh]'}`}>
+            {/* Header de la modal */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <div className="flex items-center gap-3">
+                {getFileIcon(previewFile.name, previewFile.type)}
+                <div>
+                  <h3 className="text-lg font-semibold text-white">{previewFile.name}</h3>
+                  <p className="text-sm text-gray-400">
+                    {previewFile.size ? `${(previewFile.size / 1024 / 1024).toFixed(2)} MB` : ''}
+                    {!previewFile.isExisting && (
+                      <span className="text-green-400 ml-2">• Apercu avant enregistrement</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {previewFile.isExisting && previewFile.path && (
+                  <a
+                    href={previewFile.path}
+                    download={previewFile.name}
+                    className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                    title="Telecharger"
+                  >
+                    <Download className="w-5 h-5 text-gray-400 hover:text-white" />
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                  title={isFullscreen ? "Reduire" : "Plein ecran"}
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="w-5 h-5 text-gray-400 hover:text-white" />
+                  ) : (
+                    <Maximize2 className="w-5 h-5 text-gray-400 hover:text-white" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPdfModal(false);
+                    setIsFullscreen(false);
+                    setPreviewFile(null);
+                  }}
+                  className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
+                  title="Fermer"
+                >
+                  <X className="w-5 h-5 text-gray-400 hover:text-red-400" />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenu - PDF ou Image */}
+            <div className="flex-1 bg-slate-900 rounded-b-xl overflow-hidden flex items-center justify-center">
+              {(previewFile.type?.startsWith('image/') || previewFile.name?.match(/\.(jpg|jpeg|png|gif)$/i)) ? (
+                // Image preview
+                <img
+                  src={previewFile.isExisting ? previewFile.path : previewFile.previewUrl}
+                  alt={previewFile.name}
+                  className="max-w-full max-h-full object-contain"
+                />
+              ) : (
+                // PDF preview
+                <iframe
+                  src={`${previewFile.isExisting ? previewFile.path : previewFile.previewUrl}#toolbar=1&navpanes=1&scrollbar=1`}
+                  className="w-full h-full"
+                  title="Visualisation du document"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

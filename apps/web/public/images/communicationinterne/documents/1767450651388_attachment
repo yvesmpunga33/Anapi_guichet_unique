@@ -1,0 +1,175 @@
+Return-Path: <merrykapula@futurissvision.com>
+NC-Service-Type: out-pe-bsn
+Received: from prod-lbout-phx.jellyfish.systems (bsn-01-5.privateemail.com [198.54.122.103])
+	by pe-bsn.jellyfish.systems (Postfix) with ESMTPA id 4dk23165jVz2ycw
+	for <yves.munga33@gmail.com>; Sat, 03 Jan 2026 13:48:45 +0000 (UTC)
+Received: from MTA-06.privateemail.com (unknown [10.50.14.16])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+	 key-exchange X25519 server-signature RSA-PSS (2048 bits))
+	(No client certificate requested)
+	by BSN-01.privateemail.com (Postfix) with ESMTPS id 4dk2315VLlz3hhT6
+	for <yves.munga33@gmail.com>; Sat,  3 Jan 2026 08:48:45 -0500 (EST)
+DKIM-Signature: v=1; a=rsa-sha256; c=simple/simple; d=futurissvision.com;
+	s=default; t=1767448125;
+	bh=BFkBssvxP0CoREXFhZsw3A8ma36ffwLrX3W43h2il9Q=;
+	h=From:To:Reply-To:Subject:Date:From;
+	b=sctR9vq3ESpefV/QR75pP1jNuqCklzi4wibh+VVSEApI87me5ZPSckfAS2605txfz
+	 YysD7NW5X5NvpFqkp15lEY0PcPshYkMQAddAS/zLYBTVc8f1RQYxOEOsGQVojQ1+tz
+	 GOZbMlciH0B0BNtv7nk919tTPyx8ZeiZxhxqHawYtf3pYmXJgsxTg3IPhLPbVwTZvB
+	 rYA8Ye9gnN1N1XroDhEqlMmR+NjetYAyXkkuRBBb4E9fxw+P85oCrtbC4JWabHi0Id
+	 Aa7f+vNRWwdpht2AoxGrlhTVimCxtcWCOafGDQdRcMnzYLNlnOwhanOzOozciycWom
+	 YknpjKBuFr9QQ==
+Received: from Yvess-MacBook-Pro.local (unknown [185.202.220.64])
+	by mta-06.privateemail.com (Postfix) with ESMTPA id 4dk23116c6z3hhTG
+	for <yves.munga33@gmail.com>; Sat,  3 Jan 2026 08:48:44 -0500 (EST)
+From: ANAPI <merrykapula@futurissvision.com>
+To: yves.munga33@gmail.com
+Reply-To: Yves Mpunga <yves2@gmail.com>
+Subject: Email bie. formatte2
+Message-ID: <5fe701d9-d16e-c3b2-0b55-54c23412fa51@futurissvision.com>
+Date: Sat, 03 Jan 2026 13:48:43 +0000
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="--_NmP-86bb5126561eee7c-Part_1"
+X-Rspamd-Queue-Id: 4dk23165jVz2ycw
+
+----_NmP-86bb5126561eee7c-Part_1
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Je suis en train de tester un email externe bienformstt=C3=A9
+
+---
+Yves Mpunga
+yves2@gmail.com
+
+Envoye via ANAPI - Agence Nationale pour la =
+Promotion des Investissements
+----_NmP-86bb5126561eee7c-Part_1
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+
+<!DOCTYPE html>
+<html lang=3D"fr">
+<head>
+  <meta charset=3D"UTF-8">
+  <meta name=3D"viewport" content=3D"width=3Ddevice-width, =
+initial-scale=3D1.0">
+  <title>Email bie. formatte2</title>
+</head>
+<body style=3D"margin: 0; padding: 0; background-color: #f4f4f5; =
+font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <table role=3D"presentation" style=3D"width: 100%; border-collapse: =
+collapse;">
+    <tr>
+      <td style=3D"padding: 40px 20px;">
+        <table role=3D"presentation" style=3D"max-width: 600px; margin: 0 =
+auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; =
+box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <!-- Header avec logo=
+ -->
+          <tr>
+            <td style=3D"background: =
+linear-gradient(135deg, #047857 0%, #059669 100%); padding: 30px 40px; =
+text-align: center;">
+              <table role=3D"presentation" =
+style=3D"width: 100%;">
+                <tr>
+                  <td =
+style=3D"text-align: center;">
+                    <div style=3D"display: =
+inline-block; background-color: white; border-radius: 50%; width: 60px; =
+height: 60px; line-height: 60px; text-align: center;">
+                      <span style=3D"font-size: 28px; font-weight: bold; =
+color: #047857;">A</span>
+                    </div>
+                    <h1 style=3D"color: #ffffff; margin: 15px 0 5px 0; =
+font-size: 24px; font-weight: 600;">ANAPI</h1>
+                    <p =
+style=3D"color: rgba(255,255,255,0.9); margin: 0; font-size: 14px;">Agence =
+Nationale pour la Promotion des Investissements</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Contenu principal -->
+          <tr>
+            <td style=3D"padding: 40px;">
+              <div =
+style=3D"color: #1f2937; font-size: 15px; line-height: 1.7;">
+                <p>Je suis en train de tester un email externe =
+bienformstt=C3=A9</p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Signature -->
+          <tr>
+            <td style=3D"padding: 0 40px 30px 40px;">
+              <table role=3D"presentation" style=3D"width: 100%; =
+border-top: 1px solid #e5e7eb; padding-top: 25px;">
+                <tr>
+                  <td>
+                    <p style=3D"margin: 0 0 5px 0; =
+font-weight: 600; color: #1f2937; font-size: 15px;">Yves Mpunga</p>
+                    <p style=3D"margin: 0; color: #6b7280; font-size: =
+14px;">yves2@gmail.com</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td =
+style=3D"background-color: #f9fafb; padding: 25px 40px; border-top: 1px =
+solid #e5e7eb;">
+              <table role=3D"presentation" style=3D"width:=
+ 100%;">
+                <tr>
+                  <td style=3D"text-align: =
+center;">
+                    <p style=3D"margin: 0 0 10px 0; color: =
+#6b7280; font-size: 13px;">
+                      Ce message a ete envoye =
+via la plateforme ANAPI
+                    </p>
+                    <p =
+style=3D"margin: 0; color: #9ca3af; font-size: 12px;">
+                      Agence Nationale pour la Promotion des =
+Investissements<br/>
+                      Republique Democratique du Congo
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Mentions legales -->
+        <table role=3D"presentation" =
+style=3D"max-width: 600px; margin: 20px auto 0;">
+          <tr>
+            <td style=3D"text-align: center; padding: 0 20px;">
+              <p style=3D"color: #9ca3af; font-size: 11px; line-height: 1.=
+5; margin: 0;">
+                Cet email et ses pieces jointes sont =
+confidentiels et destines exclusivement aux destinataires mentionnes.
+                Si vous avez recu ce message par erreur, veuillez le =
+supprimer et en informer l'expediteur.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+     =20
+----_NmP-86bb5126561eee7c-Part_1--

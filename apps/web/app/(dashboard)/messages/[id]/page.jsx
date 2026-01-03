@@ -27,6 +27,7 @@ import {
   ChevronUp,
   ExternalLink,
   Landmark,
+  Globe,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -46,7 +47,7 @@ export default function ReadMessagePage() {
         const result = await response.json();
 
         if (result.success) {
-          setMessage(result.data);
+          setMessage(result.data || result.message);
         } else {
           console.error("Erreur:", result.error);
         }
@@ -167,11 +168,12 @@ export default function ReadMessagePage() {
   const toRecipients = recipients.filter((r) => r.recipientType === "TO");
   const ccRecipients = recipients.filter((r) => r.recipientType === "CC");
   const attachments = message.attachments || [];
+  const isExternalEmail = message.messageType === 'EXTERNAL_IN' || message.messageType === 'EXTERNAL_OUT';
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600/80 to-indigo-600/80 dark:from-blue-800/60 dark:to-indigo-700/60 rounded-2xl p-6 text-white">
+      <div className={`bg-gradient-to-r ${isExternalEmail ? 'from-emerald-600/80 to-teal-600/80 dark:from-emerald-800/60 dark:to-teal-700/60' : 'from-blue-600/80 to-indigo-600/80 dark:from-blue-800/60 dark:to-indigo-700/60'} rounded-2xl p-6 text-white`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
@@ -181,14 +183,22 @@ export default function ReadMessagePage() {
               <ArrowLeft className="w-6 h-6" />
             </Link>
             <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-              <MailOpen className="w-6 h-6" />
+              {isExternalEmail ? <Globe className="w-6 h-6" /> : <MailOpen className="w-6 h-6" />}
             </div>
             <div>
-              <h1 className="text-xl font-bold truncate max-w-md">
-                {message.subject}
-              </h1>
-              <p className="text-blue-100 text-sm">
-                {format(new Date(message.createdAt), "EEEE d MMMM yyyy à HH:mm", {
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold truncate max-w-md">
+                  {message.subject}
+                </h1>
+                {isExternalEmail && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-white/20">
+                    <Globe className="w-3 h-3 mr-1" />
+                    {message.messageType === 'EXTERNAL_IN' ? 'Recu' : 'Envoye'}
+                  </span>
+                )}
+              </div>
+              <p className={`${isExternalEmail ? 'text-emerald-100' : 'text-blue-100'} text-sm`}>
+                {format(new Date(message.sentAt || message.createdAt), "EEEE d MMMM yyyy à HH:mm", {
                   locale: fr,
                 })}
               </p>
@@ -244,7 +254,11 @@ export default function ReadMessagePage() {
         {/* Sender Info */}
         <div className="p-6 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-start gap-4">
-            {sender.image ? (
+            {sender.isExternal ? (
+              <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-white text-xl font-bold">
+                {(sender.name || sender.email || "?")[0].toUpperCase()}
+              </div>
+            ) : sender.image ? (
               <Image
                 src={sender.image}
                 alt={sender.name || ""}
@@ -265,6 +279,13 @@ export default function ReadMessagePage() {
                 <span className="text-sm text-gray-500 dark:text-gray-400">
                   &lt;{sender.email}&gt;
                 </span>
+                {/* External Badge */}
+                {sender.isExternal && (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+                    <Globe className="w-3.5 h-3.5 mr-1.5" />
+                    Email externe
+                  </span>
+                )}
                 {/* Ministry Badge */}
                 {sender.ministry && (
                   <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
@@ -276,37 +297,78 @@ export default function ReadMessagePage() {
 
               {/* Recipients */}
               <div className="mt-2 space-y-1">
-                <div className="flex items-start gap-2">
-                  <span className="text-sm text-gray-500 dark:text-gray-400 w-8">
-                    À :
-                  </span>
-                  <div className="flex-1">
-                    <div className="flex flex-wrap gap-1">
-                      {(showAllRecipients
-                        ? toRecipients
-                        : toRecipients.slice(0, 3)
-                      ).map((r) => (
-                        <span
-                          key={r.id}
-                          className="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm"
-                        >
-                          {r.recipient?.name || r.recipient?.email}
-                        </span>
-                      ))}
-                      {toRecipients.length > 3 && !showAllRecipients && (
-                        <button
-                          onClick={() => setShowAllRecipients(true)}
-                          className="inline-flex items-center px-2 py-0.5 text-blue-600 dark:text-blue-400 text-sm hover:underline"
-                        >
-                          +{toRecipients.length - 3} autres
-                          <ChevronDown className="w-3 h-3 ml-1" />
-                        </button>
-                      )}
+                {/* External email recipients */}
+                {isExternalEmail && message.externalTo ? (
+                  <div className="flex items-start gap-2">
+                    <span className="text-sm text-gray-500 dark:text-gray-400 w-8">
+                      À :
+                    </span>
+                    <div className="flex-1">
+                      <div className="flex flex-wrap gap-1">
+                        {(Array.isArray(message.externalTo) ? message.externalTo : []).map((email, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded text-sm"
+                          >
+                            {email}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex items-start gap-2">
+                    <span className="text-sm text-gray-500 dark:text-gray-400 w-8">
+                      À :
+                    </span>
+                    <div className="flex-1">
+                      <div className="flex flex-wrap gap-1">
+                        {(showAllRecipients
+                          ? toRecipients
+                          : toRecipients.slice(0, 3)
+                        ).map((r) => (
+                          <span
+                            key={r.id}
+                            className="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm"
+                          >
+                            {r.recipient?.name || r.recipient?.email}
+                          </span>
+                        ))}
+                        {toRecipients.length > 3 && !showAllRecipients && (
+                          <button
+                            onClick={() => setShowAllRecipients(true)}
+                            className="inline-flex items-center px-2 py-0.5 text-blue-600 dark:text-blue-400 text-sm hover:underline"
+                          >
+                            +{toRecipients.length - 3} autres
+                            <ChevronDown className="w-3 h-3 ml-1" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-                {ccRecipients.length > 0 && (
+                {/* External CC */}
+                {isExternalEmail && message.externalCc && message.externalCc.length > 0 && (
+                  <div className="flex items-start gap-2">
+                    <span className="text-sm text-gray-500 dark:text-gray-400 w-8">
+                      Cc :
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {message.externalCc.map((email, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded text-sm"
+                        >
+                          {email}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Internal CC */}
+                {!isExternalEmail && ccRecipients.length > 0 && (
                   <div className="flex items-start gap-2">
                     <span className="text-sm text-gray-500 dark:text-gray-400 w-8">
                       Cc :
@@ -324,7 +386,7 @@ export default function ReadMessagePage() {
                   </div>
                 )}
 
-                {showAllRecipients && (
+                {showAllRecipients && !isExternalEmail && (
                   <button
                     onClick={() => setShowAllRecipients(false)}
                     className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center"
@@ -337,7 +399,7 @@ export default function ReadMessagePage() {
 
               <div className="flex items-center gap-2 mt-2 text-sm text-gray-500 dark:text-gray-400">
                 <Clock className="w-4 h-4" />
-                {format(new Date(message.createdAt), "d MMMM yyyy à HH:mm", {
+                {format(new Date(message.sentAt || message.createdAt), "d MMMM yyyy à HH:mm", {
                   locale: fr,
                 })}
               </div>

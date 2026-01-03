@@ -2,6 +2,26 @@ import { NextResponse } from 'next/server';
 import { auth } from '../../../../lib/auth.js';
 import Investment from '../../../../../models/Investment.js';
 import Investor from '../../../../../models/Investor.js';
+import ProjectHistory from '../../../../../models/ProjectHistory.js';
+
+// Helper pour enregistrer dans l'historique
+async function logHistory(projectId, action, data, session, request) {
+  try {
+    const forwardedFor = request?.headers?.get?.('x-forwarded-for');
+    const ipAddress = forwardedFor ? forwardedFor.split(',')[0] : 'unknown';
+
+    await ProjectHistory.create({
+      projectId,
+      action,
+      ...data,
+      performedById: session?.user?.id || null,
+      performedByName: session?.user?.name || 'Systeme',
+      ipAddress,
+    });
+  } catch (err) {
+    console.error('Error logging history:', err);
+  }
+}
 
 // GET - Obtenir un projet par ID
 export async function GET(request, { params }) {
@@ -62,6 +82,8 @@ export async function PUT(request, { params }) {
       );
     }
 
+    const previousData = project.toJSON();
+
     // Fields that can be updated
     const allowedFields = [
       'projectName',
@@ -83,9 +105,15 @@ export async function PUT(request, { params }) {
     ];
 
     const updateData = {};
+    const changedFields = [];
     for (const field of allowedFields) {
-      if (body[field] !== undefined) {
+      if (body[field] !== undefined && body[field] !== previousData[field]) {
         updateData[field] = body[field];
+        changedFields.push({
+          field,
+          previousValue: previousData[field],
+          newValue: body[field],
+        });
       }
     }
 
@@ -101,6 +129,57 @@ export async function PUT(request, { params }) {
     }
 
     await project.update(updateData);
+
+    // Log history entries for important changes
+    if (changedFields.length > 0) {
+      // Check for status change
+      const statusChange = changedFields.find(c => c.field === 'status');
+      if (statusChange) {
+        let action = 'STATUS_CHANGED';
+        if (statusChange.newValue === 'APPROVED') action = 'APPROVED';
+        else if (statusChange.newValue === 'REJECTED') action = 'REJECTED';
+        else if (statusChange.newValue === 'IN_PROGRESS') action = 'STARTED';
+        else if (statusChange.newValue === 'COMPLETED') action = 'COMPLETED';
+        else if (statusChange.newValue === 'CANCELLED') action = 'CANCELLED';
+
+        await logHistory(id, action, {
+          previousStatus: statusChange.previousValue,
+          newStatus: statusChange.newValue,
+          description: `Statut change de ${statusChange.previousValue || 'N/A'} a ${statusChange.newValue}`,
+        }, session, request);
+      }
+
+      // Check for amount change
+      const amountChange = changedFields.find(c => c.field === 'amount');
+      if (amountChange) {
+        await logHistory(id, 'AMOUNT_UPDATED', {
+          fieldChanged: 'amount',
+          previousValue: String(amountChange.previousValue),
+          newValue: String(amountChange.newValue),
+          description: `Montant modifie de ${amountChange.previousValue} a ${amountChange.newValue} ${updateData.currency || previousData.currency || 'USD'}`,
+        }, session, request);
+      }
+
+      // Check for investor change
+      const investorChange = changedFields.find(c => c.field === 'investorId');
+      if (investorChange) {
+        await logHistory(id, 'INVESTOR_CHANGED', {
+          fieldChanged: 'investorId',
+          previousValue: investorChange.previousValue,
+          newValue: investorChange.newValue,
+          description: 'Investisseur associe au projet modifie',
+        }, session, request);
+      }
+
+      // Log general update for other changes
+      const otherChanges = changedFields.filter(c => !['status', 'amount', 'investorId'].includes(c.field));
+      if (otherChanges.length > 0) {
+        await logHistory(id, 'UPDATED', {
+          description: `Champs modifies: ${otherChanges.map(c => c.field).join(', ')}`,
+          metadata: { changes: otherChanges },
+        }, session, request);
+      }
+    }
 
     const updatedProject = await Investment.findByPk(id);
 

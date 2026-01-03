@@ -15,6 +15,8 @@ import {
   ArrowRight,
   Calendar,
   Loader2,
+  BarChart3,
+  Mail,
 } from "lucide-react";
 
 export default function LegalDashboardPage() {
@@ -318,6 +320,20 @@ export default function LegalDashboardPage() {
           >
             <Clock className="w-8 h-8 text-red-500 mb-2" />
             <span className="text-sm text-white">Echeances</span>
+          </Link>
+          <Link
+            href="/legal/analytics"
+            className="flex flex-col items-center p-4 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors"
+          >
+            <BarChart3 className="w-8 h-8 text-purple-500 mb-2" />
+            <span className="text-sm text-white">Analytics</span>
+          </Link>
+          <Link
+            href="/legal/notifications"
+            className="flex flex-col items-center p-4 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors"
+          >
+            <Mail className="w-8 h-8 text-cyan-500 mb-2" />
+            <span className="text-sm text-white">Notifications</span>
           </Link>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../lib/auth.js';
-import { Message, MessageRecipient } from '../../../../models/index.js';
+import { Message, MessageRecipient, User } from '../../../../models/index.js';
 
 // GET - Nombre de messages non lus
 export async function GET(request) {
@@ -58,7 +58,7 @@ export async function GET(request) {
           where: { isDeleted: false },
           include: [
             {
-              model: require('../../../../models/index.js').User,
+              model: User,
               as: 'sender',
               attributes: ['id', 'name', 'email', 'image'],
             },

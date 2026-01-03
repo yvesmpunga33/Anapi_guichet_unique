@@ -85,7 +85,8 @@ export default function RichTextEditor({
     },
     editorProps: {
       attributes: {
-        class: `prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[200px] px-4 py-3 ${editorClassName}`,
+        class: `prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[200px] px-4 py-3 text-gray-900 dark:text-white ${editorClassName}`,
+        style: 'color: inherit;',
       },
     },
   });
@@ -348,7 +349,7 @@ export default function RichTextEditor({
       {/* Editor Content */}
       <EditorContent
         editor={editor}
-        className="min-h-[200px] max-h-[500px] overflow-y-auto"
+        className="min-h-[200px] max-h-[500px] overflow-y-auto [&_.ProseMirror]:text-gray-900 [&_.ProseMirror]:dark:text-white"
       />
     </div>
   );

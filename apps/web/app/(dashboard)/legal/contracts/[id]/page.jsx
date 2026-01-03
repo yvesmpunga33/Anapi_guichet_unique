@@ -21,6 +21,7 @@ import {
   Eye,
   X,
   Printer,
+  RefreshCcw,
 } from "lucide-react";
 
 export default function ContractDetailPage() {
@@ -170,6 +171,15 @@ export default function ContractDetailPage() {
             <Edit className="w-4 h-4" />
             Modifier
           </Link>
+          {["ACTIVE", "EXPIRED"].includes(contract.status) && (
+            <Link
+              href={`/legal/contracts/${contract.id}/renew`}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+            >
+              <RefreshCcw className="w-4 h-4" />
+              Renouveler
+            </Link>
+          )}
           <button
             onClick={handleDelete}
             className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"

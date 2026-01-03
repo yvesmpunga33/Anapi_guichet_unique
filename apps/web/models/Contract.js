@@ -134,6 +134,11 @@ Contract.init(
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
+    renewalType: {
+      type: DataTypes.ENUM('MANUAL', 'AUTO', 'TACIT', 'NONE'),
+      defaultValue: 'MANUAL',
+      comment: 'Type de renouvellement',
+    },
     renewalTerms: {
       type: DataTypes.TEXT,
       allowNull: true,
@@ -141,6 +146,36 @@ Contract.init(
     previousContractId: {
       type: DataTypes.UUID,
       allowNull: true,
+    },
+    renewedFromId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      comment: 'ID du contrat original (si ce contrat est un renouvellement)',
+    },
+    renewedToId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      comment: 'ID du nouveau contrat (si ce contrat a ete renouvele)',
+    },
+    renewedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Date de renouvellement',
+    },
+    renewedById: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      comment: 'Utilisateur ayant effectue le renouvellement',
+    },
+    renewalNotes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Notes sur le renouvellement',
+    },
+    alertEnabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      comment: 'Activer les alertes pour ce contrat',
     },
     // Audit
     createdById: {

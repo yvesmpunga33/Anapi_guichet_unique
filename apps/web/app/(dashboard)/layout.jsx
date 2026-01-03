@@ -47,6 +47,10 @@ import {
   FileSignature,
   Bell,
   Gavel,
+  ShoppingCart,
+  FileSearch,
+  HandshakeIcon,
+  BadgeCheck,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import MessageNotifications from "../../components/notifications/MessageNotifications";
@@ -199,12 +203,26 @@ const getNavigation = (intl) => [
     ],
   },
   {
+    titleKey: "nav.procurement",
+    title: intl.formatMessage({ id: "nav.procurement", defaultMessage: "PASSATION DE MARCHÉS" }),
+    items: [
+      { name: intl.formatMessage({ id: "nav.procurementDashboard", defaultMessage: "Tableau de bord" }), href: "/procurement", icon: BarChart3 },
+      { name: intl.formatMessage({ id: "nav.tenders", defaultMessage: "Appels d'offres" }), href: "/procurement/tenders", icon: FileSearch },
+      { name: intl.formatMessage({ id: "nav.bidders", defaultMessage: "Soumissionnaires" }), href: "/procurement/bidders", icon: Briefcase },
+      { name: intl.formatMessage({ id: "nav.bids", defaultMessage: "Soumissions" }), href: "/procurement/bids", icon: ClipboardList },
+      { name: intl.formatMessage({ id: "nav.procurementContracts", defaultMessage: "Contrats" }), href: "/procurement/contracts", icon: HandshakeIcon },
+      { name: intl.formatMessage({ id: "nav.certificates", defaultMessage: "Certificats" }), href: "/procurement/certificates", icon: BadgeCheck },
+      { name: intl.formatMessage({ id: "nav.procurementConfig", defaultMessage: "Configuration" }), href: "/procurement/config", icon: Cog },
+    ],
+  },
+  {
     titleKey: "nav.configuration",
     title: intl.formatMessage({ id: "nav.configuration", defaultMessage: "CONFIGURATION" }),
     items: [
       { name: intl.formatMessage({ id: "nav.adminActs", defaultMessage: "Actes administratifs" }), href: "/configuration/actes-administratifs", icon: FileCheck },
       { name: intl.formatMessage({ id: "nav.workflowSteps", defaultMessage: "Étapes de workflow" }), href: "/configuration/workflow-steps", icon: Workflow },
       { name: intl.formatMessage({ id: "nav.ministryWorkflows", defaultMessage: "Workflows ministères" }), href: "/configuration/ministry-workflows", icon: Cog },
+      { name: intl.formatMessage({ id: "nav.ministryDepartments", defaultMessage: "Départements ministères" }), href: "/configuration/ministry-departments", icon: Building2 },
     ],
   },
   {

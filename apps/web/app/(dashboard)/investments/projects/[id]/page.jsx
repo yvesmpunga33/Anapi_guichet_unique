@@ -37,6 +37,15 @@ import {
   File,
   Image,
   FileSpreadsheet,
+  Target,
+  AlertTriangle,
+  BarChart3,
+  Plus,
+  Flag,
+  Shield,
+  Zap,
+  Leaf,
+  HeartHandshake,
 } from "lucide-react";
 
 const statusConfig = {
@@ -84,6 +93,36 @@ export default function ProjectDetailPage() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Milestones state
+  const [milestones, setMilestones] = useState([]);
+  const [loadingMilestones, setLoadingMilestones] = useState(false);
+  const [showMilestoneModal, setShowMilestoneModal] = useState(false);
+  const [editingMilestone, setEditingMilestone] = useState(null);
+  const [milestoneForm, setMilestoneForm] = useState({
+    name: "", description: "", dueDate: "", status: "PENDING", progress: 0,
+    plannedBudget: "", actualBudget: "", deliverables: "", priority: "MEDIUM"
+  });
+
+  // Risks state
+  const [risks, setRisks] = useState([]);
+  const [loadingRisks, setLoadingRisks] = useState(false);
+  const [showRiskModal, setShowRiskModal] = useState(false);
+  const [editingRisk, setEditingRisk] = useState(null);
+  const [riskForm, setRiskForm] = useState({
+    title: "", description: "", category: "OPERATIONAL", probability: "MEDIUM",
+    impact: "MEDIUM", status: "IDENTIFIED", mitigationStrategy: "", contingencyPlan: ""
+  });
+
+  // Impacts state
+  const [impacts, setImpacts] = useState([]);
+  const [loadingImpacts, setLoadingImpacts] = useState(false);
+  const [showImpactModal, setShowImpactModal] = useState(false);
+  const [impactForm, setImpactForm] = useState({
+    reportDate: new Date().toISOString().split('T')[0], directJobs: 0, indirectJobs: 0,
+    localRevenue: 0, taxContribution: 0, exportValue: 0, localPurchases: 0,
+    trainingHours: 0, environmentalScore: 0, socialScore: 0, notes: ""
+  });
 
   // Check if edit mode is requested via URL parameter
   useEffect(() => {
@@ -246,6 +285,265 @@ export default function ProjectDetailPage() {
       fetchHistory();
     }
   }, [activeTab, params.id]);
+
+  // ========== MILESTONES ==========
+  const fetchMilestones = async () => {
+    try {
+      setLoadingMilestones(true);
+      const response = await fetch(`/api/investments/projects/${params.id}/milestones`);
+      if (response.ok) {
+        const data = await response.json();
+        setMilestones(data.data || []);
+      }
+    } catch (err) {
+      console.error("Error fetching milestones:", err);
+    } finally {
+      setLoadingMilestones(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "milestones" && params.id) {
+      fetchMilestones();
+    }
+  }, [activeTab, params.id]);
+
+  const handleSaveMilestone = async () => {
+    try {
+      const url = editingMilestone
+        ? `/api/investments/projects/${params.id}/milestones?id=${editingMilestone.id}`
+        : `/api/investments/projects/${params.id}/milestones`;
+      const method = editingMilestone ? "PUT" : "POST";
+
+      // Mapper les champs du formulaire vers l'API
+      const payload = {
+        name: milestoneForm.name,
+        description: milestoneForm.description,
+        plannedEndDate: milestoneForm.dueDate,
+        status: milestoneForm.status,
+        progress: milestoneForm.progress,
+        budget: milestoneForm.plannedBudget,
+        actualCost: milestoneForm.actualBudget,
+        deliverables: milestoneForm.deliverables ? [milestoneForm.deliverables] : [],
+        priority: milestoneForm.priority,
+      };
+
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Erreur");
+      }
+
+      await fetchMilestones();
+      setShowMilestoneModal(false);
+      setEditingMilestone(null);
+      setMilestoneForm({
+        name: "", description: "", dueDate: "", status: "PENDING", progress: 0,
+        plannedBudget: "", actualBudget: "", deliverables: "", priority: "MEDIUM"
+      });
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleDeleteMilestone = async (id) => {
+    if (!confirm("Supprimer ce jalon ?")) return;
+    try {
+      const response = await fetch(`/api/investments/projects/${params.id}/milestones?id=${id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setMilestones(milestones.filter(m => m.id !== id));
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  // ========== RISKS ==========
+  const fetchRisks = async () => {
+    try {
+      setLoadingRisks(true);
+      const response = await fetch(`/api/investments/projects/${params.id}/risks`);
+      if (response.ok) {
+        const data = await response.json();
+        setRisks(data.data || []);
+      }
+    } catch (err) {
+      console.error("Error fetching risks:", err);
+    } finally {
+      setLoadingRisks(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "risks" && params.id) {
+      fetchRisks();
+    }
+  }, [activeTab, params.id]);
+
+  const handleSaveRisk = async () => {
+    try {
+      const url = editingRisk
+        ? `/api/investments/projects/${params.id}/risks?id=${editingRisk.id}`
+        : `/api/investments/projects/${params.id}/risks`;
+      const method = editingRisk ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(riskForm),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Erreur");
+      }
+
+      await fetchRisks();
+      setShowRiskModal(false);
+      setEditingRisk(null);
+      setRiskForm({
+        title: "", description: "", category: "OPERATIONAL", probability: "MEDIUM",
+        impact: "MEDIUM", status: "IDENTIFIED", mitigationStrategy: "", contingencyPlan: ""
+      });
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleDeleteRisk = async (id) => {
+    if (!confirm("Supprimer ce risque ?")) return;
+    try {
+      const response = await fetch(`/api/investments/projects/${params.id}/risks?id=${id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setRisks(risks.filter(r => r.id !== id));
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  // ========== IMPACTS ==========
+  const fetchImpacts = async () => {
+    try {
+      setLoadingImpacts(true);
+      const response = await fetch(`/api/investments/projects/${params.id}/impacts`);
+      if (response.ok) {
+        const data = await response.json();
+        setImpacts(data.data || []);
+      }
+    } catch (err) {
+      console.error("Error fetching impacts:", err);
+    } finally {
+      setLoadingImpacts(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "impacts" && params.id) {
+      fetchImpacts();
+    }
+  }, [activeTab, params.id]);
+
+  const handleSaveImpact = async () => {
+    try {
+      const isEditing = impactForm.id;
+      const url = isEditing
+        ? `/api/investments/projects/${params.id}/impacts?id=${impactForm.id}`
+        : `/api/investments/projects/${params.id}/impacts`;
+
+      const response = await fetch(url, {
+        method: isEditing ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(impactForm),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Erreur");
+      }
+
+      await fetchImpacts();
+      setShowImpactModal(false);
+      setImpactForm({
+        reportDate: new Date().toISOString().split('T')[0], directJobs: 0, indirectJobs: 0,
+        localRevenue: 0, taxContribution: 0, exportValue: 0, localPurchases: 0,
+        trainingHours: 0, environmentalScore: 0, socialScore: 0, notes: ""
+      });
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleDeleteImpact = async (id) => {
+    if (!confirm("Supprimer ce rapport d'impact ?")) return;
+    try {
+      const response = await fetch(`/api/investments/projects/${params.id}/impacts?id=${id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setImpacts(impacts.filter(i => i.id !== id));
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || "Erreur");
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  // Config objects for display
+  const milestoneStatusConfig = {
+    NOT_STARTED: { label: "Non demarre", color: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300" },
+    PENDING: { label: "En attente", color: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300" },
+    IN_PROGRESS: { label: "En cours", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+    COMPLETED: { label: "Termine", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
+    DELAYED: { label: "En retard", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
+    ON_HOLD: { label: "En pause", color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
+    CANCELLED: { label: "Annule", color: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400" },
+  };
+
+  const priorityConfig = {
+    LOW: { label: "Basse", color: "bg-gray-100 text-gray-600" },
+    MEDIUM: { label: "Moyenne", color: "bg-yellow-100 text-yellow-700" },
+    HIGH: { label: "Haute", color: "bg-orange-100 text-orange-700" },
+    CRITICAL: { label: "Critique", color: "bg-red-100 text-red-700" },
+  };
+
+  const riskCategoryConfig = {
+    FINANCIAL: { label: "Financier", icon: DollarSign },
+    OPERATIONAL: { label: "Operationnel", icon: Briefcase },
+    TECHNICAL: { label: "Technique", icon: Zap },
+    LEGAL: { label: "Juridique", icon: Shield },
+    ENVIRONMENTAL: { label: "Environnemental", icon: Leaf },
+    SOCIAL: { label: "Social", icon: HeartHandshake },
+    POLITICAL: { label: "Politique", icon: Flag },
+    MARKET: { label: "Marche", icon: TrendingUp },
+  };
+
+  const riskLevelConfig = {
+    LOW: { label: "Faible", color: "bg-green-100 text-green-700" },
+    MEDIUM: { label: "Moyen", color: "bg-yellow-100 text-yellow-700" },
+    HIGH: { label: "Eleve", color: "bg-orange-100 text-orange-700" },
+    CRITICAL: { label: "Critique", color: "bg-red-100 text-red-700" },
+  };
+
+  const riskStatusConfig = {
+    IDENTIFIED: { label: "Identifie", color: "bg-blue-100 text-blue-700" },
+    ANALYZING: { label: "En analyse", color: "bg-yellow-100 text-yellow-700" },
+    MITIGATING: { label: "En mitigation", color: "bg-orange-100 text-orange-700" },
+    MONITORING: { label: "Sous surveillance", color: "bg-purple-100 text-purple-700" },
+    RESOLVED: { label: "Resolu", color: "bg-green-100 text-green-700" },
+    ACCEPTED: { label: "Accepte", color: "bg-gray-100 text-gray-700" },
+  };
 
   // Handle file selection
   const handleFileSelect = (e) => {
@@ -754,6 +1052,9 @@ export default function ProjectDetailPage() {
         <nav className="flex gap-6">
           {[
             { id: "overview", label: "Informations", icon: Briefcase },
+            { id: "milestones", label: "Jalons", icon: Target },
+            { id: "risks", label: "Risques", icon: AlertTriangle },
+            { id: "impacts", label: "Impacts", icon: BarChart3 },
             { id: "investor", label: "Investisseur", icon: Building2 },
             { id: "documents", label: "Documents", icon: FileText },
             { id: "history", label: "Historique", icon: History },
@@ -1055,6 +1356,429 @@ export default function ProjectDetailPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========== MILESTONES TAB ========== */}
+      {activeTab === "milestones" && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Jalons du projet ({milestones.length})
+              </h3>
+              <button
+                onClick={() => {
+                  setEditingMilestone(null);
+                  setMilestoneForm({
+                    name: "", description: "", dueDate: "", status: "PENDING", progress: 0,
+                    plannedBudget: "", actualBudget: "", deliverables: "", priority: "MEDIUM"
+                  });
+                  setShowMilestoneModal(true);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Ajouter un jalon
+              </button>
+            </div>
+
+            {loadingMilestones ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+              </div>
+            ) : milestones.length === 0 ? (
+              <div className="text-center py-12">
+                <Target className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 dark:text-gray-400">Aucun jalon defini</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Ajoutez des jalons pour suivre l'avancement du projet</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                {milestones.map((milestone) => {
+                  const msStatus = milestoneStatusConfig[milestone.status] || milestoneStatusConfig.PENDING;
+                  const msPriority = priorityConfig[milestone.priority] || priorityConfig.MEDIUM;
+                  return (
+                    <div key={milestone.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-medium text-gray-900 dark:text-white">{milestone.name}</h4>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${msStatus.color}`}>
+                              {msStatus.label}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${msPriority.color}`}>
+                              {msPriority.label}
+                            </span>
+                          </div>
+                          {milestone.description && (
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{milestone.description}</p>
+                          )}
+                          <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                            {milestone.plannedEndDate && (
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-4 h-4" />
+                                {formatDate(milestone.plannedEndDate)}
+                              </span>
+                            )}
+                            {milestone.budget && (
+                              <span className="flex items-center gap-1">
+                                <DollarSign className="w-4 h-4" />
+                                Budget: {formatAmount(milestone.budget)}
+                              </span>
+                            )}
+                          </div>
+                          {milestone.progress > 0 && (
+                            <div className="mt-3">
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className="text-gray-500">Progression</span>
+                                <span className="font-medium text-gray-700 dark:text-gray-300">{milestone.progress}%</span>
+                              </div>
+                              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                                <div
+                                  className={`h-2 rounded-full ${milestone.progress === 100 ? "bg-green-500" : "bg-blue-500"}`}
+                                  style={{ width: `${milestone.progress}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingMilestone(milestone);
+                              setMilestoneForm({
+                                name: milestone.name || "",
+                                description: milestone.description || "",
+                                dueDate: milestone.plannedEndDate ? milestone.plannedEndDate.split('T')[0] : "",
+                                status: milestone.status || "PENDING",
+                                progress: milestone.progress || 0,
+                                plannedBudget: milestone.budget || "",
+                                actualBudget: milestone.actualCost || "",
+                                deliverables: Array.isArray(milestone.deliverables) ? milestone.deliverables.join(", ") : (milestone.deliverables || ""),
+                                priority: milestone.priority || "MEDIUM"
+                              });
+                              setShowMilestoneModal(true);
+                            }}
+                            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMilestone(milestone.id)}
+                            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========== RISKS TAB ========== */}
+      {activeTab === "risks" && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Risques identifies ({risks.length})
+              </h3>
+              <button
+                onClick={() => {
+                  setEditingRisk(null);
+                  setRiskForm({
+                    title: "", description: "", category: "OPERATIONAL", probability: "MEDIUM",
+                    impact: "MEDIUM", status: "IDENTIFIED", mitigationStrategy: "", contingencyPlan: ""
+                  });
+                  setShowRiskModal(true);
+                }}
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Ajouter un risque
+              </button>
+            </div>
+
+            {loadingRisks ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+              </div>
+            ) : risks.length === 0 ? (
+              <div className="text-center py-12">
+                <AlertTriangle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 dark:text-gray-400">Aucun risque identifie</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Evaluez les risques pour mieux gerer le projet</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                {risks.map((risk) => {
+                  const riskCategory = riskCategoryConfig[risk.category] || riskCategoryConfig.OPERATIONAL;
+                  const RiskIcon = riskCategory.icon;
+                  const probLevel = riskLevelConfig[risk.probability] || riskLevelConfig.MEDIUM;
+                  const impactLevel = riskLevelConfig[risk.impact] || riskLevelConfig.MEDIUM;
+                  const riskStatus = riskStatusConfig[risk.status] || riskStatusConfig.IDENTIFIED;
+                  return (
+                    <div key={risk.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3 flex-1">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${impactLevel.color}`}>
+                            <RiskIcon className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h4 className="font-medium text-gray-900 dark:text-white">{risk.title}</h4>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${riskStatus.color}`}>
+                                {riskStatus.label}
+                              </span>
+                            </div>
+                            {risk.description && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{risk.description}</p>
+                            )}
+                            <div className="flex items-center gap-4 text-sm">
+                              <span className="text-gray-500 dark:text-gray-400">
+                                Categorie: <span className="font-medium">{riskCategory.label}</span>
+                              </span>
+                              <span className={`px-2 py-0.5 rounded text-xs ${probLevel.color}`}>
+                                Prob: {probLevel.label}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded text-xs ${impactLevel.color}`}>
+                                Impact: {impactLevel.label}
+                              </span>
+                            </div>
+                            {risk.mitigationStrategy && (
+                              <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                                <p className="text-xs text-green-700 dark:text-green-400">
+                                  <strong>Mitigation:</strong> {risk.mitigationStrategy}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingRisk(risk);
+                              setRiskForm({
+                                title: risk.title || "",
+                                description: risk.description || "",
+                                category: risk.category || "OPERATIONAL",
+                                probability: risk.probability || "MEDIUM",
+                                impact: risk.impact || "MEDIUM",
+                                status: risk.status || "IDENTIFIED",
+                                mitigationStrategy: risk.mitigationStrategy || "",
+                                contingencyPlan: risk.contingencyPlan || ""
+                              });
+                              setShowRiskModal(true);
+                            }}
+                            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteRisk(risk.id)}
+                            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========== IMPACTS TAB ========== */}
+      {activeTab === "impacts" && (
+        <div className="space-y-6">
+          {/* Summary Cards */}
+          {impacts.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                    <Users className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Emplois directs</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white">
+                      {impacts.reduce((sum, i) => sum + (i.directJobsCreated || i.directJobs || 0), 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                    <Users className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Emplois indirects</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white">
+                      {impacts.reduce((sum, i) => sum + (i.indirectJobsCreated || i.indirectJobs || 0), 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                    <DollarSign className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Revenus locaux</p>
+                    <p className="text-lg font-bold text-green-600">
+                      {formatAmount(impacts.reduce((sum, i) => sum + (parseFloat(i.actualRevenue || i.localRevenue) || 0), 0))}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                    <DollarSign className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Taxes</p>
+                    <p className="text-lg font-bold text-orange-600">
+                      {formatAmount(impacts.reduce((sum, i) => sum + (parseFloat(i.taxesPaid || i.taxContribution) || 0), 0))}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Rapports d'impact ({impacts.length})
+              </h3>
+              <button
+                onClick={() => {
+                  setImpactForm({
+                    reportDate: new Date().toISOString().split('T')[0], directJobs: 0, indirectJobs: 0,
+                    localRevenue: 0, taxContribution: 0, exportValue: 0, localPurchases: 0,
+                    trainingHours: 0, environmentalScore: 0, socialScore: 0, notes: ""
+                  });
+                  setShowImpactModal(true);
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Nouveau rapport
+              </button>
+            </div>
+
+            {loadingImpacts ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
+              </div>
+            ) : impacts.length === 0 ? (
+              <div className="text-center py-12">
+                <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 dark:text-gray-400">Aucun rapport d'impact</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Documentez l'impact du projet sur l'economie locale</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                {impacts.map((impact) => (
+                  <div key={impact.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            Rapport du {formatDate(impact.reportDate)}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <p className="text-gray-500 dark:text-gray-400">Emplois directs</p>
+                            <p className="font-medium text-gray-900 dark:text-white">{impact.directJobsCreated || impact.directJobs || 0}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500 dark:text-gray-400">Emplois indirects</p>
+                            <p className="font-medium text-gray-900 dark:text-white">{impact.indirectJobsCreated || impact.indirectJobs || 0}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500 dark:text-gray-400">Revenus locaux</p>
+                            <p className="font-medium text-green-600">{formatAmount(impact.actualRevenue || impact.localRevenue)}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500 dark:text-gray-400">Taxes</p>
+                            <p className="font-medium text-orange-600">{formatAmount(impact.taxesPaid || impact.taxContribution)}</p>
+                          </div>
+                        </div>
+                        {(impact.environmentalScore > 0 || impact.socialScore > 0) && (
+                          <div className="mt-3 flex items-center gap-4">
+                            {impact.environmentalScore > 0 && (
+                              <div className="flex items-center gap-2">
+                                <Leaf className="w-4 h-4 text-green-500" />
+                                <span className="text-sm text-gray-600 dark:text-gray-400">
+                                  Env: {impact.environmentalScore}/10
+                                </span>
+                              </div>
+                            )}
+                            {impact.socialScore > 0 && (
+                              <div className="flex items-center gap-2">
+                                <HeartHandshake className="w-4 h-4 text-pink-500" />
+                                <span className="text-sm text-gray-600 dark:text-gray-400">
+                                  Social: {impact.socialScore}/10
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {impact.notes && (
+                          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 italic">{impact.notes}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setImpactForm({
+                              reportDate: impact.reportDate ? impact.reportDate.split('T')[0] : "",
+                              directJobs: impact.directJobsCreated || impact.directJobs || 0,
+                              indirectJobs: impact.indirectJobsCreated || impact.indirectJobs || 0,
+                              localRevenue: impact.actualRevenue || impact.localRevenue || 0,
+                              taxContribution: impact.taxesPaid || impact.taxContribution || 0,
+                              exportValue: impact.exportRevenue || impact.exportValue || 0,
+                              localPurchases: impact.localPurchases || 0,
+                              trainingHours: impact.trainingHours || 0,
+                              environmentalScore: impact.environmentalScore || 0,
+                              socialScore: impact.socialScore || 0,
+                              notes: impact.notes || "",
+                              id: impact.id
+                            });
+                            setShowImpactModal(true);
+                          }}
+                          className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteImpact(impact.id)}
+                          className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -1528,6 +2252,420 @@ export default function ProjectDetailPage() {
                 <p className="text-sm text-gray-400 mt-1">Les modifications seront enregistrees ici</p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ========== MILESTONE MODAL ========== */}
+      {showMilestoneModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {editingMilestone ? "Modifier le jalon" : "Ajouter un jalon"}
+              </h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nom du jalon *</label>
+                <input
+                  type="text"
+                  value={milestoneForm.name}
+                  onChange={(e) => setMilestoneForm({ ...milestoneForm, name: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Ex: Etude de faisabilite"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                <textarea
+                  rows={3}
+                  value={milestoneForm.description}
+                  onChange={(e) => setMilestoneForm({ ...milestoneForm, description: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date d'echeance</label>
+                  <input
+                    type="date"
+                    value={milestoneForm.dueDate}
+                    onChange={(e) => setMilestoneForm({ ...milestoneForm, dueDate: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priorite</label>
+                  <select
+                    value={milestoneForm.priority}
+                    onChange={(e) => setMilestoneForm({ ...milestoneForm, priority: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="LOW">Basse</option>
+                    <option value="MEDIUM">Moyenne</option>
+                    <option value="HIGH">Haute</option>
+                    <option value="CRITICAL">Critique</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Statut</label>
+                  <select
+                    value={milestoneForm.status}
+                    onChange={(e) => setMilestoneForm({ ...milestoneForm, status: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="NOT_STARTED">Non demarre</option>
+                    <option value="PENDING">En attente</option>
+                    <option value="IN_PROGRESS">En cours</option>
+                    <option value="COMPLETED">Termine</option>
+                    <option value="DELAYED">En retard</option>
+                    <option value="ON_HOLD">En pause</option>
+                    <option value="CANCELLED">Annule</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Progression (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={milestoneForm.progress}
+                    onChange={(e) => setMilestoneForm({ ...milestoneForm, progress: parseInt(e.target.value) || 0 })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Budget prevu</label>
+                  <input
+                    type="number"
+                    value={milestoneForm.plannedBudget}
+                    onChange={(e) => setMilestoneForm({ ...milestoneForm, plannedBudget: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Budget reel</label>
+                  <input
+                    type="number"
+                    value={milestoneForm.actualBudget}
+                    onChange={(e) => setMilestoneForm({ ...milestoneForm, actualBudget: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Livrables</label>
+                <textarea
+                  rows={2}
+                  value={milestoneForm.deliverables}
+                  onChange={(e) => setMilestoneForm({ ...milestoneForm, deliverables: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Liste des livrables attendus..."
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+              <button
+                onClick={() => { setShowMilestoneModal(false); setEditingMilestone(null); }}
+                className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSaveMilestone}
+                disabled={!milestoneForm.name}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {editingMilestone ? "Mettre a jour" : "Creer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========== RISK MODAL ========== */}
+      {showRiskModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {editingRisk ? "Modifier le risque" : "Ajouter un risque"}
+              </h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Titre du risque *</label>
+                <input
+                  type="text"
+                  value={riskForm.title}
+                  onChange={(e) => setRiskForm({ ...riskForm, title: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Ex: Risque de retard de livraison"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                <textarea
+                  rows={3}
+                  value={riskForm.description}
+                  onChange={(e) => setRiskForm({ ...riskForm, description: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Categorie</label>
+                  <select
+                    value={riskForm.category}
+                    onChange={(e) => setRiskForm({ ...riskForm, category: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="FINANCIAL">Financier</option>
+                    <option value="OPERATIONAL">Operationnel</option>
+                    <option value="TECHNICAL">Technique</option>
+                    <option value="LEGAL">Juridique</option>
+                    <option value="ENVIRONMENTAL">Environnemental</option>
+                    <option value="SOCIAL">Social</option>
+                    <option value="POLITICAL">Politique</option>
+                    <option value="MARKET">Marche</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Statut</label>
+                  <select
+                    value={riskForm.status}
+                    onChange={(e) => setRiskForm({ ...riskForm, status: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="IDENTIFIED">Identifie</option>
+                    <option value="ANALYZING">En analyse</option>
+                    <option value="MITIGATING">En mitigation</option>
+                    <option value="MONITORING">Sous surveillance</option>
+                    <option value="RESOLVED">Resolu</option>
+                    <option value="ACCEPTED">Accepte</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Probabilite</label>
+                  <select
+                    value={riskForm.probability}
+                    onChange={(e) => setRiskForm({ ...riskForm, probability: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="LOW">Faible</option>
+                    <option value="MEDIUM">Moyenne</option>
+                    <option value="HIGH">Elevee</option>
+                    <option value="CRITICAL">Critique</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Impact</label>
+                  <select
+                    value={riskForm.impact}
+                    onChange={(e) => setRiskForm({ ...riskForm, impact: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="LOW">Faible</option>
+                    <option value="MEDIUM">Moyen</option>
+                    <option value="HIGH">Eleve</option>
+                    <option value="CRITICAL">Critique</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Strategie de mitigation</label>
+                <textarea
+                  rows={2}
+                  value={riskForm.mitigationStrategy}
+                  onChange={(e) => setRiskForm({ ...riskForm, mitigationStrategy: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Comment reduire ce risque..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Plan de contingence</label>
+                <textarea
+                  rows={2}
+                  value={riskForm.contingencyPlan}
+                  onChange={(e) => setRiskForm({ ...riskForm, contingencyPlan: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Que faire si le risque se materialise..."
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+              <button
+                onClick={() => { setShowRiskModal(false); setEditingRisk(null); }}
+                className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSaveRisk}
+                disabled={!riskForm.title}
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+              >
+                {editingRisk ? "Mettre a jour" : "Creer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========== IMPACT MODAL ========== */}
+      {showImpactModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Nouveau rapport d'impact
+              </h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date du rapport *</label>
+                <input
+                  type="date"
+                  value={impactForm.reportDate}
+                  onChange={(e) => setImpactForm({ ...impactForm, reportDate: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Emplois directs</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={impactForm.directJobs}
+                    onChange={(e) => setImpactForm({ ...impactForm, directJobs: parseInt(e.target.value) || 0 })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Emplois indirects</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={impactForm.indirectJobs}
+                    onChange={(e) => setImpactForm({ ...impactForm, indirectJobs: parseInt(e.target.value) || 0 })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Revenus locaux (USD)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={impactForm.localRevenue}
+                    onChange={(e) => setImpactForm({ ...impactForm, localRevenue: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contribution fiscale (USD)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={impactForm.taxContribution}
+                    onChange={(e) => setImpactForm({ ...impactForm, taxContribution: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Exportations (USD)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={impactForm.exportValue}
+                    onChange={(e) => setImpactForm({ ...impactForm, exportValue: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Achats locaux (USD)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={impactForm.localPurchases}
+                    onChange={(e) => setImpactForm({ ...impactForm, localPurchases: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Heures de formation</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={impactForm.trainingHours}
+                    onChange={(e) => setImpactForm({ ...impactForm, trainingHours: parseInt(e.target.value) || 0 })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Score environnemental (0-10)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={impactForm.environmentalScore}
+                    onChange={(e) => setImpactForm({ ...impactForm, environmentalScore: parseInt(e.target.value) || 0 })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Score social (0-10)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={impactForm.socialScore}
+                    onChange={(e) => setImpactForm({ ...impactForm, socialScore: parseInt(e.target.value) || 0 })}
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+                <textarea
+                  rows={3}
+                  value={impactForm.notes}
+                  onChange={(e) => setImpactForm({ ...impactForm, notes: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Commentaires additionnels..."
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+              <button
+                onClick={() => setShowImpactModal(false)}
+                className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSaveImpact}
+                disabled={!impactForm.reportDate}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                Enregistrer
+              </button>
+            </div>
           </div>
         </div>
       )}

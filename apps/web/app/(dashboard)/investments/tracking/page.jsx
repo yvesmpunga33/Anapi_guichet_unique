@@ -554,13 +554,13 @@ export default function TrackingPage() {
                       <div className="flex items-center justify-between text-xs mb-2">
                         <span className="text-gray-500 dark:text-gray-400">{intl.formatMessage({ id: "tracking.progression", defaultMessage: "Progression" })}</span>
                         <div className="flex items-center gap-4">
-                          <span className="flex items-center gap-1">
+                          <span className="flex items-center gap-1 text-gray-700 dark:text-gray-200">
                             <span className="w-3 h-3 rounded-full bg-blue-500"></span>
                             {intl.formatMessage({ id: "tracking.actual", defaultMessage: "Réel" })}: {project.progress || 0}%
                           </span>
                           {expectedProgress > 0 && (
-                            <span className="flex items-center gap-1">
-                              <span className="w-3 h-3 rounded-full bg-gray-300"></span>
+                            <span className="flex items-center gap-1 text-gray-700 dark:text-gray-200">
+                              <span className="w-3 h-3 rounded-full bg-gray-300 dark:bg-gray-400"></span>
                               {intl.formatMessage({ id: "tracking.expected", defaultMessage: "Attendu" })}: {expectedProgress}%
                             </span>
                           )}

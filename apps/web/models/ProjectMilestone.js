@@ -43,7 +43,7 @@ ProjectMilestone.init(
     },
     plannedEndDate: {
       type: DataTypes.DATE,
-      allowNull: false,
+      allowNull: true,
     },
     actualStartDate: {
       type: DataTypes.DATE,
@@ -56,6 +56,7 @@ ProjectMilestone.init(
     status: {
       type: DataTypes.ENUM(
         'NOT_STARTED',
+        'PENDING',
         'IN_PROGRESS',
         'COMPLETED',
         'DELAYED',
@@ -63,6 +64,10 @@ ProjectMilestone.init(
         'CANCELLED'
       ),
       defaultValue: 'NOT_STARTED',
+    },
+    priority: {
+      type: DataTypes.ENUM('LOW', 'MEDIUM', 'HIGH', 'CRITICAL'),
+      defaultValue: 'MEDIUM',
     },
     progress: {
       type: DataTypes.INTEGER,

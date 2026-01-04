@@ -75,22 +75,22 @@ export async function POST(request, { params }) {
       projectId: id,
       reportDate: body.reportDate || new Date(),
       reportPeriod: body.reportPeriod,
-      // Emplois
+      // Emplois (support both naming conventions)
       directJobsPlanned: body.directJobsPlanned || project.jobsCreated || 0,
-      directJobsCreated: body.directJobsCreated || 0,
+      directJobsCreated: body.directJobsCreated || body.directJobs || 0,
       indirectJobsPlanned: body.indirectJobsPlanned || project.jobsIndirect || 0,
-      indirectJobsCreated: body.indirectJobsCreated || 0,
+      indirectJobsCreated: body.indirectJobsCreated || body.indirectJobs || 0,
       permanentJobs: body.permanentJobs || 0,
       temporaryJobs: body.temporaryJobs || 0,
       localJobs: body.localJobs || 0,
       femaleJobs: body.femaleJobs || 0,
       youthJobs: body.youthJobs || 0,
-      // Revenus
+      // Revenus (support both naming conventions)
       projectedRevenue: body.projectedRevenue || 0,
-      actualRevenue: body.actualRevenue || 0,
-      taxesPaid: body.taxesPaid || 0,
+      actualRevenue: body.actualRevenue || body.localRevenue || 0,
+      taxesPaid: body.taxesPaid || body.taxContribution || 0,
       localPurchases: body.localPurchases || 0,
-      exportRevenue: body.exportRevenue || 0,
+      exportRevenue: body.exportRevenue || body.exportValue || 0,
       currency: body.currency || project.currency || 'USD',
       // Formation
       trainedEmployees: body.trainedEmployees || 0,
@@ -135,6 +135,96 @@ export async function POST(request, { params }) {
     console.error('Error creating impact:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la création du rapport d\'impact', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT - Mettre à jour un rapport d'impact
+export async function PUT(request, { params }) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const impactId = searchParams.get('id');
+    const body = await request.json();
+
+    if (!impactId) {
+      return NextResponse.json({ error: 'ID du rapport requis' }, { status: 400 });
+    }
+
+    const impact = await ProjectImpact.findOne({
+      where: { id: impactId, projectId: id },
+    });
+
+    if (!impact) {
+      return NextResponse.json({ error: 'Rapport non trouvé' }, { status: 404 });
+    }
+
+    await impact.update({
+      reportDate: body.reportDate || impact.reportDate,
+      directJobsCreated: body.directJobsCreated || body.directJobs || impact.directJobsCreated,
+      indirectJobsCreated: body.indirectJobsCreated || body.indirectJobs || impact.indirectJobsCreated,
+      actualRevenue: body.actualRevenue || body.localRevenue || impact.actualRevenue,
+      taxesPaid: body.taxesPaid || body.taxContribution || impact.taxesPaid,
+      exportRevenue: body.exportRevenue || body.exportValue || impact.exportRevenue,
+      localPurchases: body.localPurchases || impact.localPurchases,
+      trainingHours: body.trainingHours || impact.trainingHours,
+      notes: body.notes !== undefined ? body.notes : impact.notes,
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: impact,
+      message: 'Rapport mis à jour avec succès',
+    });
+  } catch (error) {
+    console.error('Error updating impact:', error);
+    return NextResponse.json(
+      { error: 'Erreur lors de la mise à jour', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Supprimer un rapport d'impact
+export async function DELETE(request, { params }) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const impactId = searchParams.get('id');
+
+    if (!impactId) {
+      return NextResponse.json({ error: 'ID du rapport requis' }, { status: 400 });
+    }
+
+    const impact = await ProjectImpact.findOne({
+      where: { id: impactId, projectId: id },
+    });
+
+    if (!impact) {
+      return NextResponse.json({ error: 'Rapport non trouvé' }, { status: 404 });
+    }
+
+    await impact.destroy();
+
+    return NextResponse.json({
+      success: true,
+      message: 'Rapport supprimé avec succès',
+    });
+  } catch (error) {
+    console.error('Error deleting impact:', error);
+    return NextResponse.json(
+      { error: 'Erreur lors de la suppression', details: error.message },
       { status: 500 }
     );
   }

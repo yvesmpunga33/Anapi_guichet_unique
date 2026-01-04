@@ -86,9 +86,9 @@ export async function POST(request, { params }) {
     }
 
     // Validation
-    if (!body.name || !body.plannedEndDate) {
+    if (!body.name) {
       return NextResponse.json(
-        { error: 'Le nom et la date de fin prévue sont obligatoires' },
+        { error: 'Le nom du jalon est obligatoire' },
         { status: 400 }
       );
     }
@@ -107,7 +107,11 @@ export async function POST(request, { params }) {
       category: body.category || 'OTHER',
       plannedStartDate: body.plannedStartDate,
       plannedEndDate: body.plannedEndDate,
+      status: body.status || 'NOT_STARTED',
+      progress: body.progress || 0,
+      priority: body.priority || 'MEDIUM',
       budget: body.budget,
+      actualCost: body.actualCost,
       currency: body.currency || 'USD',
       weight: body.weight,
       deliverables: body.deliverables || [],

@@ -76,6 +76,20 @@ import ProcurementContract from './ProcurementContract.js';
 import ContractExecution from './ContractExecution.js';
 import ContractDocument from './ContractDocument.js';
 import EvaluationCommittee from './EvaluationCommittee.js';
+// Nouveaux modèles - Investissements
+import ProjectMilestone from './ProjectMilestone.js';
+import ProjectRisk from './ProjectRisk.js';
+import ProjectImpact from './ProjectImpact.js';
+// Nouveaux modèles - Procurement
+import BidderRating from './BidderRating.js';
+import FrameworkAgreement from './FrameworkAgreement.js';
+import FrameworkAgreementSupplier from './FrameworkAgreementSupplier.js';
+import FrameworkOrder from './FrameworkOrder.js';
+// Nouveaux modèles - HR
+import Attendance from './Attendance.js';
+import Overtime from './Overtime.js';
+import WorkSchedule from './WorkSchedule.js';
+import PublicHoliday from './PublicHoliday.js';
 
 // ==================== ASSOCIATIONS ====================
 
@@ -474,6 +488,77 @@ ContractDocument.belongsTo(ContractExecution, { foreignKey: 'executionId', as: '
 ContractDocument.belongsTo(ProcurementDocumentType, { foreignKey: 'documentTypeId', as: 'documentType' });
 ContractDocument.belongsTo(User, { foreignKey: 'uploadedById', as: 'uploadedBy' });
 
+// ==================== INVESTISSEMENTS - NOUVEAUX MODULES ====================
+
+// ProjectMilestone - Investment
+ProjectMilestone.belongsTo(Investment, { foreignKey: 'projectId', as: 'project' });
+Investment.hasMany(ProjectMilestone, { foreignKey: 'projectId', as: 'milestones', onDelete: 'CASCADE' });
+ProjectMilestone.belongsTo(User, { foreignKey: 'completedById', as: 'completedBy' });
+ProjectMilestone.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+
+// ProjectRisk - Investment
+ProjectRisk.belongsTo(Investment, { foreignKey: 'projectId', as: 'project' });
+Investment.hasMany(ProjectRisk, { foreignKey: 'projectId', as: 'risks', onDelete: 'CASCADE' });
+ProjectRisk.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+ProjectRisk.belongsTo(User, { foreignKey: 'updatedById', as: 'updatedBy' });
+
+// ProjectImpact - Investment
+ProjectImpact.belongsTo(Investment, { foreignKey: 'projectId', as: 'project' });
+Investment.hasMany(ProjectImpact, { foreignKey: 'projectId', as: 'impacts', onDelete: 'CASCADE' });
+ProjectImpact.belongsTo(User, { foreignKey: 'verifiedById', as: 'verifiedBy' });
+ProjectImpact.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+
+// ==================== PROCUREMENT - NOUVEAUX MODULES ====================
+
+// BidderRating - Bidder
+BidderRating.belongsTo(Bidder, { foreignKey: 'bidderId', as: 'bidder' });
+Bidder.hasMany(BidderRating, { foreignKey: 'bidderId', as: 'ratings', onDelete: 'CASCADE' });
+BidderRating.belongsTo(ProcurementContract, { foreignKey: 'contractId', as: 'contract' });
+BidderRating.belongsTo(Tender, { foreignKey: 'tenderId', as: 'tender' });
+BidderRating.belongsTo(User, { foreignKey: 'evaluatedById', as: 'evaluatedBy' });
+BidderRating.belongsTo(User, { foreignKey: 'approvedById', as: 'approvedBy' });
+
+// FrameworkAgreement
+FrameworkAgreement.belongsTo(Tender, { foreignKey: 'tenderId', as: 'tender' });
+FrameworkAgreement.belongsTo(Ministry, { foreignKey: 'ministryId', as: 'ministry' });
+FrameworkAgreement.belongsTo(User, { foreignKey: 'signedByClientId', as: 'signedByClient' });
+FrameworkAgreement.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+FrameworkAgreement.belongsTo(User, { foreignKey: 'approvedById', as: 'approvedBy' });
+
+// FrameworkAgreementSupplier
+FrameworkAgreementSupplier.belongsTo(FrameworkAgreement, { foreignKey: 'agreementId', as: 'agreement' });
+FrameworkAgreement.hasMany(FrameworkAgreementSupplier, { foreignKey: 'agreementId', as: 'suppliers', onDelete: 'CASCADE' });
+FrameworkAgreementSupplier.belongsTo(Bidder, { foreignKey: 'bidderId', as: 'bidder' });
+FrameworkAgreementSupplier.belongsTo(User, { foreignKey: 'addedById', as: 'addedBy' });
+
+// FrameworkOrder
+FrameworkOrder.belongsTo(FrameworkAgreement, { foreignKey: 'agreementId', as: 'agreement' });
+FrameworkAgreement.hasMany(FrameworkOrder, { foreignKey: 'agreementId', as: 'orders', onDelete: 'CASCADE' });
+FrameworkOrder.belongsTo(FrameworkAgreementSupplier, { foreignKey: 'supplierId', as: 'supplier' });
+FrameworkOrder.belongsTo(Bidder, { foreignKey: 'bidderId', as: 'bidder' });
+FrameworkOrder.belongsTo(User, { foreignKey: 'requestedById', as: 'requestedBy' });
+FrameworkOrder.belongsTo(User, { foreignKey: 'approvedById', as: 'approvedBy' });
+FrameworkOrder.belongsTo(User, { foreignKey: 'receivedById', as: 'receivedBy' });
+
+// ==================== HR - NOUVEAUX MODULES ====================
+
+// WorkSchedule - Employee
+Employee.belongsTo(WorkSchedule, { foreignKey: 'workScheduleId', as: 'workSchedule' });
+WorkSchedule.hasMany(Employee, { foreignKey: 'workScheduleId', as: 'employees' });
+
+// Attendance - Employee
+Attendance.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
+Employee.hasMany(Attendance, { foreignKey: 'employeeId', as: 'attendances', onDelete: 'CASCADE' });
+Attendance.belongsTo(Leave, { foreignKey: 'leaveId', as: 'leave' });
+Attendance.belongsTo(User, { foreignKey: 'validatedById', as: 'validatedBy' });
+
+// Overtime - Employee
+Overtime.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
+Employee.hasMany(Overtime, { foreignKey: 'employeeId', as: 'overtimes', onDelete: 'CASCADE' });
+Overtime.belongsTo(Payslip, { foreignKey: 'payslipId', as: 'payslip' });
+Overtime.belongsTo(User, { foreignKey: 'requestedById', as: 'requestedBy' });
+Overtime.belongsTo(User, { foreignKey: 'approvedById', as: 'approvedBy' });
+
 // Export all models
 export {
   sequelize,
@@ -552,6 +637,20 @@ export {
   ContractExecution,
   ContractDocument,
   EvaluationCommittee,
+  // Nouveaux modèles - Investissements
+  ProjectMilestone,
+  ProjectRisk,
+  ProjectImpact,
+  // Nouveaux modèles - Procurement
+  BidderRating,
+  FrameworkAgreement,
+  FrameworkAgreementSupplier,
+  FrameworkOrder,
+  // Nouveaux modèles - HR
+  Attendance,
+  Overtime,
+  WorkSchedule,
+  PublicHoliday,
 };
 
 export default {
@@ -631,4 +730,18 @@ export default {
   ContractExecution,
   ContractDocument,
   EvaluationCommittee,
+  // Nouveaux modèles - Investissements
+  ProjectMilestone,
+  ProjectRisk,
+  ProjectImpact,
+  // Nouveaux modèles - Procurement
+  BidderRating,
+  FrameworkAgreement,
+  FrameworkAgreementSupplier,
+  FrameworkOrder,
+  // Nouveaux modèles - HR
+  Attendance,
+  Overtime,
+  WorkSchedule,
+  PublicHoliday,
 };

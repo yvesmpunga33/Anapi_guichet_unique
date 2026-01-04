@@ -249,103 +249,114 @@ export default function BiddersPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {bidders.map((bidder) => (
-            <div
-              key={bidder.id}
-              className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-5 hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start gap-4">
-                {/* Logo/Avatar */}
-                <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
-                  {bidder.logo ? (
-                    <img src={bidder.logo} alt={bidder.companyName} className="w-10 h-10 rounded object-cover" />
-                  ) : (
-                    <Building2 className="w-7 h-7 text-blue-600 dark:text-blue-400" />
-                  )}
-                </div>
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+          {/* Table Header */}
+          <div className="hidden lg:grid lg:grid-cols-12 gap-4 px-6 py-3 bg-gray-50 dark:bg-slate-700/50 border-b border-gray-200 dark:border-slate-700 text-sm font-medium text-gray-600 dark:text-gray-400">
+            <div className="col-span-4">Entreprise</div>
+            <div className="col-span-2">Identifiants</div>
+            <div className="col-span-3">Contact</div>
+            <div className="col-span-2">Statistiques</div>
+            <div className="col-span-1 text-right">Actions</div>
+          </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                      {bidder.companyName}
-                    </h3>
-                    {bidder.isVerified && (
-                      <CheckCircle className="w-4 h-4 text-green-500" title="Vérifié" />
+          {/* Table Body */}
+          <div className="divide-y divide-gray-200 dark:divide-slate-700">
+            {bidders.map((bidder) => (
+              <div
+                key={bidder.id}
+                className="lg:grid lg:grid-cols-12 gap-4 p-4 lg:px-6 lg:py-4 hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors"
+              >
+                {/* Entreprise */}
+                <div className="col-span-4 flex items-center gap-3 mb-3 lg:mb-0">
+                  <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                    {bidder.logo ? (
+                      <img src={bidder.logo} alt={bidder.companyName} className="w-8 h-8 rounded object-cover" />
+                    ) : (
+                      <Building2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                     )}
-                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[bidder.status]}`}>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                        {bidder.companyName}
+                      </h3>
+                      {bidder.isVerified && (
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" title="Vérifié" />
+                      )}
+                    </div>
+                    <span className={`inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[bidder.status]}`}>
                       {statusLabels[bidder.status]}
                     </span>
                   </div>
+                </div>
 
-                  {/* Identifiers */}
-                  <div className="flex items-center gap-3 mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    {bidder.rccm && (
-                      <span className="font-mono text-xs bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
-                        RCCM: {bidder.rccm}
-                      </span>
-                    )}
-                    {bidder.nif && (
-                      <span className="font-mono text-xs bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
-                        NIF: {bidder.nif}
-                      </span>
-                    )}
+                {/* Identifiants */}
+                <div className="col-span-2 flex flex-col justify-center gap-1 mb-3 lg:mb-0">
+                  {bidder.rccm && (
+                    <span className="font-mono text-xs text-gray-600 dark:text-gray-400">
+                      <span className="text-gray-400 dark:text-gray-500">RCCM:</span> {bidder.rccm}
+                    </span>
+                  )}
+                  {bidder.nif && (
+                    <span className="font-mono text-xs text-gray-600 dark:text-gray-400">
+                      <span className="text-gray-400 dark:text-gray-500">NIF:</span> {bidder.nif}
+                    </span>
+                  )}
+                </div>
+
+                {/* Contact */}
+                <div className="col-span-3 flex flex-col justify-center gap-1 text-sm text-gray-600 dark:text-gray-400 mb-3 lg:mb-0">
+                  {bidder.email && (
+                    <span className="flex items-center gap-1.5 truncate">
+                      <Mail className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span className="truncate">{bidder.email}</span>
+                    </span>
+                  )}
+                  {bidder.phone && (
+                    <span className="flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 flex-shrink-0" />
+                      {bidder.phone}
+                    </span>
+                  )}
+                  {(bidder.city || bidder.province) && (
+                    <span className="flex items-center gap-1.5 truncate">
+                      <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span className="truncate">{[bidder.city?.name, bidder.province?.name].filter(Boolean).join(", ")}</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Statistiques */}
+                <div className="col-span-2 flex flex-col justify-center gap-1 mb-3 lg:mb-0">
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <FileText className="w-4 h-4 text-blue-500" />
+                    <span className="text-gray-900 dark:text-white font-medium">
+                      {bidder._count?.bids || 0}
+                    </span>
+                    <span className="text-gray-500 text-xs">soumissions</span>
                   </div>
-
-                  {/* Contact info */}
-                  <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-gray-600 dark:text-gray-400">
-                    {bidder.email && (
-                      <span className="flex items-center gap-1">
-                        <Mail className="w-3.5 h-3.5" />
-                        {bidder.email}
-                      </span>
-                    )}
-                    {bidder.phone && (
-                      <span className="flex items-center gap-1">
-                        <Phone className="w-3.5 h-3.5" />
-                        {bidder.phone}
-                      </span>
-                    )}
-                    {(bidder.city || bidder.province) && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5" />
-                        {[bidder.city?.name, bidder.province?.name].filter(Boolean).join(", ")}
-                      </span>
-                    )}
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <Award className="w-4 h-4 text-emerald-500" />
+                    <span className="text-gray-900 dark:text-white font-medium">
+                      {bidder._count?.contracts || 0}
+                    </span>
+                    <span className="text-gray-500 text-xs">contrats</span>
                   </div>
-
-                  {/* Stats */}
-                  <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 dark:border-slate-700">
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <FileText className="w-4 h-4 text-blue-500" />
+                  {bidder.rating && (
+                    <div className="flex items-center gap-1 text-sm">
+                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                       <span className="text-gray-900 dark:text-white font-medium">
-                        {bidder._count?.bids || 0}
+                        {bidder.rating.toFixed(1)}
                       </span>
-                      <span className="text-gray-500">soumissions</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <Award className="w-4 h-4 text-emerald-500" />
-                      <span className="text-gray-900 dark:text-white font-medium">
-                        {bidder._count?.contracts || 0}
-                      </span>
-                      <span className="text-gray-500">contrats</span>
-                    </div>
-                    {bidder.rating && (
-                      <div className="flex items-center gap-1 text-sm">
-                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                        <span className="text-gray-900 dark:text-white font-medium">
-                          {bidder.rating.toFixed(1)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-col gap-1">
+                <div className="col-span-1 flex items-center justify-end gap-1">
                   <Link
                     href={`/procurement/bidders/${bidder.id}`}
-                    className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                    className="p-2 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                     title="Voir les détails"
                   >
                     <Eye className="w-5 h-5" />
@@ -353,7 +364,7 @@ export default function BiddersPage() {
 
                   <Link
                     href={`/procurement/bidders/${bidder.id}/edit`}
-                    className="p-2 text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                    className="p-2 text-gray-500 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
                     title="Modifier"
                   >
                     <Edit className="w-5 h-5" />
@@ -361,15 +372,15 @@ export default function BiddersPage() {
 
                   <button
                     onClick={() => setDeleteId(bidder.id)}
-                    className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                     title="Supprimer"
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 

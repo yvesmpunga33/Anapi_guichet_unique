@@ -25,7 +25,7 @@ export async function GET(request) {
       where[Op.or] = [
         { contractNumber: { [Op.iLike]: `%${search}%` } },
         { title: { [Op.iLike]: `%${search}%` } },
-        { '$bidder.company_name$': { [Op.iLike]: `%${search}%` } },
+        { '$contractor.company_name$': { [Op.iLike]: `%${search}%` } },
       ];
     }
 
@@ -51,7 +51,7 @@ export async function GET(request) {
       include: [
         {
           model: Bidder,
-          as: 'bidder',
+          as: 'contractor',
           attributes: ['id', 'companyName', 'rccm'],
         },
         {
@@ -59,10 +59,10 @@ export async function GET(request) {
           as: 'tender',
           attributes: ['id', 'reference', 'title'],
           include: [
-            { model: Ministry, as: 'ministry', attributes: ['id', 'name', 'abbreviation'] },
+            { model: Ministry, as: 'ministry', attributes: ['id', 'name', 'shortName'] },
           ],
         },
-        { model: User, as: 'signedBy', attributes: ['id', 'name'] },
+        { model: User, as: 'signedByClient', attributes: ['id', 'name'] },
       ],
       limit,
       offset,
@@ -70,9 +70,17 @@ export async function GET(request) {
       distinct: true,
     });
 
+    // Map contractor to bidder for frontend compatibility
+    const mappedRows = rows.map(row => {
+      const data = row.toJSON();
+      data.bidder = data.contractor;
+      delete data.contractor;
+      return data;
+    });
+
     return NextResponse.json({
       success: true,
-      data: rows,
+      data: mappedRows,
       pagination: {
         page,
         limit,
@@ -142,14 +150,19 @@ export async function POST(request) {
 
     const result = await ProcurementContract.findByPk(contract.id, {
       include: [
-        { model: Bidder, as: 'bidder', attributes: ['id', 'companyName', 'rccm'] },
+        { model: Bidder, as: 'contractor', attributes: ['id', 'companyName', 'rccm'] },
         { model: Tender, as: 'tender', attributes: ['id', 'reference', 'title'] },
       ],
     });
 
+    // Map contractor to bidder for frontend compatibility
+    const mappedResult = result.toJSON();
+    mappedResult.bidder = mappedResult.contractor;
+    delete mappedResult.contractor;
+
     return NextResponse.json({
       success: true,
-      data: result,
+      data: mappedResult,
       message: 'Contrat cree avec succes',
     }, { status: 201 });
   } catch (error) {

@@ -33,29 +33,65 @@ export async function GET(request) {
 
     if (status) where.status = status;
 
-    const { count, rows } = await Bidder.findAndCountAll({
+    // Compter d'abord
+    const count = await Bidder.count({ where });
+
+    // Recuperer les soumissionnaires sans includes pour eviter les problemes de type
+    const bidders = await Bidder.findAll({
       where,
-      include: [
-        {
-          model: Country,
-          as: 'country',
-          attributes: ['id', 'code', 'name'],
-        },
-        {
-          model: Province,
-          as: 'province',
-          attributes: ['id', 'code', 'name'],
-        },
-        {
-          model: City,
-          as: 'city',
-          attributes: ['id', 'code', 'name'],
-        },
-      ],
       order: [['companyName', 'ASC']],
       limit,
       offset,
     });
+
+    // Enrichir manuellement les donnees
+    const rows = await Promise.all(bidders.map(async (bidder) => {
+      const bidderJson = bidder.toJSON();
+
+      // Recuperer le pays
+      if (bidderJson.countryId) {
+        try {
+          const country = await Country.findByPk(bidderJson.countryId, {
+            attributes: ['id', 'code', 'name'],
+          });
+          bidderJson.country = country ? country.toJSON() : null;
+        } catch (e) {
+          bidderJson.country = null;
+        }
+      } else {
+        bidderJson.country = null;
+      }
+
+      // Recuperer la province
+      if (bidderJson.provinceId) {
+        try {
+          const province = await Province.findByPk(bidderJson.provinceId, {
+            attributes: ['id', 'code', 'name'],
+          });
+          bidderJson.province = province ? province.toJSON() : null;
+        } catch (e) {
+          bidderJson.province = null;
+        }
+      } else {
+        bidderJson.province = null;
+      }
+
+      // Recuperer la ville
+      if (bidderJson.cityId) {
+        try {
+          const city = await City.findByPk(bidderJson.cityId, {
+            attributes: ['id', 'code', 'name'],
+          });
+          bidderJson.city = city ? city.toJSON() : null;
+        } catch (e) {
+          bidderJson.city = null;
+        }
+      } else {
+        bidderJson.city = null;
+      }
+
+      return bidderJson;
+    }));
 
     // Stats par statut
     const [statusStats] = await sequelize.query(`
@@ -125,24 +161,37 @@ export async function POST(request) {
       }
     }
 
+    // Verifier si l'ID utilisateur est un UUID valide
+    const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(session.user.id);
+
     const bidder = await Bidder.create({
       ...body,
       code,
-      createdById: session.user.id,
+      createdById: isValidUUID ? session.user.id : null,
       status: body.status || 'ACTIVE',
     });
 
-    const result = await Bidder.findByPk(bidder.id, {
-      include: [
-        { model: Country, as: 'country' },
-        { model: Province, as: 'province' },
-        { model: City, as: 'city' },
-      ],
-    });
+    // Recuperer sans includes pour eviter les erreurs
+    const result = await Bidder.findByPk(bidder.id);
+    const bidderJson = result.toJSON();
+
+    // Enrichir manuellement
+    if (bidderJson.countryId) {
+      const country = await Country.findByPk(bidderJson.countryId, { attributes: ['id', 'code', 'name'] });
+      bidderJson.country = country ? country.toJSON() : null;
+    }
+    if (bidderJson.provinceId) {
+      const province = await Province.findByPk(bidderJson.provinceId, { attributes: ['id', 'code', 'name'] });
+      bidderJson.province = province ? province.toJSON() : null;
+    }
+    if (bidderJson.cityId) {
+      const city = await City.findByPk(bidderJson.cityId, { attributes: ['id', 'code', 'name'] });
+      bidderJson.city = city ? city.toJSON() : null;
+    }
 
     return NextResponse.json({
       success: true,
-      data: result,
+      data: bidderJson,
       message: 'Soumissionnaire cree avec succes',
     }, { status: 201 });
 

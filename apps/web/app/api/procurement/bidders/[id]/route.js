@@ -1,136 +1,157 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../../lib/auth.js';
-import { Bidder, BidderDocument, Bid, ProcurementContract, Country, Province, City, User, sequelize } from '../../../../../models/index.js';
+import { Bidder, Country, Province, City, Sector } from '../../../../../models/index.js';
 
-// GET - Detail d'un soumissionnaire
+// GET - Récupérer un soumissionnaire
 export async function GET(request, { params }) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Non autorise' }, { status: 401 });
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
     const { id } = await params;
 
-    const bidder = await Bidder.findByPk(id, {
-      include: [
-        { model: Country, as: 'country' },
-        { model: Province, as: 'province' },
-        { model: City, as: 'city' },
-        { model: BidderDocument, as: 'documents' },
-        {
-          model: Bid,
-          as: 'bids',
-          attributes: ['id', 'reference', 'tenderId', 'status', 'financialOffer', 'totalScore', 'ranking', 'createdAt'],
-          limit: 10,
-          order: [['createdAt', 'DESC']],
-        },
-        {
-          model: ProcurementContract,
-          as: 'contracts',
-          attributes: ['id', 'contractNumber', 'title', 'contractValue', 'status', 'progressPercent', 'createdAt'],
-          limit: 10,
-          order: [['createdAt', 'DESC']],
-        },
-        { model: User, as: 'createdBy', attributes: ['id', 'name', 'email'] },
-        { model: User, as: 'verifiedBy', attributes: ['id', 'name', 'email'] },
-      ],
-    });
+    const bidder = await Bidder.findByPk(id);
 
     if (!bidder) {
-      return NextResponse.json({ error: 'Soumissionnaire non trouve' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Soumissionnaire non trouvé' },
+        { status: 404 }
+      );
     }
 
-    // Statistiques
-    const [stats] = await sequelize.query(`
-      SELECT
-        (SELECT COUNT(*) FROM procurement_bids WHERE bidder_id = :id) as total_bids,
-        (SELECT COUNT(*) FROM procurement_bids WHERE bidder_id = :id AND status = 'AWARDED') as bids_won,
-        (SELECT COUNT(*) FROM procurement_contracts WHERE bidder_id = :id) as total_contracts,
-        (SELECT COALESCE(SUM(contract_value), 0) FROM procurement_contracts WHERE bidder_id = :id) as contracts_value,
-        (SELECT AVG(total_score) FROM procurement_bids WHERE bidder_id = :id AND total_score IS NOT NULL) as avg_score
-    `, { replacements: { id } });
+    const bidderJson = bidder.toJSON();
+
+    // Enrichir manuellement les relations
+    if (bidderJson.countryId) {
+      try {
+        const country = await Country.findByPk(bidderJson.countryId, {
+          attributes: ['id', 'code', 'name'],
+        });
+        bidderJson.country = country ? country.toJSON() : null;
+      } catch (e) {
+        bidderJson.country = null;
+      }
+    }
+
+    if (bidderJson.provinceId) {
+      try {
+        const province = await Province.findByPk(bidderJson.provinceId, {
+          attributes: ['id', 'code', 'name'],
+        });
+        bidderJson.province = province ? province.toJSON() : null;
+      } catch (e) {
+        bidderJson.province = null;
+      }
+    }
+
+    if (bidderJson.cityId) {
+      try {
+        const city = await City.findByPk(bidderJson.cityId, {
+          attributes: ['id', 'code', 'name'],
+        });
+        bidderJson.city = city ? city.toJSON() : null;
+      } catch (e) {
+        bidderJson.city = null;
+      }
+    }
+
+    if (bidderJson.sectorId) {
+      try {
+        const sector = await Sector.findByPk(bidderJson.sectorId, {
+          attributes: ['id', 'code', 'name'],
+        });
+        bidderJson.sector = sector ? sector.toJSON() : null;
+      } catch (e) {
+        bidderJson.sector = null;
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      data: {
-        ...bidder.toJSON(),
-        stats: stats[0] || {},
-      },
+      data: bidderJson,
     });
-
   } catch (error) {
     console.error('Error fetching bidder:', error);
     return NextResponse.json(
-      { error: 'Erreur lors de la recuperation du soumissionnaire', details: error.message },
+      { error: 'Erreur lors de la récupération du soumissionnaire', details: error.message },
       { status: 500 }
     );
   }
 }
 
-// PUT - Modifier un soumissionnaire
+// PUT - Mettre à jour un soumissionnaire
 export async function PUT(request, { params }) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Non autorise' }, { status: 401 });
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
     const { id } = await params;
     const body = await request.json();
 
     const bidder = await Bidder.findByPk(id);
+
     if (!bidder) {
-      return NextResponse.json({ error: 'Soumissionnaire non trouve' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Soumissionnaire non trouvé' },
+        { status: 404 }
+      );
     }
 
-    // Verifier l'unicite si modification du RCCM ou NIF
+    // Vérifier l'unicité du RCCM si modifié
     if (body.rccm && body.rccm !== bidder.rccm) {
       const existingRccm = await Bidder.findOne({ where: { rccm: body.rccm } });
       if (existingRccm) {
         return NextResponse.json(
-          { error: 'Un soumissionnaire avec ce RCCM existe deja' },
+          { error: 'Un soumissionnaire avec ce RCCM existe déjà' },
           { status: 400 }
         );
       }
     }
 
+    // Vérifier l'unicité du NIF si modifié
     if (body.nif && body.nif !== bidder.nif) {
       const existingNif = await Bidder.findOne({ where: { nif: body.nif } });
       if (existingNif) {
         return NextResponse.json(
-          { error: 'Un soumissionnaire avec ce NIF existe deja' },
+          { error: 'Un soumissionnaire avec ce NIF existe déjà' },
           { status: 400 }
         );
       }
     }
 
-    // Gestion du blacklist
-    if (body.status === 'BLACKLISTED' && bidder.status !== 'BLACKLISTED') {
-      body.blacklistedById = session.user.id;
-      body.blacklistStartDate = new Date();
-    }
-
     await bidder.update(body);
 
-    const result = await Bidder.findByPk(id, {
-      include: [
-        { model: Country, as: 'country' },
-        { model: Province, as: 'province' },
-        { model: City, as: 'city' },
-      ],
-    });
+    // Récupérer le bidder mis à jour
+    const updatedBidder = await Bidder.findByPk(id);
+    const bidderJson = updatedBidder.toJSON();
+
+    // Enrichir manuellement
+    if (bidderJson.countryId) {
+      const country = await Country.findByPk(bidderJson.countryId, { attributes: ['id', 'code', 'name'] });
+      bidderJson.country = country ? country.toJSON() : null;
+    }
+    if (bidderJson.provinceId) {
+      const province = await Province.findByPk(bidderJson.provinceId, { attributes: ['id', 'code', 'name'] });
+      bidderJson.province = province ? province.toJSON() : null;
+    }
+    if (bidderJson.cityId) {
+      const city = await City.findByPk(bidderJson.cityId, { attributes: ['id', 'code', 'name'] });
+      bidderJson.city = city ? city.toJSON() : null;
+    }
 
     return NextResponse.json({
       success: true,
-      data: result,
-      message: 'Soumissionnaire modifie avec succes',
+      data: bidderJson,
+      message: 'Soumissionnaire mis à jour avec succès',
     });
-
   } catch (error) {
     console.error('Error updating bidder:', error);
     return NextResponse.json(
-      { error: 'Erreur lors de la modification du soumissionnaire', details: error.message },
+      { error: 'Erreur lors de la mise à jour du soumissionnaire', details: error.message },
       { status: 500 }
     );
   }
@@ -141,27 +162,17 @@ export async function DELETE(request, { params }) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Non autorise' }, { status: 401 });
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
     const { id } = await params;
 
     const bidder = await Bidder.findByPk(id);
+
     if (!bidder) {
-      return NextResponse.json({ error: 'Soumissionnaire non trouve' }, { status: 404 });
-    }
-
-    // Verifier s'il a des soumissions ou contrats
-    const [hasData] = await sequelize.query(`
-      SELECT
-        (SELECT COUNT(*) FROM procurement_bids WHERE bidder_id = :id) as bids,
-        (SELECT COUNT(*) FROM procurement_contracts WHERE bidder_id = :id) as contracts
-    `, { replacements: { id } });
-
-    if (parseInt(hasData[0]?.bids) > 0 || parseInt(hasData[0]?.contracts) > 0) {
       return NextResponse.json(
-        { error: 'Impossible de supprimer un soumissionnaire ayant des soumissions ou contrats. Desactivez-le a la place.' },
-        { status: 400 }
+        { error: 'Soumissionnaire non trouvé' },
+        { status: 404 }
       );
     }
 
@@ -169,9 +180,8 @@ export async function DELETE(request, { params }) {
 
     return NextResponse.json({
       success: true,
-      message: 'Soumissionnaire supprime avec succes',
+      message: 'Soumissionnaire supprimé avec succès',
     });
-
   } catch (error) {
     console.error('Error deleting bidder:', error);
     return NextResponse.json(

@@ -165,11 +165,11 @@ ProcurementContract.init(
       allowNull: true,
     },
     managedById: {
-      type: DataTypes.UUID,
+      type: DataTypes.STRING,
       allowNull: true,
     },
     signedByClientId: {
-      type: DataTypes.UUID,
+      type: DataTypes.STRING,
       allowNull: true,
     },
     signedByContractorName: {
@@ -181,7 +181,7 @@ ProcurementContract.init(
       allowNull: true,
     },
     createdById: {
-      type: DataTypes.UUID,
+      type: DataTypes.STRING,
       allowNull: true,
     },
     isArchived: {
@@ -202,7 +202,7 @@ ProcurementContract.init(
       allowNull: true,
     },
     certificateIssuedById: {
-      type: DataTypes.UUID,
+      type: DataTypes.STRING,
       allowNull: true,
     },
     notes: {

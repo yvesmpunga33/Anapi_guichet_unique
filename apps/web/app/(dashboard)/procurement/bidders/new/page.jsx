@@ -19,7 +19,24 @@ import {
   Calendar,
   DollarSign,
   Briefcase,
+  Plus,
+  X,
+  CheckCircle,
+  Palette,
 } from "lucide-react";
+
+const colorOptions = [
+  { value: "blue", label: "Bleu", class: "bg-blue-500" },
+  { value: "green", label: "Vert", class: "bg-green-500" },
+  { value: "red", label: "Rouge", class: "bg-red-500" },
+  { value: "yellow", label: "Jaune", class: "bg-yellow-500" },
+  { value: "purple", label: "Violet", class: "bg-purple-500" },
+  { value: "orange", label: "Orange", class: "bg-orange-500" },
+  { value: "pink", label: "Rose", class: "bg-pink-500" },
+  { value: "indigo", label: "Indigo", class: "bg-indigo-500" },
+  { value: "teal", label: "Cyan", class: "bg-teal-500" },
+  { value: "gray", label: "Gris", class: "bg-gray-500" },
+];
 
 const categories = [
   { value: "MICRO", label: "Micro entreprise", description: "CA < 50 000 USD" },
@@ -49,6 +66,17 @@ export default function NewBidderPage() {
   const [provinces, setProvinces] = useState([]);
   const [cities, setCities] = useState([]);
   const [sectors, setSectors] = useState([]);
+
+  // Sector modal state
+  const [showSectorModal, setShowSectorModal] = useState(false);
+  const [savingSector, setSavingSector] = useState(false);
+  const [sectorFormData, setSectorFormData] = useState({
+    code: "",
+    name: "",
+    description: "",
+    color: "blue",
+    isActive: true,
+  });
 
   const [formData, setFormData] = useState({
     companyName: "",
@@ -107,12 +135,14 @@ export default function NewBidderPage() {
           sectorsRes.json(),
         ]);
 
-        if (countriesData.success) setCountries(countriesData.data || []);
-        if (provincesData.success) setProvinces(provincesData.data || []);
-        if (sectorsData.success) setSectors(sectorsData.data || []);
+        // APIs return { countries: [...] }, { provinces: [...] }, { sectors: [...] }
+        setCountries(countriesData.countries || countriesData.data || []);
+        setProvinces(provincesData.provinces || provincesData.data || []);
+        setSectors(sectorsData.sectors || sectorsData.data || []);
 
         // Set DRC as default country
-        const drc = countriesData.data?.find(c => c.code === "CD");
+        const countriesList = countriesData.countries || countriesData.data || [];
+        const drc = countriesList.find(c => c.code === "CD");
         if (drc) {
           setFormData(prev => ({ ...prev, countryId: drc.id }));
         }
@@ -133,9 +163,8 @@ export default function NewBidderPage() {
       try {
         const response = await fetch(`/api/referentiels/cities?provinceId=${formData.provinceId}&limit=100`);
         const data = await response.json();
-        if (data.success) {
-          setCities(data.data || []);
-        }
+        // API returns { cities: [...] }
+        setCities(data.cities || data.data || []);
       } catch (err) {
         console.error("Error fetching cities:", err);
       }
@@ -149,6 +178,55 @@ export default function NewBidderPage() {
       ...prev,
       [name]: type === "number" ? (value === "" ? "" : parseFloat(value)) : value,
     }));
+  };
+
+  // Sector modal functions
+  const openSectorModal = () => {
+    setSectorFormData({
+      code: "",
+      name: "",
+      description: "",
+      color: "blue",
+      isActive: true,
+    });
+    setShowSectorModal(true);
+  };
+
+  const handleSaveSector = async () => {
+    if (!sectorFormData.code || !sectorFormData.name) {
+      alert("Le code et le nom sont obligatoires");
+      return;
+    }
+
+    setSavingSector(true);
+    try {
+      const response = await fetch("/api/referentiels/sectors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sectorFormData),
+      });
+
+      const data = await response.json();
+
+      if (data.sector) {
+        // Refresh sectors list
+        const sectorsResponse = await fetch("/api/referentiels/sectors?limit=100");
+        const sectorsData = await sectorsResponse.json();
+        if (sectorsData.sectors) {
+          setSectors(sectorsData.sectors);
+        }
+
+        // Select the new sector
+        setFormData((prev) => ({ ...prev, sectorId: data.sector.id }));
+        setShowSectorModal(false);
+      } else {
+        alert(data.error || "Erreur lors de la création du secteur");
+      }
+    } catch (err) {
+      alert("Erreur lors de la création du secteur");
+    } finally {
+      setSavingSector(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -342,17 +420,27 @@ export default function NewBidderPage() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Secteur d'activité
               </label>
-              <select
-                name="sectorId"
-                value={formData.sectorId}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Sélectionner...</option>
-                {sectors.map((sector) => (
-                  <option key={sector.id} value={sector.id}>{sector.name}</option>
-                ))}
-              </select>
+              <div className="flex gap-2">
+                <select
+                  name="sectorId"
+                  value={formData.sectorId}
+                  onChange={handleChange}
+                  className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Sélectionner...</option>
+                  {sectors.map((sector) => (
+                    <option key={sector.id} value={sector.id}>{sector.name}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={openSectorModal}
+                  className="px-3 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1"
+                  title="Ajouter un secteur"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div>
@@ -726,6 +814,108 @@ export default function NewBidderPage() {
           </button>
         </div>
       </form>
+
+      {/* Sector Modal */}
+      {showSectorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-y-auto py-8">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-slate-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-green-600" />
+                Nouveau secteur d'activité
+              </h3>
+              <button
+                onClick={() => setShowSectorModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Code *
+                </label>
+                <input
+                  type="text"
+                  value={sectorFormData.code}
+                  onChange={(e) => setSectorFormData((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ex: BTP"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Nom *
+                </label>
+                <input
+                  type="text"
+                  value={sectorFormData.name}
+                  onChange={(e) => setSectorFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ex: Bâtiment et Travaux Publics"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={sectorFormData.description}
+                  onChange={(e) => setSectorFormData((prev) => ({ ...prev, description: e.target.value }))}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  placeholder="Description du secteur..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <Palette className="w-4 h-4 inline mr-1" />
+                  Couleur
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {colorOptions.map((color) => (
+                    <button
+                      key={color.value}
+                      type="button"
+                      onClick={() => setSectorFormData((prev) => ({ ...prev, color: color.value }))}
+                      className={`w-8 h-8 rounded-lg ${color.class} flex items-center justify-center transition-transform ${
+                        sectorFormData.color === color.value ? "ring-2 ring-offset-2 ring-blue-500 scale-110" : "hover:scale-105"
+                      }`}
+                    >
+                      {sectorFormData.color === color.value && (
+                        <CheckCircle className="w-4 h-4 text-white" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-slate-700">
+              <button
+                onClick={() => setShowSectorModal(false)}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSaveSector}
+                disabled={savingSector || !sectorFormData.code || !sectorFormData.name}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {savingSector && <Loader2 className="w-4 h-4 animate-spin" />}
+                <Save className="w-4 h-4" />
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

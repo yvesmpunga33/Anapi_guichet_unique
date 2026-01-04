@@ -193,18 +193,27 @@ export async function POST(request) {
       performedById: isValidUUID ? session.user.id : null,
     });
 
-    // Recuperer l'appel d'offres avec ses relations
-    const result = await Tender.findByPk(tender.id, {
-      include: [
-        { model: TenderLot, as: 'lots' },
-        { model: Ministry, as: 'ministry' },
-        { model: User, as: 'createdBy', attributes: ['id', 'name', 'email'] },
-      ],
+    // Recuperer l'appel d'offres sans includes pour eviter les erreurs uuid/text
+    const createdTender = await Tender.findByPk(tender.id);
+    const tenderJson = createdTender.toJSON();
+
+    // Enrichir manuellement
+    if (tenderJson.ministryId) {
+      const ministry = await Ministry.findByPk(tenderJson.ministryId, {
+        attributes: ['id', 'code', 'name', 'shortName'],
+      });
+      tenderJson.ministry = ministry ? ministry.toJSON() : null;
+    }
+
+    // Recuperer les lots
+    const lots = await TenderLot.findAll({
+      where: { tenderId: tender.id },
     });
+    tenderJson.lots = lots.map(l => l.toJSON());
 
     return NextResponse.json({
       success: true,
-      data: result,
+      data: tenderJson,
       message: 'Appel d\'offres cree avec succes',
     }, { status: 201 });
 

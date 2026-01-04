@@ -24,74 +24,140 @@ export async function GET(request, { params }) {
 
     const { id } = await params;
 
-    const tender = await Tender.findByPk(id, {
-      include: [
-        {
-          model: Ministry,
-          as: 'ministry',
-          attributes: ['id', 'code', 'name', 'shortName'],
-        },
-        {
-          model: User,
-          as: 'createdBy',
-          attributes: ['id', 'name', 'email', 'image'],
-        },
-        {
-          model: User,
-          as: 'approvedBy',
-          attributes: ['id', 'name', 'email'],
-        },
-        {
-          model: TenderLot,
-          as: 'lots',
-          include: [
-            {
-              model: Bidder,
-              as: 'awardedBidder',
-              attributes: ['id', 'code', 'companyName'],
-            },
-          ],
-        },
-        {
-          model: TenderDocument,
-          as: 'documents',
-          attributes: ['id', 'title', 'filename', 'filepath', 'filetype', 'filesize', 'isPublic', 'createdAt'],
-        },
-        {
-          model: TenderHistory,
-          as: 'history',
-          include: [
-            { model: User, as: 'performedBy', attributes: ['id', 'name'] },
-          ],
-          order: [['createdAt', 'DESC']],
-          limit: 20,
-        },
-        {
-          model: EvaluationCommittee,
-          as: 'committee',
-          include: [
-            { model: User, as: 'member', attributes: ['id', 'name', 'email', 'image'] },
-          ],
-        },
-        {
-          model: Bid,
-          as: 'bids',
-          include: [
-            { model: Bidder, as: 'bidder', attributes: ['id', 'code', 'companyName'] },
-          ],
-        },
-        {
-          model: ProcurementContract,
-          as: 'contracts',
-          include: [
-            { model: Bidder, as: 'contractor', attributes: ['id', 'code', 'companyName'] },
-          ],
-        },
-      ],
-    });
+    // Recuperer l'appel d'offres sans les includes User pour eviter l'erreur uuid = text
+    const tender = await Tender.findByPk(id);
 
     if (!tender) {
       return NextResponse.json({ error: 'Appel d\'offres non trouve' }, { status: 404 });
+    }
+
+    const tenderJson = tender.toJSON();
+
+    // Enrichir manuellement les donnees
+
+    // Ministere
+    if (tenderJson.ministryId) {
+      try {
+        const ministry = await Ministry.findByPk(tenderJson.ministryId, {
+          attributes: ['id', 'code', 'name', 'shortName'],
+        });
+        tenderJson.ministry = ministry ? ministry.toJSON() : null;
+      } catch (e) {
+        tenderJson.ministry = null;
+      }
+    } else {
+      tenderJson.ministry = null;
+    }
+
+    // Lots
+    try {
+      const lots = await TenderLot.findAll({
+        where: { tenderId: id },
+      });
+      // Enrichir chaque lot avec le soumissionnaire gagnant si applicable
+      tenderJson.lots = await Promise.all(lots.map(async (lot) => {
+        const lotJson = lot.toJSON();
+        if (lotJson.awardedBidderId) {
+          try {
+            const bidder = await Bidder.findByPk(lotJson.awardedBidderId, {
+              attributes: ['id', 'code', 'companyName'],
+            });
+            lotJson.awardedBidder = bidder ? bidder.toJSON() : null;
+          } catch (e) {
+            lotJson.awardedBidder = null;
+          }
+        } else {
+          lotJson.awardedBidder = null;
+        }
+        return lotJson;
+      }));
+    } catch (e) {
+      tenderJson.lots = [];
+    }
+
+    // Documents
+    try {
+      const documents = await TenderDocument.findAll({
+        where: { tenderId: id },
+        attributes: ['id', 'title', 'filename', 'filepath', 'filetype', 'filesize', 'isPublic', 'createdAt'],
+      });
+      tenderJson.documents = documents.map(d => d.toJSON());
+    } catch (e) {
+      tenderJson.documents = [];
+    }
+
+    // Historique (sans User pour eviter l'erreur uuid = text)
+    try {
+      const history = await TenderHistory.findAll({
+        where: { tenderId: id },
+        order: [['createdAt', 'DESC']],
+        limit: 20,
+      });
+      tenderJson.history = history.map(h => h.toJSON());
+    } catch (e) {
+      tenderJson.history = [];
+    }
+
+    // Comite d'evaluation (sans User pour eviter l'erreur uuid = text)
+    try {
+      const committee = await EvaluationCommittee.findAll({
+        where: { tenderId: id },
+      });
+      tenderJson.committee = committee.map(c => c.toJSON());
+    } catch (e) {
+      tenderJson.committee = [];
+    }
+
+    // Soumissions
+    try {
+      const bids = await Bid.findAll({
+        where: { tenderId: id },
+      });
+      // Enrichir chaque soumission avec le soumissionnaire
+      tenderJson.bids = await Promise.all(bids.map(async (bid) => {
+        const bidJson = bid.toJSON();
+        if (bidJson.bidderId) {
+          try {
+            const bidder = await Bidder.findByPk(bidJson.bidderId, {
+              attributes: ['id', 'code', 'companyName'],
+            });
+            bidJson.bidder = bidder ? bidder.toJSON() : null;
+          } catch (e) {
+            bidJson.bidder = null;
+          }
+        } else {
+          bidJson.bidder = null;
+        }
+        return bidJson;
+      }));
+    } catch (e) {
+      tenderJson.bids = [];
+    }
+
+    // Contrats
+    try {
+      const contracts = await ProcurementContract.findAll({
+        where: { tenderId: id },
+      });
+      // Enrichir chaque contrat avec le contractant
+      tenderJson.contracts = await Promise.all(contracts.map(async (contract) => {
+        const contractJson = contract.toJSON();
+        if (contractJson.contractorId) {
+          try {
+            const contractor = await Bidder.findByPk(contractJson.contractorId, {
+              attributes: ['id', 'code', 'companyName'],
+            });
+            contractJson.contractor = contractor ? contractor.toJSON() : null;
+          } catch (e) {
+            contractJson.contractor = null;
+          }
+        } else {
+          contractJson.contractor = null;
+        }
+        return contractJson;
+      }));
+    } catch (e) {
+      tenderJson.contracts = [];
     }
 
     // Statistiques des soumissions
@@ -111,7 +177,7 @@ export async function GET(request, { params }) {
     return NextResponse.json({
       success: true,
       data: {
-        ...tender.toJSON(),
+        ...tenderJson,
         bidStats: bidStats[0] || {},
       },
     });
@@ -143,6 +209,9 @@ export async function PUT(request, { params }) {
 
     const previousStatus = tender.status;
 
+    // Verifier si l'ID utilisateur est un UUID valide
+    const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(session.user.id);
+
     // Mettre a jour
     await tender.update(body);
 
@@ -154,7 +223,7 @@ export async function PUT(request, { params }) {
         previousStatus,
         newStatus: body.status,
         description: `Statut change de ${previousStatus} a ${body.status}`,
-        performedById: session.user.id,
+        performedById: isValidUUID ? session.user.id : null,
       });
 
       // Actions specifiques selon le nouveau statut
@@ -168,7 +237,7 @@ export async function PUT(request, { params }) {
         tenderId: id,
         action: 'UPDATED',
         description: 'Appel d\'offres modifie',
-        performedById: session.user.id,
+        performedById: isValidUUID ? session.user.id : null,
       });
     }
 
@@ -198,17 +267,37 @@ export async function PUT(request, { params }) {
       }
     }
 
-    const result = await Tender.findByPk(id, {
-      include: [
-        { model: TenderLot, as: 'lots' },
-        { model: Ministry, as: 'ministry' },
-        { model: User, as: 'createdBy', attributes: ['id', 'name', 'email'] },
-      ],
-    });
+    // Recuperer l'appel d'offres sans includes User pour eviter l'erreur uuid = text
+    const result = await Tender.findByPk(id);
+    const resultJson = result.toJSON();
+
+    // Enrichir manuellement
+    if (resultJson.ministryId) {
+      try {
+        const ministry = await Ministry.findByPk(resultJson.ministryId, {
+          attributes: ['id', 'code', 'name', 'shortName'],
+        });
+        resultJson.ministry = ministry ? ministry.toJSON() : null;
+      } catch (e) {
+        resultJson.ministry = null;
+      }
+    } else {
+      resultJson.ministry = null;
+    }
+
+    // Recuperer les lots
+    try {
+      const lots = await TenderLot.findAll({
+        where: { tenderId: id },
+      });
+      resultJson.lots = lots.map(l => l.toJSON());
+    } catch (e) {
+      resultJson.lots = [];
+    }
 
     return NextResponse.json({
       success: true,
-      data: result,
+      data: resultJson,
       message: 'Appel d\'offres modifie avec succes',
     });
 

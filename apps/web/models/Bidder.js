@@ -56,16 +56,19 @@ Bidder.init(
       allowNull: true,
     },
     countryId: {
-      type: DataTypes.UUID,
+      type: DataTypes.STRING(50),
       allowNull: true,
+      comment: 'Accepts both UUID and cuid formats',
     },
     provinceId: {
-      type: DataTypes.UUID,
+      type: DataTypes.STRING(50),
       allowNull: true,
+      comment: 'Accepts both UUID and cuid formats',
     },
     cityId: {
-      type: DataTypes.UUID,
+      type: DataTypes.STRING(50),
       allowNull: true,
+      comment: 'Accepts both UUID and cuid formats',
     },
     address: {
       type: DataTypes.TEXT,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Award,
   Search,
@@ -33,6 +34,9 @@ const statusLabels = {
 };
 
 export default function CertificatesPage() {
+  const searchParams = useSearchParams();
+  const contractIdFromUrl = searchParams.get('contractId');
+
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -59,6 +63,10 @@ export default function CertificatesPage() {
 
       if (data.success) {
         setContracts(data.data);
+        // Load certificate from URL if contractId is provided
+        if (contractIdFromUrl && data.data.find(c => c.id === contractIdFromUrl)) {
+          loadCertificate(contractIdFromUrl);
+        }
       } else {
         setError(data.error);
       }
@@ -67,7 +75,7 @@ export default function CertificatesPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, yearFilter]);
+  }, [search, yearFilter, contractIdFromUrl]);
 
   useEffect(() => {
     fetchContracts();
@@ -101,25 +109,220 @@ export default function CertificatesPage() {
         <head>
           <title>Certificat de Passation de Marché - ${certificateData?.certificateNumber}</title>
           <style>
-            @page { margin: 20mm; size: A4; }
-            body { font-family: 'Times New Roman', serif; margin: 0; padding: 40px; }
-            .certificate { max-width: 800px; margin: 0 auto; border: 3px double #1e3a5f; padding: 40px; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .logo { font-size: 48px; margin-bottom: 10px; }
-            .title { font-size: 28px; font-weight: bold; color: #1e3a5f; margin: 10px 0; }
-            .subtitle { font-size: 16px; color: #666; }
-            .cert-number { font-size: 14px; color: #888; margin: 20px 0; font-family: monospace; }
-            .content { line-height: 1.8; margin: 30px 0; text-align: justify; }
-            .company-name { font-weight: bold; font-size: 18px; color: #1e3a5f; }
-            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 30px 0; }
-            .info-box { background: #f8f9fa; padding: 15px; border-left: 3px solid #1e3a5f; }
-            .info-label { font-size: 12px; color: #666; text-transform: uppercase; }
-            .info-value { font-size: 14px; font-weight: bold; margin-top: 5px; }
-            .footer { margin-top: 50px; display: flex; justify-content: space-between; }
-            .signature-box { text-align: center; width: 200px; }
-            .signature-line { border-top: 1px solid #333; margin-top: 60px; padding-top: 10px; }
-            .date-stamp { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
-            .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 100px; color: rgba(30, 58, 95, 0.05); pointer-events: none; z-index: -1; }
+            @page { margin: 0; size: A4; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: 'Times New Roman', Georgia, serif;
+              background: #fff;
+              width: 210mm;
+              min-height: 297mm;
+            }
+            .certificate-wrapper {
+              width: 210mm;
+              min-height: 297mm;
+              padding: 15mm;
+              position: relative;
+              background: linear-gradient(135deg, #fefefe 0%, #f8f9fa 100%);
+            }
+            .certificate-border {
+              border: 3px solid #1a365d;
+              padding: 8mm;
+              min-height: calc(297mm - 30mm);
+              position: relative;
+            }
+            .certificate-inner {
+              border: 1px solid #2c5282;
+              padding: 10mm;
+              min-height: calc(297mm - 52mm);
+              position: relative;
+            }
+            .corner-ornament {
+              position: absolute;
+              width: 40px;
+              height: 40px;
+              border: 2px solid #c5a028;
+            }
+            .corner-tl { top: 5mm; left: 5mm; border-right: none; border-bottom: none; }
+            .corner-tr { top: 5mm; right: 5mm; border-left: none; border-bottom: none; }
+            .corner-bl { bottom: 5mm; left: 5mm; border-right: none; border-top: none; }
+            .corner-br { bottom: 5mm; right: 5mm; border-left: none; border-top: none; }
+
+            .header { text-align: center; margin-bottom: 8mm; }
+            .republic-title {
+              font-size: 14pt;
+              font-weight: bold;
+              color: #1a365d;
+              letter-spacing: 3px;
+              margin-bottom: 3mm;
+            }
+            .motto {
+              font-size: 10pt;
+              font-style: italic;
+              color: #4a5568;
+              margin-bottom: 5mm;
+            }
+            .agency-name {
+              font-size: 12pt;
+              font-weight: bold;
+              color: #2b6cb0;
+              letter-spacing: 2px;
+              margin-bottom: 8mm;
+            }
+
+            .emblem {
+              width: 60px;
+              height: 60px;
+              margin: 0 auto 5mm;
+              background: linear-gradient(135deg, #c5a028 0%, #d4af37 50%, #c5a028 100%);
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              box-shadow: 0 2px 10px rgba(197, 160, 40, 0.3);
+            }
+            .emblem-inner {
+              width: 50px;
+              height: 50px;
+              background: #fff;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 24pt;
+            }
+
+            .certificate-title {
+              font-size: 22pt;
+              font-weight: bold;
+              color: #1a365d;
+              text-align: center;
+              margin: 8mm 0;
+              padding: 5mm 0;
+              border-top: 2px solid #c5a028;
+              border-bottom: 2px solid #c5a028;
+              letter-spacing: 4px;
+              text-transform: uppercase;
+            }
+
+            .cert-number {
+              text-align: center;
+              font-size: 10pt;
+              color: #718096;
+              font-family: 'Courier New', monospace;
+              margin-bottom: 8mm;
+            }
+
+            .content {
+              line-height: 2;
+              text-align: justify;
+              font-size: 11pt;
+              color: #2d3748;
+              margin: 5mm 0;
+            }
+            .content p { margin-bottom: 4mm; }
+
+            .company-highlight {
+              text-align: center;
+              margin: 8mm 0;
+              padding: 5mm;
+            }
+            .company-name {
+              font-size: 16pt;
+              font-weight: bold;
+              color: #1a365d;
+              border-bottom: 2px solid #c5a028;
+              padding-bottom: 3mm;
+              display: inline-block;
+            }
+
+            .contract-box {
+              background: linear-gradient(to right, #f7fafc, #edf2f7, #f7fafc);
+              border: 1px solid #cbd5e0;
+              border-left: 4px solid #1a365d;
+              padding: 5mm;
+              margin: 5mm 0;
+              font-size: 10pt;
+            }
+            .contract-title {
+              font-weight: bold;
+              color: #1a365d;
+              font-size: 11pt;
+              margin-bottom: 2mm;
+            }
+            .contract-details { color: #4a5568; }
+            .contract-amount {
+              font-size: 12pt;
+              font-weight: bold;
+              color: #2b6cb0;
+              margin-top: 2mm;
+            }
+
+            .footer {
+              display: flex;
+              justify-content: space-between;
+              margin-top: 15mm;
+              padding-top: 5mm;
+            }
+            .date-location {
+              font-size: 10pt;
+              color: #4a5568;
+            }
+            .signature-block {
+              text-align: center;
+              width: 60mm;
+            }
+            .signature-title {
+              font-size: 10pt;
+              color: #4a5568;
+              margin-bottom: 20mm;
+            }
+            .signature-line {
+              border-top: 1px solid #1a365d;
+              padding-top: 2mm;
+            }
+            .signature-name {
+              font-weight: bold;
+              color: #1a365d;
+            }
+
+            .official-seal {
+              position: absolute;
+              bottom: 25mm;
+              right: 25mm;
+              width: 70px;
+              height: 70px;
+              border: 2px dashed #c5a028;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: #c5a028;
+              font-size: 8pt;
+              text-align: center;
+              opacity: 0.7;
+            }
+
+            .legal-notice {
+              text-align: center;
+              font-size: 8pt;
+              color: #a0aec0;
+              margin-top: 10mm;
+              padding-top: 3mm;
+              border-top: 1px solid #e2e8f0;
+            }
+
+            .watermark {
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%) rotate(-30deg);
+              font-size: 80pt;
+              color: rgba(26, 54, 93, 0.03);
+              font-weight: bold;
+              pointer-events: none;
+              white-space: nowrap;
+              letter-spacing: 10px;
+            }
           </style>
         </head>
         <body>
@@ -128,7 +331,7 @@ export default function CertificatesPage() {
         </html>
       `);
       printWindow.document.close();
-      printWindow.print();
+      setTimeout(() => printWindow.print(), 500);
     }
   };
 
@@ -148,6 +351,34 @@ export default function CertificatesPage() {
       month: "long",
       year: "numeric",
     });
+  };
+
+  const numberToWords = (amount) => {
+    // Simplified French number to words for amounts
+    const units = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize', 'dix-sept', 'dix-huit', 'dix-neuf'];
+    const tens = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', 'soixante-dix', 'quatre-vingt', 'quatre-vingt-dix'];
+
+    if (amount >= 1000000) {
+      const millions = Math.floor(amount / 1000000);
+      const remainder = amount % 1000000;
+      return (millions === 1 ? 'un million' : numberToWords(millions) + ' millions') + (remainder > 0 ? ' ' + numberToWords(remainder) : '');
+    }
+    if (amount >= 1000) {
+      const thousands = Math.floor(amount / 1000);
+      const remainder = amount % 1000;
+      return (thousands === 1 ? 'mille' : numberToWords(thousands) + ' mille') + (remainder > 0 ? ' ' + numberToWords(remainder) : '');
+    }
+    if (amount >= 100) {
+      const hundreds = Math.floor(amount / 100);
+      const remainder = amount % 100;
+      return (hundreds === 1 ? 'cent' : numberToWords(hundreds) + ' cent') + (remainder > 0 ? ' ' + numberToWords(remainder) : '');
+    }
+    if (amount >= 20) {
+      const ten = Math.floor(amount / 10);
+      const unit = amount % 10;
+      return tens[ten] + (unit > 0 ? '-' + units[unit] : '');
+    }
+    return units[amount] || String(amount);
   };
 
   return (
@@ -291,90 +522,140 @@ export default function CertificatesPage() {
             )}
           </div>
 
-          <div className="p-6 min-h-[600px] bg-gray-50 dark:bg-slate-900">
+          <div className="p-6 min-h-[600px] bg-gray-100 dark:bg-slate-900 overflow-auto">
             {loadingCertificate ? (
               <div className="flex items-center justify-center h-full py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
               </div>
             ) : certificateData ? (
-              <div ref={certificateRef} className="bg-white rounded-lg shadow-lg p-8 max-w-2xl mx-auto" style={{ fontFamily: "'Times New Roman', serif" }}>
-                {/* Certificate Content */}
-                <div className="text-center mb-8">
-                  <div className="text-5xl mb-4">🏛️</div>
-                  <h1 className="text-2xl font-bold text-blue-900 mb-2">
-                    RÉPUBLIQUE DÉMOCRATIQUE DU CONGO
-                  </h1>
-                  <p className="text-gray-600 text-sm mb-4">
-                    {certificateData.authority.name}
-                  </p>
-                  <h2 className="text-xl font-bold text-blue-800 border-y-2 border-blue-800 py-3 my-4">
-                    CERTIFICAT DE PASSATION DE MARCHÉ
-                  </h2>
-                  <p className="text-sm text-gray-500 font-mono">
-                    N° {certificateData.certificateNumber}
-                  </p>
-                </div>
+              <div ref={certificateRef} className="certificate-wrapper mx-auto" style={{ fontFamily: "'Times New Roman', Georgia, serif", maxWidth: '700px' }}>
+                {/* Professional Certificate Design */}
+                <div className="certificate-border bg-white rounded-sm shadow-xl" style={{ border: '3px solid #1a365d', padding: '20px' }}>
+                  <div className="certificate-inner" style={{ border: '1px solid #2c5282', padding: '25px', position: 'relative' }}>
+                    {/* Corner Ornaments */}
+                    <div className="corner-ornament corner-tl" style={{ position: 'absolute', top: '10px', left: '10px', width: '30px', height: '30px', borderTop: '2px solid #c5a028', borderLeft: '2px solid #c5a028' }}></div>
+                    <div className="corner-ornament corner-tr" style={{ position: 'absolute', top: '10px', right: '10px', width: '30px', height: '30px', borderTop: '2px solid #c5a028', borderRight: '2px solid #c5a028' }}></div>
+                    <div className="corner-ornament corner-bl" style={{ position: 'absolute', bottom: '10px', left: '10px', width: '30px', height: '30px', borderBottom: '2px solid #c5a028', borderLeft: '2px solid #c5a028' }}></div>
+                    <div className="corner-ornament corner-br" style={{ position: 'absolute', bottom: '10px', right: '10px', width: '30px', height: '30px', borderBottom: '2px solid #c5a028', borderRight: '2px solid #c5a028' }}></div>
 
-                <div className="text-gray-800 leading-relaxed mb-6 text-justify">
-                  <p className="mb-4">
-                    L'Agence Nationale pour la Promotion des Investissements (ANAPI), certifie par la présente que :
-                  </p>
+                    {/* Watermark */}
+                    <div className="watermark" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-30deg)', fontSize: '60px', color: 'rgba(26, 54, 93, 0.04)', fontWeight: 'bold', pointerEvents: 'none', whiteSpace: 'nowrap', letterSpacing: '8px' }}>
+                      ANAPI
+                    </div>
 
-                  <p className="text-center my-6">
-                    <span className="text-xl font-bold text-blue-900 border-b-2 border-blue-900 pb-1">
-                      {certificateData.bidder?.companyName}
-                    </span>
-                  </p>
+                    {/* Header */}
+                    <div className="header text-center mb-6" style={{ position: 'relative', zIndex: 1 }}>
+                      {/* Emblem */}
+                      <div className="emblem mx-auto mb-3" style={{ width: '70px', height: '70px', background: 'linear-gradient(135deg, #c5a028 0%, #d4af37 50%, #c5a028 100%)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 15px rgba(197, 160, 40, 0.3)' }}>
+                        <div style={{ width: '58px', height: '58px', background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px' }}>
+                          🏛️
+                        </div>
+                      </div>
 
-                  <p className="mb-4">
-                    Entreprise immatriculée au RCCM sous le numéro <strong>{certificateData.bidder?.rccm || "—"}</strong>,
-                    ayant son siège social à {certificateData.bidder?.address || "Kinshasa"}, représentée par
-                    <strong> {certificateData.bidder?.representativeName || "—"}</strong> en qualité de
-                    {certificateData.bidder?.representativeTitle || " Représentant légal"} ;
-                  </p>
-
-                  <p className="mb-4">
-                    S'est vu attribuer le marché suivant :
-                  </p>
-
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 my-6">
-                    <p className="font-semibold text-blue-900 mb-2">{certificateData.contract.title}</p>
-                    {certificateData.tender && (
-                      <p className="text-sm text-gray-600">
-                        Référence : {certificateData.tender.reference}
+                      <h1 className="republic-title" style={{ fontSize: '16px', fontWeight: 'bold', color: '#1a365d', letterSpacing: '3px', marginBottom: '4px' }}>
+                        RÉPUBLIQUE DÉMOCRATIQUE DU CONGO
+                      </h1>
+                      <p className="motto" style={{ fontSize: '11px', fontStyle: 'italic', color: '#4a5568', marginBottom: '8px' }}>
+                        Justice - Paix - Travail
                       </p>
-                    )}
-                    <p className="text-sm text-gray-600 mt-2">
-                      Montant du marché : <strong>{formatCurrency(certificateData.contract.contractValue, certificateData.contract.currency)}</strong>
+                      <p className="agency-name" style={{ fontSize: '13px', fontWeight: 'bold', color: '#2b6cb0', letterSpacing: '2px' }}>
+                        AGENCE NATIONALE POUR LA PROMOTION DES INVESTISSEMENTS
+                      </p>
+                    </div>
+
+                    {/* Certificate Title */}
+                    <h2 className="certificate-title text-center" style={{ fontSize: '20px', fontWeight: 'bold', color: '#1a365d', margin: '20px 0', padding: '12px 0', borderTop: '2px solid #c5a028', borderBottom: '2px solid #c5a028', letterSpacing: '4px', textTransform: 'uppercase' }}>
+                      Certificat de Passation de Marché
+                    </h2>
+
+                    {/* Certificate Number */}
+                    <p className="cert-number text-center" style={{ fontSize: '11px', color: '#718096', fontFamily: 'Courier New, monospace', marginBottom: '20px' }}>
+                      N° {certificateData.certificateNumber}
                     </p>
-                    <p className="text-sm text-gray-600">
-                      Contrat N° : <strong>{certificateData.contract.contractNumber}</strong>
-                    </p>
-                  </div>
 
-                  <p className="mb-4">
-                    Ce certificat est délivré pour servir et valoir ce que de droit.
-                  </p>
-                </div>
+                    {/* Content */}
+                    <div className="content" style={{ lineHeight: '1.9', textAlign: 'justify', fontSize: '12px', color: '#2d3748', position: 'relative', zIndex: 1 }}>
+                      <p style={{ marginBottom: '12px' }}>
+                        L'Agence Nationale pour la Promotion des Investissements (ANAPI), organisme public placé sous la tutelle du Ministère du Plan, certifie par la présente que :
+                      </p>
 
-                <div className="flex justify-between items-end mt-12">
-                  <div className="text-sm text-gray-600">
-                    <p>Fait à Kinshasa,</p>
-                    <p>Le {formatDate(certificateData.issueDate)}</p>
-                  </div>
+                      {/* Company Name Highlight */}
+                      <div className="company-highlight text-center" style={{ margin: '20px 0', padding: '15px' }}>
+                        <span className="company-name" style={{ fontSize: '18px', fontWeight: 'bold', color: '#1a365d', borderBottom: '2px solid #c5a028', paddingBottom: '6px', display: 'inline-block' }}>
+                          {certificateData.bidder?.companyName || '—'}
+                        </span>
+                      </div>
 
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600 mb-16">Le Directeur Général</p>
-                    <div className="border-t border-gray-400 w-48 pt-2">
-                      <p className="text-sm text-gray-800">{certificateData.signedBy?.name || "Signature"}</p>
+                      <p style={{ marginBottom: '12px' }}>
+                        Entreprise immatriculée au Registre du Commerce et du Crédit Mobilier (RCCM) sous le numéro <strong>{certificateData.bidder?.rccm || '—'}</strong>,
+                        {certificateData.bidder?.idnat && <> ID National : <strong>{certificateData.bidder.idnat}</strong>,</>}
+                        ayant son siège social à <strong>{certificateData.bidder?.address || 'Kinshasa, RDC'}</strong>,
+                        représentée par <strong>{certificateData.bidder?.representativeName || 'le représentant légal'}</strong>
+                        {certificateData.bidder?.representativeTitle && <> en qualité de <strong>{certificateData.bidder.representativeTitle}</strong></>} ;
+                      </p>
+
+                      <p style={{ marginBottom: '12px' }}>
+                        S'est vu attribuer le marché public ci-après désigné, conformément aux dispositions légales et réglementaires en vigueur en République Démocratique du Congo :
+                      </p>
+
+                      {/* Contract Box */}
+                      <div className="contract-box" style={{ background: 'linear-gradient(to right, #f7fafc, #edf2f7, #f7fafc)', border: '1px solid #cbd5e0', borderLeft: '4px solid #1a365d', padding: '15px', margin: '15px 0', fontSize: '11px' }}>
+                        <p className="contract-title" style={{ fontWeight: 'bold', color: '#1a365d', fontSize: '13px', marginBottom: '8px' }}>
+                          {certificateData.contract.title}
+                        </p>
+                        {certificateData.tender && (
+                          <p className="contract-details" style={{ color: '#4a5568', marginBottom: '4px' }}>
+                            Référence de l'Appel d'Offres : <strong>{certificateData.tender.reference}</strong>
+                          </p>
+                        )}
+                        <p className="contract-details" style={{ color: '#4a5568', marginBottom: '4px' }}>
+                          Numéro du Contrat : <strong>{certificateData.contract.contractNumber}</strong>
+                        </p>
+                        <p className="contract-amount" style={{ fontSize: '14px', fontWeight: 'bold', color: '#2b6cb0', marginTop: '8px' }}>
+                          Montant du Marché : {formatCurrency(certificateData.contract.contractValue, certificateData.contract.currency)}
+                        </p>
+                        {certificateData.contract.contractValue && (
+                          <p style={{ fontSize: '10px', color: '#718096', marginTop: '4px', fontStyle: 'italic' }}>
+                            Soit : {numberToWords(Math.floor(parseFloat(certificateData.contract.contractValue)))} {certificateData.contract.currency}
+                          </p>
+                        )}
+                      </div>
+
+                      <p style={{ marginBottom: '8px' }}>
+                        En foi de quoi, le présent certificat lui est délivré pour servir et valoir ce que de droit.
+                      </p>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '30px', paddingTop: '15px', position: 'relative', zIndex: 1 }}>
+                      <div className="date-location" style={{ fontSize: '11px', color: '#4a5568' }}>
+                        <p>Fait à Kinshasa,</p>
+                        <p>Le {formatDate(certificateData.issueDate)}</p>
+                      </div>
+
+                      <div className="signature-block text-center" style={{ width: '180px' }}>
+                        <p className="signature-title" style={{ fontSize: '11px', color: '#4a5568', marginBottom: '45px' }}>
+                          Le Directeur Général
+                        </p>
+                        <div className="signature-line" style={{ borderTop: '1px solid #1a365d', paddingTop: '6px' }}>
+                          <p className="signature-name" style={{ fontWeight: 'bold', color: '#1a365d', fontSize: '11px' }}>
+                            {certificateData.signedBy?.name || '___________________'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Official Seal Placeholder */}
+                    <div className="official-seal" style={{ position: 'absolute', bottom: '60px', right: '40px', width: '70px', height: '70px', border: '2px dashed #c5a028', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c5a028', fontSize: '8px', textAlign: 'center', opacity: '0.6' }}>
+                      <span>SCEAU<br/>OFFICIEL</span>
+                    </div>
+
+                    {/* Legal Notice */}
+                    <div className="legal-notice text-center" style={{ fontSize: '9px', color: '#a0aec0', marginTop: '25px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
+                      <p>Ce document est un certificat officiel de l'Agence Nationale pour la Promotion des Investissements (ANAPI).</p>
+                      <p style={{ marginTop: '3px' }}>Toute falsification, altération ou usage frauduleux est passible de poursuites judiciaires conformément aux lois de la RDC.</p>
                     </div>
                   </div>
-                </div>
-
-                <div className="text-center mt-8 pt-4 border-t border-gray-200">
-                  <p className="text-xs text-gray-400">
-                    Ce document est un certificat officiel de l'ANAPI. Toute falsification est passible de poursuites judiciaires.
-                  </p>
                 </div>
               </div>
             ) : (

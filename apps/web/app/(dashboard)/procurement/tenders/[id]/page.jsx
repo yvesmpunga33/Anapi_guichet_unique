@@ -32,6 +32,8 @@ import {
   History,
   User,
   Percent,
+  Printer,
+  X,
 } from "lucide-react";
 
 const statusColors = {
@@ -104,6 +106,9 @@ export default function TenderDetailPage({ params }) {
   // Delete confirmation
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // PDF Modal
+  const [showPdfModal, setShowPdfModal] = useState(false);
 
   useEffect(() => {
     const fetchTender = async () => {
@@ -274,7 +279,20 @@ export default function TenderDetailPage({ params }) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Page Title */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+            <FileSearch className="w-7 h-7 text-blue-600" />
+            Détail de l'appel d'offres
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Consultez et gérez les informations de cet appel d'offres
+          </p>
+        </div>
+      </div>
+
+      {/* Header Card */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
         <div className="flex flex-col lg:flex-row lg:items-start gap-4">
           <div className="flex items-start gap-4 flex-1">
@@ -347,6 +365,14 @@ export default function TenderDetailPage({ params }) {
                 )}
               </div>
             )}
+
+            <button
+              onClick={() => setShowPdfModal(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+            >
+              <Printer className="w-4 h-4" />
+              Imprimer
+            </button>
 
             <Link
               href={`/procurement/tenders/${id}/edit`}
@@ -873,6 +899,66 @@ export default function TenderDetailPage({ params }) {
                 {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
                 Supprimer
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal PDF - Aperçu et impression */}
+      {showPdfModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="relative w-[95vw] h-[95vh] bg-white dark:bg-slate-900 rounded-xl shadow-2xl flex flex-col">
+            {/* Header du modal */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-slate-700">
+              <div className="flex items-center gap-3">
+                <FileText className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Appel d'Offres - {tender.reference}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {tender.title}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <a
+                  href={`/api/procurement/tenders/${id}/pdf`}
+                  download={`AO-${tender.reference}.pdf`}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Télécharger PDF
+                </a>
+                <button
+                  onClick={() => {
+                    const iframe = document.getElementById('tender-pdf-iframe');
+                    if (iframe) {
+                      iframe.contentWindow.print();
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  <Printer className="w-4 h-4" />
+                  Imprimer
+                </button>
+                <button
+                  onClick={() => setShowPdfModal(false)}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                  Fermer
+                </button>
+              </div>
+            </div>
+            {/* Contenu PDF */}
+            <div className="flex-1 p-2 bg-gray-100 dark:bg-slate-800">
+              <iframe
+                id="tender-pdf-iframe"
+                src={`/api/procurement/tenders/${id}/pdf#toolbar=1&navpanes=0&scrollbar=1`}
+                className="w-full h-full rounded-lg border-0 bg-white"
+                title={`Appel d'offres ${tender.reference}`}
+              />
             </div>
           </div>
         </div>

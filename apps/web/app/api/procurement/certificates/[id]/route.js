@@ -17,7 +17,7 @@ export async function GET(request, { params }) {
       include: [
         {
           model: Bidder,
-          as: 'bidder',
+          as: 'contractor',
           attributes: ['id', 'companyName', 'tradeName', 'rccm', 'idnat', 'nif', 'legalForm',
             'address', 'phone', 'email', 'representativeName', 'representativeTitle'],
         },
@@ -25,10 +25,10 @@ export async function GET(request, { params }) {
           model: Tender,
           as: 'tender',
           include: [
-            { model: Ministry, as: 'ministry', attributes: ['id', 'name', 'abbreviation'] },
+            { model: Ministry, as: 'ministry', attributes: ['id', 'name', 'shortName'] },
           ],
         },
-        { model: User, as: 'signedBy', attributes: ['id', 'name', 'email'] },
+        { model: User, as: 'signedByClient', attributes: ['id', 'name', 'email'] },
       ],
     });
 
@@ -66,28 +66,28 @@ export async function GET(request, { params }) {
         type: contract.tender.type,
         category: contract.tender.category,
         ministry: contract.tender.ministry?.name,
-        ministryAbbreviation: contract.tender.ministry?.abbreviation,
+        ministryAbbreviation: contract.tender.ministry?.shortName,
       } : null,
 
       // Informations de l'attributaire
-      bidder: contract.bidder ? {
-        companyName: contract.bidder.companyName,
-        tradeName: contract.bidder.tradeName,
-        rccm: contract.bidder.rccm,
-        idnat: contract.bidder.idnat,
-        nif: contract.bidder.nif,
-        legalForm: contract.bidder.legalForm,
-        address: contract.bidder.address,
-        phone: contract.bidder.phone,
-        email: contract.bidder.email,
-        representativeName: contract.bidder.representativeName,
-        representativeTitle: contract.bidder.representativeTitle,
+      bidder: contract.contractor ? {
+        companyName: contract.contractor.companyName,
+        tradeName: contract.contractor.tradeName,
+        rccm: contract.contractor.rccm,
+        idnat: contract.contractor.idnat,
+        nif: contract.contractor.nif,
+        legalForm: contract.contractor.legalForm,
+        address: contract.contractor.address,
+        phone: contract.contractor.phone,
+        email: contract.contractor.email,
+        representativeName: contract.contractor.representativeName,
+        representativeTitle: contract.contractor.representativeTitle,
       } : null,
 
       // Signataire
-      signedBy: contract.signedBy ? {
-        name: contract.signedBy.name,
-        email: contract.signedBy.email,
+      signedBy: contract.signedByClient ? {
+        name: contract.signedByClient.name,
+        email: contract.signedByClient.email,
       } : null,
 
       // Informations ANAPI

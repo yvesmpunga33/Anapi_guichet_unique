@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   FileText,
   Plus,
@@ -15,6 +16,8 @@ import {
   X,
   Settings,
   Filter,
+  Briefcase,
+  ChevronRight,
 } from "lucide-react";
 
 const categoryLabels = {
@@ -199,7 +202,7 @@ export default function ProcurementConfigPage() {
             Configuration
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Gérez les types de documents requis pour la passation de marchés
+            Gérez les paramètres de la passation de marchés
           </p>
         </div>
 
@@ -211,6 +214,45 @@ export default function ProcurementConfigPage() {
           Nouveau type
         </button>
       </div>
+
+      {/* Configuration Links */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Link
+          href="/procurement/config/sectors"
+          className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-5 hover:shadow-md transition-shadow group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+                <Briefcase className="w-6 h-6 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">Secteurs d'activité</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Gérer les secteurs</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
+          </div>
+        </Link>
+
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-5">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+              <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Types de documents</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{documentTypes.length} types configurés</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Document Types Section Title */}
+      <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+        <FileText className="w-5 h-5 text-blue-600" />
+        Types de documents requis
+      </h2>
 
       {/* Search and Filters */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4">

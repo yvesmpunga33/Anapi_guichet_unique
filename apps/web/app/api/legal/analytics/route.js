@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../lib/auth.js';
 import { Contract, JuridicalText, LegalAlert, ContractType, LegalDomain } from '../../../../models/index.js';
-import { Op, fn, col, literal } from 'sequelize';
-import sequelize from '../../../lib/sequelize.js';
+import { Op, fn, col } from 'sequelize';
 
 // GET - Obtenir les analytics pour le dashboard juridique
 export async function GET(request) {

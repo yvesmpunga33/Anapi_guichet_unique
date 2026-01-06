@@ -4,7 +4,7 @@ import { SalaryGrade } from '../../../../models/index.js';
 import { v4 as uuidv4 } from 'uuid';
 
 // GET /api/hr/grades
-export async function GET(request) {
+export async function GET() {
   try {
     const session = await auth();
     if (!session) {

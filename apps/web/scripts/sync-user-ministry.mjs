@@ -1,4 +1,4 @@
-import { User, sequelize } from '../models/index.js';
+import { sequelize } from '../models/index.js';
 
 async function syncTable() {
   try {

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../../../lib/auth.js';
-import { ProjectImpact, Investment, User, sequelize } from '../../../../../../models/index.js';
-import { Op } from 'sequelize';
+import { ProjectImpact, Investment, User } from '../../../../../../models/index.js';
 
 // GET - Liste des rapports d'impact d'un projet
 export async function GET(request, { params }) {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { ActeAdministratif, PieceRequise, Ministry, Sector, sequelize } from '../../../../../models/index.js';
-import { Op, fn, col, literal } from 'sequelize';
+import { ActeAdministratif, PieceRequise, Ministry, Sector } from '../../../../../models/index.js';
+import { Op, fn, col } from 'sequelize';
 
 // GET - Statistiques des actes administratifs
 export async function GET(request) {

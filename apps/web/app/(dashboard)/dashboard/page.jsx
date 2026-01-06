@@ -28,6 +28,15 @@ import {
   RefreshCw,
   Calendar,
   ChevronRight,
+  AlertTriangle,
+  Shield,
+  Zap,
+  Heart,
+  GraduationCap,
+  Banknote,
+  Flag,
+  UserCheck,
+  Download,
 } from "lucide-react";
 
 const getStatusConfig = (intl) => ({
@@ -50,6 +59,37 @@ const sectorColors = {
   "Services": "#14B8A6",
   "Energie": "#F97316",
   "Construction": "#64748B",
+};
+
+const riskLevelConfig = {
+  LOW: { label: "Faible", color: "bg-green-500", textColor: "text-green-600", bgLight: "bg-green-100" },
+  MODERATE: { label: "Modéré", color: "bg-yellow-500", textColor: "text-yellow-600", bgLight: "bg-yellow-100" },
+  HIGH: { label: "Élevé", color: "bg-orange-500", textColor: "text-orange-600", bgLight: "bg-orange-100" },
+  CRITICAL: { label: "Critique", color: "bg-red-500", textColor: "text-red-600", bgLight: "bg-red-100" },
+};
+
+const riskCategoryConfig = {
+  FINANCIAL: { label: "Financier", icon: DollarSign },
+  TECHNICAL: { label: "Technique", icon: Zap },
+  OPERATIONAL: { label: "Opérationnel", icon: Activity },
+  REGULATORY: { label: "Réglementaire", icon: FileText },
+  ENVIRONMENTAL: { label: "Environnemental", icon: Globe },
+  SOCIAL: { label: "Social", icon: Users },
+  POLITICAL: { label: "Politique", icon: Flag },
+  MARKET: { label: "Marché", icon: TrendingUp },
+  SUPPLY_CHAIN: { label: "Chaîne d'appro.", icon: Factory },
+  SECURITY: { label: "Sécurité", icon: Shield },
+  OTHER: { label: "Autre", icon: AlertCircle },
+};
+
+const milestoneStatusConfig = {
+  NOT_STARTED: { label: "Non démarré", color: "bg-gray-500" },
+  PENDING: { label: "En attente", color: "bg-yellow-500" },
+  IN_PROGRESS: { label: "En cours", color: "bg-blue-500" },
+  COMPLETED: { label: "Terminé", color: "bg-green-500" },
+  DELAYED: { label: "En retard", color: "bg-red-500" },
+  ON_HOLD: { label: "Suspendu", color: "bg-orange-500" },
+  CANCELLED: { label: "Annulé", color: "bg-gray-400" },
 };
 
 export default function DashboardPage() {
@@ -127,14 +167,51 @@ export default function DashboardPage() {
             {intl.formatMessage({ id: "dashboard.subtitle", defaultMessage: "Vue d'ensemble des investissements en RDC" })}
           </p>
         </div>
-        <button
-          onClick={() => fetchStats(true)}
-          disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm text-gray-700 dark:text-gray-200"
-        >
-          <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-          {intl.formatMessage({ id: "common.refresh", defaultMessage: "Actualiser" })}
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Export Button */}
+          <div className="relative group">
+            <button
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors shadow-sm"
+            >
+              <Download className="w-4 h-4" />
+              Exporter
+            </button>
+            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+              <a
+                href="/api/exports/investments?type=projects&format=xlsx"
+                className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-t-xl"
+              >
+                Projets (Excel)
+              </a>
+              <a
+                href="/api/exports/investments?type=impacts&format=xlsx"
+                className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Impacts (Excel)
+              </a>
+              <a
+                href="/api/exports/investments?type=risks&format=xlsx"
+                className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Risques (Excel)
+              </a>
+              <a
+                href="/api/exports/investments?type=summary&format=xlsx"
+                className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-xl"
+              >
+                Rapport synthèse
+              </a>
+            </div>
+          </div>
+          <button
+            onClick={() => fetchStats(true)}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm text-gray-700 dark:text-gray-200"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+            {intl.formatMessage({ id: "common.refresh", defaultMessage: "Actualiser" })}
+          </button>
+        </div>
       </div>
 
       {/* Main KPI Cards */}
@@ -416,6 +493,248 @@ export default function DashboardPage() {
               <p className="text-gray-500 text-center py-8">{intl.formatMessage({ id: "common.noData", defaultMessage: "Aucune donnée" })}</p>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Impact Section - Consolidated Stats */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Impact consolidé des investissements
+            </h3>
+            <p className="text-sm text-gray-500">Résultats réels rapportés par les projets</p>
+          </div>
+          <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-xl">
+            <Heart className="w-5 h-5 text-green-600" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {/* Emplois directs créés */}
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <UserCheck className="w-4 h-4 text-blue-600" />
+              <span className="text-xs text-blue-600 font-medium">Emplois directs</span>
+            </div>
+            <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">
+              {formatNumber(stats?.impacts?.totalDirectJobs || 0)}
+            </p>
+          </div>
+
+          {/* Emplois indirects créés */}
+          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="w-4 h-4 text-indigo-600" />
+              <span className="text-xs text-indigo-600 font-medium">Emplois indirects</span>
+            </div>
+            <p className="text-2xl font-bold text-indigo-700 dark:text-indigo-400">
+              {formatNumber(stats?.impacts?.totalIndirectJobs || 0)}
+            </p>
+          </div>
+
+          {/* Emplois féminins */}
+          <div className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/20 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Heart className="w-4 h-4 text-pink-600" />
+              <span className="text-xs text-pink-600 font-medium">Emplois féminins</span>
+            </div>
+            <p className="text-2xl font-bold text-pink-700 dark:text-pink-400">
+              {formatNumber(stats?.impacts?.totalFemaleJobs || 0)}
+            </p>
+          </div>
+
+          {/* Taxes payées */}
+          <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Banknote className="w-4 h-4 text-green-600" />
+              <span className="text-xs text-green-600 font-medium">Taxes payées</span>
+            </div>
+            <p className="text-2xl font-bold text-green-700 dark:text-green-400">
+              {formatCurrency(stats?.impacts?.totalTaxes || 0)}
+            </p>
+          </div>
+
+          {/* Exportations */}
+          <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Globe className="w-4 h-4 text-amber-600" />
+              <span className="text-xs text-amber-600 font-medium">Exportations</span>
+            </div>
+            <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+              {formatCurrency(stats?.impacts?.totalExports || 0)}
+            </p>
+          </div>
+
+          {/* Employés formés */}
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <GraduationCap className="w-4 h-4 text-purple-600" />
+              <span className="text-xs text-purple-600 font-medium">Formés</span>
+            </div>
+            <p className="text-2xl font-bold text-purple-700 dark:text-purple-400">
+              {formatNumber(stats?.impacts?.totalTrainedEmployees || 0)}
+            </p>
+          </div>
+        </div>
+
+        {/* Additional impact metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Revenus générés</span>
+            <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(stats?.impacts?.totalRevenue || 0)}</span>
+          </div>
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Achats locaux</span>
+            <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(stats?.impacts?.totalLocalPurchases || 0)}</span>
+          </div>
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Invest. communautaires</span>
+            <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(stats?.impacts?.totalCommunityInvestment || 0)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Risks and Milestones Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Risks Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Analyse des risques
+              </h3>
+              <p className="text-sm text-gray-500">Risques actifs sur les projets</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {(stats?.risks?.totalCritical > 0 || stats?.risks?.totalHigh > 0) && (
+                <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-full">
+                  {stats.risks.totalCritical + stats.risks.totalHigh} à surveiller
+                </span>
+              )}
+              <AlertTriangle className="w-5 h-5 text-orange-500" />
+            </div>
+          </div>
+
+          {/* Risk level distribution */}
+          <div className="grid grid-cols-4 gap-2 mb-4">
+            {['CRITICAL', 'HIGH', 'MODERATE', 'LOW'].map((level) => {
+              const config = riskLevelConfig[level];
+              const count = stats?.risks?.distribution?.find(r => r.level === level)?.count || 0;
+              return (
+                <div key={level} className="text-center p-2 rounded-lg bg-gray-50 dark:bg-gray-700/30">
+                  <div className={`w-3 h-3 rounded-full ${config.color} mx-auto mb-1`}></div>
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">{count}</p>
+                  <p className="text-xs text-gray-500">{config.label}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Critical risks list */}
+          {stats?.risks?.critical && stats.risks.critical.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-500 uppercase mb-2">Risques critiques/élevés</p>
+              {stats.risks.critical.slice(0, 3).map((risk) => {
+                const levelConfig = riskLevelConfig[risk.riskLevel] || riskLevelConfig.MODERATE;
+                return (
+                  <Link
+                    key={risk.id}
+                    href={`/investments/projects/${risk.projectId}`}
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  >
+                    <div className={`w-2 h-8 rounded-full ${levelConfig.color}`}></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{risk.title}</p>
+                      <p className="text-xs text-gray-500">{risk.projectCode}</p>
+                    </div>
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${levelConfig.bgLight} ${levelConfig.textColor}`}>
+                      {levelConfig.label}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <Shield className="w-10 h-10 text-green-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">Aucun risque critique</p>
+            </div>
+          )}
+        </div>
+
+        {/* Milestones Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Suivi des jalons
+              </h3>
+              <p className="text-sm text-gray-500">Progression globale: {stats?.milestones?.avgProgress || 0}%</p>
+            </div>
+            <Target className="w-5 h-5 text-blue-500" />
+          </div>
+
+          {/* Progress bar */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between text-sm mb-1">
+              <span className="text-gray-600 dark:text-gray-400">Progression moyenne</span>
+              <span className="font-medium text-gray-900 dark:text-white">{stats?.milestones?.avgProgress || 0}%</span>
+            </div>
+            <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3">
+              <div
+                className="h-3 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
+                style={{ width: `${stats?.milestones?.avgProgress || 0}%` }}
+              ></div>
+            </div>
+          </div>
+
+          {/* Milestones stats */}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="text-center p-2 rounded-lg bg-green-50 dark:bg-green-900/20">
+              <p className="text-lg font-bold text-green-700 dark:text-green-400">{stats?.milestones?.completed || 0}</p>
+              <p className="text-xs text-green-600">Terminés</p>
+            </div>
+            <div className="text-center p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+              <p className="text-lg font-bold text-blue-700 dark:text-blue-400">{stats?.milestones?.inProgress || 0}</p>
+              <p className="text-xs text-blue-600">En cours</p>
+            </div>
+            <div className="text-center p-2 rounded-lg bg-red-50 dark:bg-red-900/20">
+              <p className="text-lg font-bold text-red-700 dark:text-red-400">{stats?.milestones?.delayed?.length || 0}</p>
+              <p className="text-xs text-red-600">En retard</p>
+            </div>
+          </div>
+
+          {/* Delayed milestones list */}
+          {stats?.milestones?.delayed && stats.milestones.delayed.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-500 uppercase mb-2">Jalons en retard</p>
+              {stats.milestones.delayed.slice(0, 3).map((milestone) => (
+                <Link
+                  key={milestone.id}
+                  href={`/investments/projects/${milestone.projectId}`}
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                >
+                  <div className="w-2 h-8 rounded-full bg-red-500"></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{milestone.name}</p>
+                    <p className="text-xs text-gray-500">{milestone.projectCode}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-red-600">{milestone.progress}%</p>
+                    <p className="text-xs text-gray-500">
+                      {milestone.plannedEndDate ? new Date(milestone.plannedEndDate).toLocaleDateString('fr-FR') : '-'}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <CheckCircle2 className="w-10 h-10 text-green-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">Tous les jalons sont dans les temps</p>
+            </div>
+          )}
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../../lib/auth.js';
-import { ProcurementContract, Bidder, Tender, Bid, Ministry, User, sequelize } from '../../../../../models/index.js';
+import { ProcurementContract, Bidder, Tender, Bid, Ministry, User } from '../../../../../models/index.js';
 
 // GET - Détail d'un contrat
 export async function GET(request, { params }) {

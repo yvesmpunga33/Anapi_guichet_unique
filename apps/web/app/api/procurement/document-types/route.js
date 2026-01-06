@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../lib/auth.js';
-import { ProcurementDocumentType, User } from '../../../../models/index.js';
+import { ProcurementDocumentType } from '../../../../models/index.js';
 import { Op } from 'sequelize';
 
 // GET - Liste des types de documents

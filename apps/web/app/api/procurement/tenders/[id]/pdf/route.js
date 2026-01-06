@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { Tender, TenderLot, Ministry, sequelize } from '../../../../../../models/index.js';
+import { Tender, TenderLot, Ministry } from '../../../../../../models/index.js';
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../lib/auth.js';
-import { WorkSchedule, Employee, User, sequelize } from '../../../../models/index.js';
-import { Op } from 'sequelize';
+import { WorkSchedule, Employee, User } from '../../../../models/index.js';
 
 // GET - Liste des horaires de travail
 export async function GET(request) {

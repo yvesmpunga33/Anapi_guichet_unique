@@ -34,7 +34,7 @@ export async function GET(request, { params }) {
 // PATCH - Mettre a jour une demande d'agrement
 export async function PATCH(request, { params }) {
   try {
-    const session = await auth();
+    const _session = await auth();
     const { id } = await params;
     const data = await request.json();
 

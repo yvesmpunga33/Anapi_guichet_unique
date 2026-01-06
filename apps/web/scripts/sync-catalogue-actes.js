@@ -1,4 +1,4 @@
-import { Sector, Ministry, ActeAdministratif, PieceRequise, sequelize } from '../models/index.js';
+import { Sector, Ministry, ActeAdministratif, PieceRequise } from '../models/index.js';
 
 async function syncCatalogueActes() {
   try {

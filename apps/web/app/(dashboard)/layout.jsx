@@ -51,10 +51,19 @@ import {
   FileSearch,
   HandshakeIcon,
   BadgeCheck,
+  Search,
+  AlertTriangle,
+  MessageSquare,
+  Users2,
+  Handshake,
+  Megaphone,
+  Target,
+  MapPinned,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import MessageNotifications from "../../components/notifications/MessageNotifications";
 import LanguageSelector from "../../components/LanguageSelector";
+import { PageTitleProvider, usePageTitle } from "../../contexts/PageTitleContext";
 
 // Avatar component with error handling and zoom capability
 function UserAvatar({ src, name, size = 40, onClick }) {
@@ -147,6 +156,7 @@ const getNavigation = (intl) => [
     title: "PRINCIPAL",
     items: [
       { nameKey: "nav.dashboard", name: intl.formatMessage({ id: "nav.dashboard", defaultMessage: "Tableau de bord" }), href: "/dashboard", icon: LayoutDashboard },
+      { nameKey: "nav.notifications", name: intl.formatMessage({ id: "nav.notifications", defaultMessage: "Notifications" }), href: "/notifications", icon: Bell },
       { nameKey: "nav.messages", name: intl.formatMessage({ id: "nav.messages", defaultMessage: "Messages" }), href: "/messages", icon: Mail },
     ],
   },
@@ -179,6 +189,20 @@ const getNavigation = (intl) => [
       { name: intl.formatMessage({ id: "nav.investors", defaultMessage: "Investisseurs" }), href: "/investments/investors", icon: Briefcase },
       { name: intl.formatMessage({ id: "nav.investmentProjects", defaultMessage: "Projets d'investissement" }), href: "/investments/projects", icon: TrendingUp },
       { name: intl.formatMessage({ id: "nav.projectTracking", defaultMessage: "Suivi des projets" }), href: "/investments/tracking", icon: ClipboardList },
+      { name: intl.formatMessage({ id: "nav.opportunities", defaultMessage: "Opportunités par province" }), href: "/investments/opportunities", icon: MapPinned },
+    ],
+  },
+  {
+    titleKey: "nav.businessClimate",
+    title: intl.formatMessage({ id: "nav.businessClimate", defaultMessage: "CLIMAT DES AFFAIRES" }),
+    items: [
+      { name: intl.formatMessage({ id: "nav.businessClimateDashboard", defaultMessage: "Tableau de bord" }), href: "/business-climate", icon: BarChart3 },
+      { name: intl.formatMessage({ id: "nav.barriers", defaultMessage: "Obstacles & Barrières" }), href: "/business-climate/barriers", icon: AlertTriangle },
+      { name: intl.formatMessage({ id: "nav.mediations", defaultMessage: "Médiations" }), href: "/business-climate/mediations", icon: Handshake },
+      { name: intl.formatMessage({ id: "nav.dialogues", defaultMessage: "Dialogues" }), href: "/business-climate/dialogues", icon: Users2 },
+      { name: intl.formatMessage({ id: "nav.legalProposals", defaultMessage: "Propositions légales" }), href: "/business-climate/proposals", icon: Megaphone },
+      { name: intl.formatMessage({ id: "nav.treaties", defaultMessage: "Traités internationaux" }), href: "/business-climate/treaties", icon: Globe },
+      { name: intl.formatMessage({ id: "nav.climateIndicators", defaultMessage: "Indicateurs" }), href: "/business-climate/indicators", icon: Target },
     ],
   },
   {
@@ -258,7 +282,23 @@ const getNavigation = (intl) => [
   },
 ];
 
-export default function DashboardLayout({ children }) {
+// Header title component that uses PageTitleContext
+function HeaderTitle({ navigation, pathname, intl, isActiveLink }) {
+  const { pageTitle } = usePageTitle();
+
+  // Priority: 1. Custom page title from context, 2. Navigation item name, 3. Default "Dashboard"
+  const title = pageTitle ||
+    navigation.flatMap(s => s.items).find(i => i.href && isActiveLink(i.href))?.name ||
+    intl.formatMessage({ id: "nav.dashboard", defaultMessage: "Dashboard" });
+
+  return (
+    <h1 className="text-lg font-semibold text-white">
+      {title}
+    </h1>
+  );
+}
+
+function DashboardLayoutContent({ children }) {
   const { data: session } = useSession();
   const pathname = usePathname();
   const intl = useIntl();
@@ -421,9 +461,24 @@ export default function DashboardLayout({ children }) {
               </button>
 
               <div className="hidden sm:block">
-                <h1 className="text-lg font-semibold text-white">
-                  {navigation.flatMap(s => s.items).find(i => i.href && isActiveLink(i.href))?.name || intl.formatMessage({ id: "nav.dashboard", defaultMessage: "Dashboard" })}
-                </h1>
+                <HeaderTitle
+                  navigation={navigation}
+                  pathname={pathname}
+                  intl={intl}
+                  isActiveLink={isActiveLink}
+                />
+              </div>
+            </div>
+
+            {/* Center - Search Bar */}
+            <div className="hidden md:flex flex-1 max-w-md mx-4">
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder={intl.formatMessage({ id: "search.placeholder", defaultMessage: "Rechercher..." })}
+                  className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
             </div>
 
@@ -498,5 +553,14 @@ export default function DashboardLayout({ children }) {
         }
       `}</style>
     </div>
+  );
+}
+
+// Main export with PageTitleProvider wrapper
+export default function DashboardLayout({ children }) {
+  return (
+    <PageTitleProvider>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </PageTitleProvider>
   );
 }

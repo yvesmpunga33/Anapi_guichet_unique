@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../../lib/auth.js';
-import { Message, MessageAttachment, SystemConfig, sequelize } from '../../../../../models/index.js';
+import { Message, MessageAttachment, SystemConfig } from '../../../../../models/index.js';
 import crypto from 'crypto';
 
 // Cle de chiffrement

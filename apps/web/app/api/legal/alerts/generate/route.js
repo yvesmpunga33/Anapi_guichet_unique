@@ -19,7 +19,7 @@ function calculatePriority(daysRemaining) {
 }
 
 // POST - Générer les alertes automatiquement
-export async function POST(request) {
+export async function POST(_request) {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -278,7 +278,7 @@ export async function POST(request) {
 }
 
 // GET - Statistiques des alertes
-export async function GET(request) {
+export async function GET(_request) {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);

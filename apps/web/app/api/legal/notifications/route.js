@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../lib/auth.js';
-import { sendEmail, sendBulkEmail, verifyEmailConfig } from '../../../lib/email.js';
+import { sendEmail, verifyEmailConfig } from '../../../lib/email.js';
 import { Contract, LegalAlert, User } from '../../../../models/index.js';
 import { Op } from 'sequelize';
 

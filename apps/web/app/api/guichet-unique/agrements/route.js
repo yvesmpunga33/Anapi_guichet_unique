@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../lib/auth.js';
-import { ApprovalRequest, Investor, Investment, User } from '../../../../models/index.js';
+import { ApprovalRequest, Investor } from '../../../../models/index.js';
 import { Op } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
 

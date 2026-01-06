@@ -9,7 +9,6 @@ import {
   Bid,
   Bidder,
   Ministry,
-  User,
   ProcurementContract,
   sequelize,
 } from '../../../../../models/index.js';

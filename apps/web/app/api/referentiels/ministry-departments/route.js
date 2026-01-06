@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../lib/auth.js';
-import { MinistryDepartment, Ministry, sequelize } from '../../../../models/index.js';
+import { MinistryDepartment, Ministry } from '../../../../models/index.js';
 import { Op } from 'sequelize';
 
 // GET /api/referentiels/ministry-departments - Liste des départements par ministère

@@ -90,6 +90,21 @@ import Attendance from './Attendance.js';
 import Overtime from './Overtime.js';
 import WorkSchedule from './WorkSchedule.js';
 import PublicHoliday from './PublicHoliday.js';
+// Climat des Affaires
+import BusinessBarrier from './BusinessBarrier.js';
+import BarrierResolution from './BarrierResolution.js';
+import MediationCase from './MediationCase.js';
+import StakeholderDialogue from './StakeholderDialogue.js';
+import DialogueParticipant from './DialogueParticipant.js';
+import LegalProposal from './LegalProposal.js';
+import InternationalTreaty from './InternationalTreaty.js';
+import ClimateIndicator from './ClimateIndicator.js';
+import ClimateIndicatorValue from './ClimateIndicatorValue.js';
+// Opportunites d'investissement par province
+import ProvinceOpportunity from './ProvinceOpportunity.js';
+import OpportunityDocument from './OpportunityDocument.js';
+import OpportunityApplication from './OpportunityApplication.js';
+import ApplicationDocument from './ApplicationDocument.js';
 
 // ==================== ASSOCIATIONS ====================
 
@@ -559,6 +574,122 @@ Overtime.belongsTo(Payslip, { foreignKey: 'payslipId', as: 'payslip' });
 Overtime.belongsTo(User, { foreignKey: 'requestedById', as: 'requestedBy' });
 Overtime.belongsTo(User, { foreignKey: 'approvedById', as: 'approvedBy' });
 
+// ==================== CLIMAT DES AFFAIRES ====================
+
+// BusinessBarrier - Investor
+BusinessBarrier.belongsTo(Investor, { foreignKey: 'investorId', as: 'investor' });
+Investor.hasMany(BusinessBarrier, { foreignKey: 'investorId', as: 'barriers' });
+
+// BusinessBarrier - Investment
+BusinessBarrier.belongsTo(Investment, { foreignKey: 'projectId', as: 'project' });
+Investment.hasMany(BusinessBarrier, { foreignKey: 'projectId', as: 'barriers' });
+
+// BusinessBarrier - User
+BusinessBarrier.belongsTo(User, { foreignKey: 'assignedToId', as: 'assignedTo' });
+BusinessBarrier.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+BusinessBarrier.belongsTo(User, { foreignKey: 'resolvedById', as: 'resolvedBy' });
+
+// BarrierResolution - BusinessBarrier
+BarrierResolution.belongsTo(BusinessBarrier, { foreignKey: 'barrierId', as: 'barrier' });
+BusinessBarrier.hasMany(BarrierResolution, { foreignKey: 'barrierId', as: 'resolutions', onDelete: 'CASCADE' });
+BarrierResolution.belongsTo(User, { foreignKey: 'performedById', as: 'performedBy' });
+
+// MediationCase - Investor
+MediationCase.belongsTo(Investor, { foreignKey: 'investorId', as: 'investor' });
+Investor.hasMany(MediationCase, { foreignKey: 'investorId', as: 'mediationCases' });
+
+// MediationCase - Investment
+MediationCase.belongsTo(Investment, { foreignKey: 'projectId', as: 'project' });
+Investment.hasMany(MediationCase, { foreignKey: 'projectId', as: 'mediationCases' });
+
+// MediationCase - BusinessBarrier
+MediationCase.belongsTo(BusinessBarrier, { foreignKey: 'barrierId', as: 'barrier' });
+BusinessBarrier.hasMany(MediationCase, { foreignKey: 'barrierId', as: 'mediationCases' });
+
+// MediationCase - User
+MediationCase.belongsTo(User, { foreignKey: 'mediatorId', as: 'mediator' });
+MediationCase.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+
+// StakeholderDialogue - Self-reference (next event)
+StakeholderDialogue.belongsTo(StakeholderDialogue, { foreignKey: 'nextEventId', as: 'nextEvent' });
+StakeholderDialogue.hasOne(StakeholderDialogue, { foreignKey: 'nextEventId', as: 'previousEvent' });
+
+// StakeholderDialogue - User
+StakeholderDialogue.belongsTo(User, { foreignKey: 'organizerId', as: 'organizer' });
+StakeholderDialogue.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+
+// DialogueParticipant - StakeholderDialogue
+DialogueParticipant.belongsTo(StakeholderDialogue, { foreignKey: 'dialogueId', as: 'dialogue' });
+StakeholderDialogue.hasMany(DialogueParticipant, { foreignKey: 'dialogueId', as: 'participants', onDelete: 'CASCADE' });
+
+// DialogueParticipant - Investor
+DialogueParticipant.belongsTo(Investor, { foreignKey: 'investorId', as: 'investor' });
+
+// DialogueParticipant - User
+DialogueParticipant.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+// LegalProposal - JuridicalText
+LegalProposal.belongsTo(JuridicalText, { foreignKey: 'relatedTextId', as: 'relatedText' });
+JuridicalText.hasMany(LegalProposal, { foreignKey: 'relatedTextId', as: 'proposals' });
+
+// LegalProposal - User
+LegalProposal.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+LegalProposal.belongsTo(User, { foreignKey: 'approvedById', as: 'approvedBy' });
+
+// InternationalTreaty - User
+InternationalTreaty.belongsTo(User, { foreignKey: 'responsibleId', as: 'responsible' });
+InternationalTreaty.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+
+// ClimateIndicator - User
+ClimateIndicator.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+
+// ClimateIndicatorValue - ClimateIndicator
+ClimateIndicatorValue.belongsTo(ClimateIndicator, { foreignKey: 'indicatorId', as: 'indicator' });
+ClimateIndicator.hasMany(ClimateIndicatorValue, { foreignKey: 'indicatorId', as: 'values', onDelete: 'CASCADE' });
+
+// ClimateIndicatorValue - User
+ClimateIndicatorValue.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+ClimateIndicatorValue.belongsTo(User, { foreignKey: 'verifiedById', as: 'verifiedBy' });
+
+// ==================== OPPORTUNITES D'INVESTISSEMENT PAR PROVINCE ====================
+
+// ProvinceOpportunity - Province
+ProvinceOpportunity.belongsTo(Province, { foreignKey: 'provinceId', as: 'province' });
+Province.hasMany(ProvinceOpportunity, { foreignKey: 'provinceId', as: 'opportunities' });
+
+// ProvinceOpportunity - Sector
+ProvinceOpportunity.belongsTo(Sector, { foreignKey: 'sectorId', as: 'sector' });
+Sector.hasMany(ProvinceOpportunity, { foreignKey: 'sectorId', as: 'opportunities' });
+
+// ProvinceOpportunity - User (createdBy)
+ProvinceOpportunity.belongsTo(User, { foreignKey: 'createdById', as: 'createdBy' });
+
+// ProvinceOpportunity - OpportunityDocument (documents requis)
+ProvinceOpportunity.hasMany(OpportunityDocument, { foreignKey: 'opportunityId', as: 'requiredDocuments', onDelete: 'CASCADE' });
+OpportunityDocument.belongsTo(ProvinceOpportunity, { foreignKey: 'opportunityId', as: 'opportunity' });
+
+// ProvinceOpportunity - OpportunityApplication (candidatures)
+ProvinceOpportunity.hasMany(OpportunityApplication, { foreignKey: 'opportunityId', as: 'applications', onDelete: 'CASCADE' });
+OpportunityApplication.belongsTo(ProvinceOpportunity, { foreignKey: 'opportunityId', as: 'opportunity' });
+
+// OpportunityApplication - Investor
+OpportunityApplication.belongsTo(Investor, { foreignKey: 'investorId', as: 'investor' });
+Investor.hasMany(OpportunityApplication, { foreignKey: 'investorId', as: 'opportunityApplications' });
+
+// OpportunityApplication - User (reviewedBy)
+OpportunityApplication.belongsTo(User, { foreignKey: 'reviewedById', as: 'reviewedBy' });
+
+// OpportunityApplication - ApplicationDocument
+OpportunityApplication.hasMany(ApplicationDocument, { foreignKey: 'applicationId', as: 'documents', onDelete: 'CASCADE' });
+ApplicationDocument.belongsTo(OpportunityApplication, { foreignKey: 'applicationId', as: 'application' });
+
+// ApplicationDocument - OpportunityDocument (document requis correspondant)
+ApplicationDocument.belongsTo(OpportunityDocument, { foreignKey: 'requiredDocumentId', as: 'requiredDocument' });
+
+// ApplicationDocument - User (uploadedBy, verifiedBy)
+ApplicationDocument.belongsTo(User, { foreignKey: 'uploadedById', as: 'uploadedBy' });
+ApplicationDocument.belongsTo(User, { foreignKey: 'verifiedById', as: 'verifiedBy' });
+
 // Export all models
 export {
   sequelize,
@@ -651,6 +782,21 @@ export {
   Overtime,
   WorkSchedule,
   PublicHoliday,
+  // Climat des Affaires
+  BusinessBarrier,
+  BarrierResolution,
+  MediationCase,
+  StakeholderDialogue,
+  DialogueParticipant,
+  LegalProposal,
+  InternationalTreaty,
+  ClimateIndicator,
+  ClimateIndicatorValue,
+  // Opportunites d'investissement par province
+  ProvinceOpportunity,
+  OpportunityDocument,
+  OpportunityApplication,
+  ApplicationDocument,
 };
 
 export default {
@@ -744,4 +890,19 @@ export default {
   Overtime,
   WorkSchedule,
   PublicHoliday,
+  // Climat des Affaires
+  BusinessBarrier,
+  BarrierResolution,
+  MediationCase,
+  StakeholderDialogue,
+  DialogueParticipant,
+  LegalProposal,
+  InternationalTreaty,
+  ClimateIndicator,
+  ClimateIndicatorValue,
+  // Opportunites d'investissement par province
+  ProvinceOpportunity,
+  OpportunityDocument,
+  OpportunityApplication,
+  ApplicationDocument,
 };

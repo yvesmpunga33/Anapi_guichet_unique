@@ -1,5 +1,5 @@
 import sequelize from '../app/lib/sequelize.js';
-import { Dossier, DossierDocument, ApprovalRequest, Investor, User } from '../models/index.js';
+import { Dossier, ApprovalRequest, Investor, User } from '../models/index.js';
 
 async function syncGuichetUnique() {
   try {

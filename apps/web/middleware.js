@@ -8,20 +8,18 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
 
-  // Routes publiques
-  const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+  // Routes publiques (incluant la landing page et la page investir)
+  const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/investir'];
+  const isPublicRoute = publicRoutes.some(route =>
+    pathname === route || (route !== '/' && pathname.startsWith(route))
+  );
 
   // Routes d'authentification (login/register)
   const isAuthRoute = pathname === '/login' || pathname === '/register';
 
-  // Si sur la page d'accueil, rediriger
+  // La page d'accueil (landing page) est publique - ne pas rediriger
   if (pathname === '/') {
-    if (isLoggedIn) {
-      return Response.redirect(new URL('/dashboard', req.url));
-    } else {
-      return Response.redirect(new URL('/login', req.url));
-    }
+    return; // Laisser la landing page s'afficher
   }
 
   // Si connecté et sur page auth, rediriger vers dashboard

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../lib/auth.js';
-import { Dossier, DossierDocument, DossierSector, Sector, Ministry, Investor, User, Province, City, sequelize } from '../../../../models/index.js';
+import { Dossier, DossierDocument, DossierSector, Sector, Ministry, Investor, Province, City, sequelize } from '../../../../models/index.js';
 import { Op } from 'sequelize';
 
 // Generer un numero de dossier unique

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../../../lib/auth.js';
-import { ProjectRisk, Investment, User, sequelize } from '../../../../../../models/index.js';
-import { Op } from 'sequelize';
+import { ProjectRisk, Investment, User } from '../../../../../../models/index.js';
 
 // GET - Liste des risques d'un projet
 export async function GET(request, { params }) {

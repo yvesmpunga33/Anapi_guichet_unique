@@ -1,4 +1,4 @@
-import { WorkflowStep, sequelize } from '../models/index.js';
+import { WorkflowStep } from '../models/index.js';
 
 async function syncWorkflowSteps() {
   try {

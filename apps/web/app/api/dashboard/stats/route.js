@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../lib/auth.js';
-import { Investor, Investment, ApprovalRequest, LegalDocument, sequelize } from '../../../../models/index.js';
+import { Investor, Investment, ApprovalRequest, LegalDocument, ProjectImpact, ProjectRisk, ProjectMilestone, sequelize } from '../../../../models/index.js';
 import { Op } from 'sequelize';
 
 // GET /api/dashboard/stats - Statistiques du tableau de bord
@@ -41,6 +41,13 @@ export async function GET() {
       monthlyInvestments,
       investorsByType,
       investorsByCountry,
+      impactStats,
+      risksByLevel,
+      risksByCategory,
+      criticalRisks,
+      milestonesByStatus,
+      delayedMilestones,
+      milestoneProgress,
     ] = await Promise.all([
       // Total investors
       Investor.count(),
@@ -220,6 +227,104 @@ export async function GET() {
         limit: 10,
         raw: true,
       }),
+
+      // Impact stats - emplois créés réels
+      ProjectImpact.findOne({
+        attributes: [
+          [sequelize.fn('SUM', sequelize.col('direct_jobs_created')), 'totalDirectJobs'],
+          [sequelize.fn('SUM', sequelize.col('indirect_jobs_created')), 'totalIndirectJobs'],
+          [sequelize.fn('SUM', sequelize.col('permanent_jobs')), 'totalPermanentJobs'],
+          [sequelize.fn('SUM', sequelize.col('temporary_jobs')), 'totalTemporaryJobs'],
+          [sequelize.fn('SUM', sequelize.col('female_jobs')), 'totalFemaleJobs'],
+          [sequelize.fn('SUM', sequelize.col('youth_jobs')), 'totalYouthJobs'],
+          [sequelize.fn('SUM', sequelize.col('local_jobs')), 'totalLocalJobs'],
+          [sequelize.fn('SUM', sequelize.col('actual_revenue')), 'totalRevenue'],
+          [sequelize.fn('SUM', sequelize.col('taxes_paid')), 'totalTaxes'],
+          [sequelize.fn('SUM', sequelize.col('export_revenue')), 'totalExports'],
+          [sequelize.fn('SUM', sequelize.col('local_purchases')), 'totalLocalPurchases'],
+          [sequelize.fn('SUM', sequelize.col('community_investment')), 'totalCommunityInvestment'],
+          [sequelize.fn('SUM', sequelize.col('trained_employees')), 'totalTrainedEmployees'],
+          [sequelize.fn('COUNT', sequelize.col('id')), 'totalReports'],
+        ],
+        raw: true,
+      }),
+
+      // Risks stats
+      ProjectRisk.findAll({
+        attributes: [
+          'riskLevel',
+          [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+        ],
+        where: {
+          status: { [Op.notIn]: ['RESOLVED', 'ACCEPTED'] }
+        },
+        group: ['riskLevel'],
+        raw: true,
+      }),
+
+      // Risks by category
+      ProjectRisk.findAll({
+        attributes: [
+          'category',
+          [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+        ],
+        where: {
+          status: { [Op.notIn]: ['RESOLVED', 'ACCEPTED'] }
+        },
+        group: ['category'],
+        order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']],
+        limit: 5,
+        raw: true,
+      }),
+
+      // Critical risks list
+      ProjectRisk.findAll({
+        where: {
+          riskLevel: { [Op.in]: ['HIGH', 'CRITICAL'] },
+          status: { [Op.notIn]: ['RESOLVED', 'ACCEPTED'] }
+        },
+        include: [{
+          model: Investment,
+          as: 'project',
+          attributes: ['id', 'projectName', 'projectCode'],
+        }],
+        order: [['riskScore', 'DESC']],
+        limit: 5,
+      }),
+
+      // Milestones stats
+      ProjectMilestone.findAll({
+        attributes: [
+          'status',
+          [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+        ],
+        group: ['status'],
+        raw: true,
+      }),
+
+      // Delayed milestones (planned end date passed but not completed)
+      ProjectMilestone.findAll({
+        where: {
+          status: { [Op.notIn]: ['COMPLETED', 'CANCELLED'] },
+          plannedEndDate: { [Op.lt]: new Date() }
+        },
+        include: [{
+          model: Investment,
+          as: 'project',
+          attributes: ['id', 'projectName', 'projectCode'],
+        }],
+        order: [['plannedEndDate', 'ASC']],
+        limit: 5,
+      }),
+
+      // Total milestones progress
+      ProjectMilestone.findOne({
+        attributes: [
+          [sequelize.fn('AVG', sequelize.col('progress')), 'avgProgress'],
+          [sequelize.fn('COUNT', sequelize.col('id')), 'total'],
+        ],
+        raw: true,
+      }),
     ]);
 
     // Cast stats results
@@ -288,6 +393,72 @@ export async function GET() {
       count: parseInt(c.count),
     }));
 
+    // Format impact stats
+    const impacts = {
+      totalDirectJobs: parseInt(impactStats?.totalDirectJobs) || 0,
+      totalIndirectJobs: parseInt(impactStats?.totalIndirectJobs) || 0,
+      totalPermanentJobs: parseInt(impactStats?.totalPermanentJobs) || 0,
+      totalTemporaryJobs: parseInt(impactStats?.totalTemporaryJobs) || 0,
+      totalFemaleJobs: parseInt(impactStats?.totalFemaleJobs) || 0,
+      totalYouthJobs: parseInt(impactStats?.totalYouthJobs) || 0,
+      totalLocalJobs: parseInt(impactStats?.totalLocalJobs) || 0,
+      totalRevenue: parseFloat(impactStats?.totalRevenue) || 0,
+      totalTaxes: parseFloat(impactStats?.totalTaxes) || 0,
+      totalExports: parseFloat(impactStats?.totalExports) || 0,
+      totalLocalPurchases: parseFloat(impactStats?.totalLocalPurchases) || 0,
+      totalCommunityInvestment: parseFloat(impactStats?.totalCommunityInvestment) || 0,
+      totalTrainedEmployees: parseInt(impactStats?.totalTrainedEmployees) || 0,
+      totalReports: parseInt(impactStats?.totalReports) || 0,
+    };
+
+    // Format risks distribution
+    const risksDistribution = risksByLevel.map(r => ({
+      level: r.riskLevel,
+      count: parseInt(r.count),
+    }));
+
+    const risksCategoryDistribution = risksByCategory.map(r => ({
+      category: r.category,
+      count: parseInt(r.count),
+    }));
+
+    // Format critical risks
+    const formattedCriticalRisks = criticalRisks.map(r => {
+      const riskJson = r.toJSON();
+      return {
+        id: riskJson.id,
+        title: riskJson.title,
+        category: riskJson.category,
+        riskLevel: riskJson.riskLevel,
+        riskScore: riskJson.riskScore,
+        status: riskJson.status,
+        projectId: riskJson.project?.id,
+        projectName: riskJson.project?.projectName,
+        projectCode: riskJson.project?.projectCode,
+      };
+    });
+
+    // Format milestones stats
+    const milestonesDistribution = milestonesByStatus.map(m => ({
+      status: m.status,
+      count: parseInt(m.count),
+    }));
+
+    // Format delayed milestones
+    const formattedDelayedMilestones = delayedMilestones.map(m => {
+      const milestoneJson = m.toJSON();
+      return {
+        id: milestoneJson.id,
+        name: milestoneJson.name,
+        status: milestoneJson.status,
+        progress: milestoneJson.progress,
+        plannedEndDate: milestoneJson.plannedEndDate,
+        projectId: milestoneJson.project?.id,
+        projectName: milestoneJson.project?.projectName,
+        projectCode: milestoneJson.project?.projectCode,
+      };
+    });
+
     return NextResponse.json({
       summary: {
         totalInvestors,
@@ -333,6 +504,25 @@ export async function GET() {
           createdAt: invJson.createdAt,
         };
       }),
+      // New consolidated impact data
+      impacts,
+      // Risks data
+      risks: {
+        distribution: risksDistribution,
+        byCategory: risksCategoryDistribution,
+        critical: formattedCriticalRisks,
+        totalCritical: formattedCriticalRisks.length,
+        totalHigh: risksDistribution.find(r => r.level === 'HIGH')?.count || 0,
+      },
+      // Milestones data
+      milestones: {
+        distribution: milestonesDistribution,
+        delayed: formattedDelayedMilestones,
+        avgProgress: Math.round(parseFloat(milestoneProgress?.avgProgress) || 0),
+        total: parseInt(milestoneProgress?.total) || 0,
+        completed: milestonesDistribution.find(m => m.status === 'COMPLETED')?.count || 0,
+        inProgress: milestonesDistribution.find(m => m.status === 'IN_PROGRESS')?.count || 0,
+      },
     });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);

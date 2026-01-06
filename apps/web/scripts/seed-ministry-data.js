@@ -8,7 +8,6 @@ import {
   MinistryWorkflow,
   MinistryRequest,
   MinistryRequestHistory,
-  sequelize
 } from '../models/index.js';
 
 // Données de workflow par type de demande

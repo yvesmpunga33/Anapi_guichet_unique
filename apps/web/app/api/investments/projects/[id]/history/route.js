@@ -5,7 +5,7 @@ import { ProjectHistory, Investment } from '../../../../../../models/index.js';
 // GET - Liste de l'historique d'un projet
 export async function GET(request, { params }) {
   try {
-    const session = await auth();
+    const _session = await auth();
     const { id } = await params;
 
     // Verifier que le projet existe

@@ -24,7 +24,7 @@ function decrypt(text) {
 async function getEmailConfig() {
   try {
     // Import dynamique pour eviter les problemes de chargement circulaire
-    const { SystemConfig } = await import('../../../models/index.js');
+    const { SystemConfig } = await import('../../models/index.js');
 
     const configs = await SystemConfig.findAll({
       where: { category: 'email' },

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../../../lib/auth.js';
-import { BidderRating, Bidder, ProcurementContract, Tender, User, sequelize } from '../../../../../../models/index.js';
-import { Op } from 'sequelize';
+import { BidderRating, Bidder, ProcurementContract, Tender, User } from '../../../../../../models/index.js';
 
 // GET - Liste des évaluations d'un fournisseur
 export async function GET(request, { params }) {

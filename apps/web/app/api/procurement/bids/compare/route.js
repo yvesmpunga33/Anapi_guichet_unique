@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../../lib/auth.js';
-import { Bid, Bidder, Tender, TenderLot, BidderRating, sequelize } from '../../../../../models/index.js';
+import { Bid, Bidder, Tender, TenderLot, BidderRating } from '../../../../../models/index.js';
 import { Op } from 'sequelize';
 
 // POST - Comparer des offres

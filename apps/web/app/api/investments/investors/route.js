@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../lib/auth.js';
-import { Investor, Investment } from '../../../../models/index.js';
+import { Investor } from '../../../../models/index.js';
 import { Op } from 'sequelize';
 
 // GET - Liste des investisseurs

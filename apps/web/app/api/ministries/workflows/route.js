@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { MinistryWorkflow, Ministry } from '../../../../models/index.js';
-import { Op } from 'sequelize';
 
 // GET - Liste des workflows par ministère
 export async function GET(request) {

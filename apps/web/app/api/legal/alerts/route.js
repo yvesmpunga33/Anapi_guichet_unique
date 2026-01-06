@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { LegalAlert, Contract, JuridicalText, ContractType, sequelize } from '../../../../models/index.js';
+import { LegalAlert, Contract, JuridicalText, ContractType } from '../../../../models/index.js';
 import { Op } from 'sequelize';
 
 // Générer un numéro d'alerte unique

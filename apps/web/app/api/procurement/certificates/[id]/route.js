@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../../lib/auth.js';
-import { ProcurementContract, Bidder, Tender, Ministry, User, sequelize } from '../../../../../models/index.js';
+import { ProcurementContract, Bidder, Tender, Ministry, User } from '../../../../../models/index.js';
 
 // GET - Générer les données pour le certificat
 export async function GET(request, { params }) {

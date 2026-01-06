@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../../../lib/auth.js';
-import { ProjectMilestone, Investment, User, sequelize } from '../../../../../../models/index.js';
-import { Op } from 'sequelize';
+import { ProjectMilestone, Investment, User } from '../../../../../../models/index.js';
 
 // GET - Liste des jalons d'un projet
 export async function GET(request, { params }) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ActeAdministratif, PieceRequise, ActeAdministration, Sector, Ministry } from '../../../../../models/index.js';
+import { ActeAdministratif, PieceRequise, Sector, Ministry } from '../../../../../models/index.js';
 
 // GET - Obtenir un acte par ID
 export async function GET(request, { params }) {

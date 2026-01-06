@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../lib/auth.js';
-import { Bidder, BidderDocument, Country, Province, City, User, sequelize } from '../../../../models/index.js';
+import { Bidder, Country, Province, City, sequelize } from '../../../../models/index.js';
 import { Op } from 'sequelize';
 
 // GET - Liste des soumissionnaires

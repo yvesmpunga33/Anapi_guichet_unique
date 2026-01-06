@@ -3,7 +3,7 @@ import { auth } from '../../../lib/auth.js';
 import { Message, MessageRecipient, User } from '../../../../models/index.js';
 
 // GET - Nombre de messages non lus
-export async function GET(request) {
+export async function GET() {
   try {
     const session = await auth();
     if (!session?.user?.id) {

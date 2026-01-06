@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../lib/auth.js';
-import { WorkerCategory, Employee, sequelize } from '../../../../models/index.js';
+import { WorkerCategory, Employee } from '../../../../models/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import { fn, col } from 'sequelize';
 
 // GET /api/hr/worker-categories
-export async function GET(request) {
+export async function GET() {
   try {
     const session = await auth();
     if (!session) {

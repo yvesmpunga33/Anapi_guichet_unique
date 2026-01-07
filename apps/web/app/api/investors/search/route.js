@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { Investor, Province, City } from '../../../../models/index.js';
+import { Investor } from '../../../../models/index.js';
 import { Op } from 'sequelize';
 
 // GET - Rechercher des investisseurs existants
@@ -24,10 +24,6 @@ export async function GET(request) {
           { phone: { [Op.iLike]: `%${query}%` } },
         ],
       },
-      include: [
-        { model: Province, as: 'province', attributes: ['id', 'name'] },
-        { model: City, as: 'city', attributes: ['id', 'name'] },
-      ],
       limit,
       order: [['name', 'ASC']],
     });
@@ -43,17 +39,13 @@ export async function GET(request) {
         email: inv.email,
         phone: inv.phone,
         country: inv.country,
-        province: inv.province?.name || inv.provinceName,
-        provinceId: inv.provinceId,
-        city: inv.city?.name || inv.cityName,
-        cityId: inv.cityId,
-        commune: inv.communeName,
-        communeId: inv.communeId,
+        province: inv.province,
+        city: inv.city,
         address: inv.address,
-        representativeName: inv.representativeName,
-        representativeFunction: inv.representativeFunction,
-        representativePhone: inv.representativePhone,
-        representativeEmail: inv.representativeEmail,
+        contactPerson: inv.contactPerson,
+        contactPosition: inv.contactPosition,
+        contactPhone: inv.contactPhone,
+        contactEmail: inv.contactEmail,
       })),
     });
   } catch (error) {

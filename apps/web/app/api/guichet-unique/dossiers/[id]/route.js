@@ -7,6 +7,7 @@ export async function GET(request, { params }) {
   try {
     const { id } = await params;
 
+    // Requete principale sans les associations Province/City qui peuvent causer des erreurs
     const dossier = await Dossier.findByPk(id, {
       include: [
         { model: User, as: 'assignedTo', attributes: ['id', 'name', 'email'] },
@@ -19,12 +20,41 @@ export async function GET(request, { params }) {
           separate: true,
           order: [['createdAt', 'DESC']],
         },
-        { model: Province, as: 'investorProvinceRef', attributes: ['id', 'code', 'name'] },
-        { model: City, as: 'investorCityRef', attributes: ['id', 'code', 'name'] },
-        { model: Province, as: 'projectProvinceRef', attributes: ['id', 'code', 'name'] },
-        { model: City, as: 'projectCityRef', attributes: ['id', 'code', 'name'] },
       ],
     });
+
+    // Essayer de charger les refs Province/City separement pour eviter les erreurs
+    if (dossier) {
+      try {
+        if (dossier.investorProvinceId) {
+          const investorProvince = await Province.findByPk(dossier.investorProvinceId, {
+            attributes: ['id', 'code', 'name']
+          });
+          dossier.dataValues.investorProvinceRef = investorProvince;
+        }
+        if (dossier.investorCityId) {
+          const investorCity = await City.findByPk(dossier.investorCityId, {
+            attributes: ['id', 'code', 'name']
+          });
+          dossier.dataValues.investorCityRef = investorCity;
+        }
+        if (dossier.projectProvinceId) {
+          const projectProvince = await Province.findByPk(dossier.projectProvinceId, {
+            attributes: ['id', 'code', 'name']
+          });
+          dossier.dataValues.projectProvinceRef = projectProvince;
+        }
+        if (dossier.projectCityId) {
+          const projectCity = await City.findByPk(dossier.projectCityId, {
+            attributes: ['id', 'code', 'name']
+          });
+          dossier.dataValues.projectCityRef = projectCity;
+        }
+      } catch (refError) {
+        // Ignorer les erreurs de chargement des refs Province/City
+        console.warn('Could not load Province/City refs:', refError.message);
+      }
+    }
 
     if (!dossier) {
       return NextResponse.json(
@@ -257,16 +287,12 @@ export async function PATCH(request, { params }) {
       await dossier.update(updateData);
     }
 
-    // Reload with associations
+    // Reload with associations (sans Province/City pour eviter les erreurs)
     await dossier.reload({
       include: [
         { model: User, as: 'assignedTo', attributes: ['id', 'name', 'email'] },
         { model: Ministry, as: 'ministry', attributes: ['id', 'name', 'shortName', 'code'] },
         { model: DossierDocument, as: 'documents' },
-        { model: Province, as: 'projectProvinceRef', attributes: ['id', 'code', 'name'] },
-        { model: City, as: 'projectCityRef', attributes: ['id', 'code', 'name'] },
-        { model: Province, as: 'investorProvinceRef', attributes: ['id', 'code', 'name'] },
-        { model: City, as: 'investorCityRef', attributes: ['id', 'code', 'name'] },
       ],
     });
 

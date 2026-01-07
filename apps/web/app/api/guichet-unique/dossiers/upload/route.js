@@ -5,6 +5,58 @@ import { Op } from 'sequelize';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import sharp from 'sharp';
+
+// Configuration de la taille maximale des fichiers (10 MB)
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+// Types de fichiers autorisés
+const ALLOWED_FILE_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+];
+
+// Types d'images qui peuvent être compressés
+const COMPRESSIBLE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+// Fonction pour compresser une image
+async function compressImage(buffer, mimeType) {
+  try {
+    let sharpInstance = sharp(buffer);
+
+    // Réduire la qualité et redimensionner si l'image est trop grande
+    const metadata = await sharpInstance.metadata();
+
+    // Redimensionner si l'image dépasse 2000px
+    if (metadata.width > 2000 || metadata.height > 2000) {
+      sharpInstance = sharpInstance.resize(2000, 2000, {
+        fit: 'inside',
+        withoutEnlargement: true
+      });
+    }
+
+    // Compresser selon le type
+    if (mimeType === 'image/jpeg') {
+      return await sharpInstance.jpeg({ quality: 80 }).toBuffer();
+    } else if (mimeType === 'image/png') {
+      return await sharpInstance.png({ compressionLevel: 8 }).toBuffer();
+    } else if (mimeType === 'image/webp') {
+      return await sharpInstance.webp({ quality: 80 }).toBuffer();
+    }
+
+    return buffer;
+  } catch (error) {
+    console.error('Error compressing image:', error);
+    return buffer; // Retourner le buffer original en cas d'erreur
+  }
+}
 
 // Generer un numero de dossier unique
 async function generateDossierNumber() {
@@ -134,6 +186,8 @@ export async function POST(request) {
     const uploadedDocuments = [];
 
     // Parcourir tous les champs du FormData pour trouver les fichiers
+    const fileErrors = [];
+
     for (const [key, value] of formData.entries()) {
       if (key.startsWith('documents[') && value instanceof File) {
         // Extraire l'ID du type de document: documents[uuid] -> uuid
@@ -141,13 +195,38 @@ export async function POST(request) {
 
         if (docTypeId && value.size > 0) {
           const file = value;
+
+          // Valider le type de fichier
+          if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+            fileErrors.push(`${file.name}: Type de fichier non autorisé`);
+            continue;
+          }
+
+          // Valider la taille du fichier
+          if (file.size > MAX_FILE_SIZE) {
+            fileErrors.push(`${file.name}: Fichier trop volumineux (max 10 MB)`);
+            continue;
+          }
+
           const fileExtension = path.extname(file.name);
           const uniqueFileName = `${Date.now()}_${uuidv4()}${fileExtension}`;
           const filePath = path.join(uploadDir, uniqueFileName);
 
-          // Convertir le fichier en buffer et l'écrire
+          // Convertir le fichier en buffer
           const bytes = await file.arrayBuffer();
-          const buffer = Buffer.from(bytes);
+          let buffer = Buffer.from(bytes);
+          let finalSize = file.size;
+
+          // Compresser automatiquement les images
+          if (COMPRESSIBLE_IMAGE_TYPES.includes(file.type)) {
+            const compressedBuffer = await compressImage(buffer, file.type);
+            if (compressedBuffer.length < buffer.length) {
+              console.log(`Image ${file.name} compressée: ${buffer.length} -> ${compressedBuffer.length} bytes`);
+              buffer = compressedBuffer;
+              finalSize = compressedBuffer.length;
+            }
+          }
+
           await writeFile(filePath, buffer);
 
           // Créer l'entrée dans la base de données
@@ -159,7 +238,7 @@ export async function POST(request) {
             originalName: file.name,
             filePath: `/uploads/guichet-unique/dossiers/${dossier.id}/${uniqueFileName}`,
             mimeType: file.type,
-            fileSize: file.size,
+            fileSize: finalSize,
             category: 'required',
             uploadedById: session?.user?.id || null,
           }, { transaction });
@@ -167,6 +246,15 @@ export async function POST(request) {
           uploadedDocuments.push(document);
         }
       }
+    }
+
+    // Si des erreurs de fichiers ont été détectées, renvoyer l'erreur
+    if (fileErrors.length > 0 && uploadedDocuments.length === 0) {
+      await transaction.rollback();
+      return NextResponse.json(
+        { error: 'Erreur de validation des fichiers', details: fileErrors },
+        { status: 400 }
+      );
     }
 
     await transaction.commit();

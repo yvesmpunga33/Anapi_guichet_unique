@@ -3,53 +3,38 @@ import sequelize from '../app/lib/sequelize.js';
 
 const Province = sequelize.define('Province', {
   id: {
-    type: DataTypes.UUID,
+    type: DataTypes.TEXT,
     primaryKey: true,
-    defaultValue: DataTypes.UUIDV4,
   },
   code: {
-    type: DataTypes.STRING(10),
+    type: DataTypes.TEXT,
     allowNull: false,
     unique: true,
   },
   name: {
-    type: DataTypes.STRING,
+    type: DataTypes.TEXT,
     allowNull: false,
   },
-  nameFr: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    field: 'name_fr',
-  },
-  nameEn: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    field: 'name_en',
-  },
   capital: {
-    type: DataTypes.STRING,
+    type: DataTypes.TEXT,
     allowNull: true,
   },
   population: {
-    type: DataTypes.BIGINT,
+    type: DataTypes.INTEGER,
     allowNull: true,
   },
   area: {
-    type: DataTypes.DECIMAL(12, 2),
+    type: DataTypes.DOUBLE,
     allowNull: true,
   },
   isActive: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: true,
-    field: 'is_active',
   },
 }, {
-  tableName: 'provinces',
-  underscored: true,
+  tableName: 'Province',
   timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
 });
 
 export default Province;

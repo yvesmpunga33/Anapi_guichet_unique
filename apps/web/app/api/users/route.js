@@ -6,9 +6,27 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
-// Generate a unique ID similar to cuid2
-function generateId() {
-  return crypto.randomBytes(16).toString('hex');
+// Generate a UUID v4
+function generateUUID() {
+  return crypto.randomUUID();
+}
+
+// Valeurs acceptées pour le rôle (enum PostgreSQL)
+const VALID_ROLES = ['admin', 'manager', 'agent', 'investor', 'partner'];
+
+// Parser les modules de manière sécurisée
+function parseModules(modules) {
+  if (!modules) return [];
+  if (Array.isArray(modules)) return modules;
+  if (typeof modules === 'string') {
+    try {
+      const parsed = JSON.parse(modules);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
 }
 
 // GET /api/users - Liste tous les utilisateurs
@@ -41,7 +59,7 @@ export async function GET(request) {
     }
 
     const users = await User.findAll({
-      attributes: ['id', 'email', 'name', 'role', 'isActive', 'image', 'phone', 'department', 'ministryId', 'modules', 'createdAt', 'updatedAt'],
+      attributes: ['id', 'email', 'name', 'role', 'isActive', 'image', 'phone', 'department', 'ministryId', 'modules', 'created_at', 'updated_at'],
       where: whereClause,
       include: [
         {
@@ -51,7 +69,7 @@ export async function GET(request) {
           required: false,
         },
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
     });
 
     // Filter by search if provided
@@ -90,8 +108,10 @@ export async function POST(request) {
       );
     }
 
-    // Vérifier le rôle admin
-    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN') {
+    // Vérifier le rôle admin (insensible à la casse, accepte admin/manager)
+    const userRole = (session.user.role || '').toLowerCase();
+    const allowedRoles = ['admin', 'super_admin', 'manager'];
+    if (!allowedRoles.includes(userRole)) {
       return NextResponse.json(
         { error: 'Accès refusé' },
         { status: 403 }
@@ -102,12 +122,12 @@ export async function POST(request) {
     const name = formData.get('name');
     const email = formData.get('email');
     const password = formData.get('password');
-    const role = formData.get('role') || 'USER';
+    const role = formData.get('role') || 'agent';
     const department = formData.get('department');
     const phone = formData.get('phone');
     const ministryId = formData.get('ministryId');
     const modules = formData.get('modules');
-    const isActive = formData.get('isActive') === 'true';
+    const isActive = formData.get('isActive') !== 'false'; // Par défaut true
     const photo = formData.get('photo');
 
     // Validation
@@ -118,6 +138,11 @@ export async function POST(request) {
       );
     }
 
+    // Extraire firstName et lastName du name complet
+    const nameParts = name.trim().split(' ');
+    const firstName = nameParts[0] || 'Utilisateur';
+    const lastName = nameParts.slice(1).join(' ') || 'Nouveau';
+
     // Vérifier si l'email existe déjà
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
@@ -127,11 +152,14 @@ export async function POST(request) {
       );
     }
 
+    // Valider le rôle
+    const normalizedRole = (role || 'agent').toLowerCase();
+    const validRole = VALID_ROLES.includes(normalizedRole) ? normalizedRole : 'agent';
+
     // Hacher le mot de passe
     let hashedPassword = null;
-    if (password) {
-      hashedPassword = await bcrypt.hash(password, 10);
-    }
+    const passwordToHash = password || 'Temporaire123!';
+    hashedPassword = await bcrypt.hash(passwordToHash, 10);
 
     // Gérer l'upload de la photo
     let imagePath = null;
@@ -153,22 +181,24 @@ export async function POST(request) {
 
     // Créer l'utilisateur
     const user = await User.create({
-      id: generateId(),
-      name,
+      id: generateUUID(),
+      firstName,
+      lastName,
+      name, // Garder aussi le nom complet pour compatibilité
       email,
       password: hashedPassword,
-      role,
+      role: validRole,
       department: department || null,
       phone: phone || null,
       ministryId: ministryId || null,
-      modules: modules ? JSON.parse(modules) : [],
+      modules: parseModules(modules),
       isActive,
       image: imagePath,
     });
 
     // Récupérer l'utilisateur avec son ministère
     const newUser = await User.findByPk(user.id, {
-      attributes: ['id', 'email', 'name', 'role', 'isActive', 'image', 'phone', 'department', 'ministryId', 'modules', 'createdAt'],
+      attributes: ['id', 'email', 'name', 'role', 'isActive', 'image', 'phone', 'department', 'ministryId', 'modules', 'created_at'],
       include: [
         {
           model: Ministry,

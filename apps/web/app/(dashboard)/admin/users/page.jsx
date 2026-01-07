@@ -28,6 +28,7 @@ import {
   UserPlus,
   Save,
   AlertTriangle,
+  ChevronDown,
 } from "lucide-react";
 
 // Liste des modules disponibles
@@ -45,11 +46,11 @@ const AVAILABLE_MODULES = [
 ];
 
 const ROLES = [
-  { id: "USER", name: "Utilisateur", description: "Accès limité", color: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300" },
-  { id: "AGENT", name: "Agent", description: "Traitement des dossiers", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
-  { id: "MANAGER", name: "Manager", description: "Supervision d'équipe", color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400" },
-  { id: "ADMIN", name: "Administrateur", description: "Accès complet", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400" },
-  { id: "SUPER_ADMIN", name: "Super Admin", description: "Tous les droits", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" },
+  { id: "agent", name: "Agent", description: "Traitement des dossiers", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
+  { id: "manager", name: "Manager", description: "Supervision d'équipe", color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400" },
+  { id: "admin", name: "Administrateur", description: "Accès complet", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400" },
+  { id: "investor", name: "Investisseur", description: "Accès investisseur", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
+  { id: "partner", name: "Partenaire", description: "Accès partenaire", color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400" },
 ];
 
 export default function UsersPage() {
@@ -65,14 +66,15 @@ export default function UsersPage() {
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [activeTab, setActiveTab] = useState("info");
+  const [showModulesDropdown, setShowModulesDropdown] = useState(false);
   const fileInputRef = useRef(null);
+  const modulesDropdownRef = useRef(null);
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
-    role: "USER",
+    role: "agent",
     department: "",
     phone: "",
     ministryId: "",
@@ -87,6 +89,17 @@ export default function UsersPage() {
   useEffect(() => {
     fetchUsers();
     fetchMinistries();
+  }, []);
+
+  // Close modules dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (modulesDropdownRef.current && !modulesDropdownRef.current.contains(event.target)) {
+        setShowModulesDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const fetchUsers = async () => {
@@ -150,7 +163,7 @@ export default function UsersPage() {
         name: user.name || "",
         email: user.email || "",
         password: "",
-        role: user.role || "USER",
+        role: user.role || "agent",
         department: user.department || "",
         phone: user.phone || "",
         ministryId: user.ministryId || "",
@@ -165,7 +178,7 @@ export default function UsersPage() {
         name: "",
         email: "",
         password: "",
-        role: "USER",
+        role: "agent",
         department: "",
         phone: "",
         ministryId: "",
@@ -176,8 +189,8 @@ export default function UsersPage() {
       });
     }
     setErrors({});
-    setActiveTab("info");
     setShowPassword(false);
+    setShowModulesDropdown(false);
     setShowModal(true);
   };
 
@@ -189,7 +202,7 @@ export default function UsersPage() {
       name: "",
       email: "",
       password: "",
-      role: "USER",
+      role: "agent",
       department: "",
       phone: "",
       ministryId: "",
@@ -280,7 +293,6 @@ export default function UsersPage() {
         handleCloseModal();
         fetchUsers();
 
-        // Notification de succès
         Swal.fire({
           icon: 'success',
           title: editingUser ? 'Utilisateur modifié' : 'Utilisateur créé',
@@ -324,7 +336,6 @@ export default function UsersPage() {
         setShowDeleteConfirm(null);
         fetchUsers();
 
-        // Notification de succès
         Swal.fire({
           icon: 'success',
           title: 'Utilisateur supprimé',
@@ -355,7 +366,7 @@ export default function UsersPage() {
   };
 
   const getRoleBadge = (role) => {
-    const roleConfig = ROLES.find((r) => r.id === role) || ROLES[0];
+    const roleConfig = ROLES.find((r) => r.id === role?.toLowerCase()) || ROLES[0];
     return roleConfig;
   };
 
@@ -363,7 +374,7 @@ export default function UsersPage() {
   const stats = {
     total: users.length,
     active: users.filter((u) => u.isActive).length,
-    admins: users.filter((u) => u.role === "ADMIN" || u.role === "SUPER_ADMIN").length,
+    admins: users.filter((u) => u.role?.toLowerCase() === "admin").length,
   };
 
   return (
@@ -583,23 +594,27 @@ export default function UsersPage() {
         )}
       </div>
 
-      {/* Modal Professionnel */}
+      {/* Modal - Formulaire Unique Professionnel */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-5">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header avec photo */}
+            <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="relative">
+                  <div className="relative group">
                     {formData.photoPreview ? (
-                      <Image src={formData.photoPreview} alt="Preview" width={64} height={64} className="w-16 h-16 rounded-full object-cover border-4 border-white/30" unoptimized />
+                      <Image src={formData.photoPreview} alt="Preview" width={72} height={72} className="w-18 h-18 rounded-2xl object-cover border-4 border-white/30 shadow-lg" unoptimized />
                     ) : (
-                      <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center border-4 border-white/30">
+                      <div className="w-18 h-18 rounded-2xl bg-white/20 flex items-center justify-center border-4 border-white/30 shadow-lg">
                         <User className="w-8 h-8 text-white" />
                       </div>
                     )}
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute -bottom-1 -right-1 p-1.5 bg-white text-blue-600 rounded-full hover:bg-gray-100 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute -bottom-2 -right-2 p-2 bg-white text-blue-600 rounded-xl hover:bg-gray-100 shadow-lg transition-transform hover:scale-105"
+                    >
                       <Camera className="w-4 h-4" />
                     </button>
                     <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
@@ -608,135 +623,107 @@ export default function UsersPage() {
                     <h2 className="text-xl font-bold text-white">
                       {editingUser ? "Modifier l'utilisateur" : "Nouvel utilisateur"}
                     </h2>
-                    <p className="text-white/70 text-sm">
-                      {editingUser ? "Mettez à jour les informations" : "Créez un nouveau compte utilisateur"}
+                    <p className="text-white/70 text-sm mt-1">
+                      {editingUser ? "Modifiez les informations du compte" : "Remplissez le formulaire pour créer un compte"}
                     </p>
                   </div>
                 </div>
-                <button onClick={handleCloseModal} className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg">
+                <button
+                  onClick={handleCloseModal}
+                  className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+                >
                   <X className="w-6 h-6" />
                 </button>
               </div>
             </div>
 
-            {/* Tabs */}
-            <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-              <div className="flex px-6">
-                <button onClick={() => setActiveTab("info")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === "info" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    Informations
-                  </div>
-                </button>
-                <button onClick={() => setActiveTab("security")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === "security" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4" />
-                    Sécurité & Rôle
-                  </div>
-                </button>
-                <button onClick={() => setActiveTab("modules")} className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === "modules" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
-                  <div className="flex items-center gap-2">
-                    <LayoutGrid className="w-4 h-4" />
-                    Modules ({formData.modules.length})
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Content */}
+            {/* Formulaire unique */}
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-              <div className="p-6">
-                {/* Tab: Informations */}
-                {activeTab === "info" && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Nom complet <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                          <input
-                            type="text"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className={`w-full pl-10 pr-4 py-3 border ${errors.name ? "border-red-500" : "border-gray-300 dark:border-gray-600"} rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                            placeholder="Jean Dupont"
-                          />
-                        </div>
-                        {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Email <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                          <input
-                            type="email"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            className={`w-full pl-10 pr-4 py-3 border ${errors.email ? "border-red-500" : "border-gray-300 dark:border-gray-600"} rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                            placeholder="jean.dupont@exemple.com"
-                          />
-                        </div>
-                        {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Téléphone</label>
-                        <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                          <input
-                            type="text"
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="+243 XXX XXX XXX"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Département / Service</label>
-                        <div className="relative">
-                          <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                          <input
-                            type="text"
-                            value={formData.department}
-                            onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="Direction des Investissements"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
+              <div className="p-6 space-y-6">
+                {/* Section: Informations personnelles */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Informations personnelles
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ministère de rattachement</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                        Nom complet <span className="text-red-500">*</span>
+                      </label>
                       <div className="relative">
-                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <select
-                          value={formData.ministryId}
-                          onChange={(e) => setFormData({ ...formData, ministryId: e.target.value })}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
-                        >
-                          <option value="">-- Aucun ministère --</option>
-                          {ministries.map((ministry) => (
-                            <option key={ministry.id} value={ministry.id}>{ministry.name}</option>
-                          ))}
-                        </select>
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="text"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          className={`w-full pl-10 pr-4 py-2.5 border ${errors.name ? "border-red-500 focus:ring-red-500" : "border-gray-300 dark:border-gray-600 focus:ring-blue-500"} rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent transition-shadow`}
+                          placeholder="Jean Dupont"
+                        />
+                      </div>
+                      {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                        Email <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          className={`w-full pl-10 pr-4 py-2.5 border ${errors.email ? "border-red-500 focus:ring-red-500" : "border-gray-300 dark:border-gray-600 focus:ring-blue-500"} rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent transition-shadow`}
+                          placeholder="jean.dupont@exemple.com"
+                        />
+                      </div>
+                      {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                        Téléphone
+                      </label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="text"
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                          placeholder="+243 XXX XXX XXX"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                        Département / Service
+                      </label>
+                      <div className="relative">
+                        <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="text"
+                          value={formData.department}
+                          onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                          className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                          placeholder="Direction des Investissements"
+                        />
                       </div>
                     </div>
                   </div>
-                )}
+                </div>
 
-                {/* Tab: Sécurité */}
-                {activeTab === "security" && (
-                  <div className="space-y-6">
+                {/* Divider */}
+                <div className="border-t border-gray-200 dark:border-gray-700" />
+
+                {/* Section: Sécurité et Rôle */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Shield className="w-4 h-4" />
+                    Sécurité et accès
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                         Mot de passe {editingUser ? "(laisser vide pour conserver)" : <span className="text-red-500">*</span>}
                       </label>
                       <div className="relative">
@@ -745,104 +732,164 @@ export default function UsersPage() {
                           type={showPassword ? "text" : "password"}
                           value={formData.password}
                           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                          className={`w-full pl-10 pr-12 py-3 border ${errors.password ? "border-red-500" : "border-gray-300 dark:border-gray-600"} rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                          className={`w-full pl-10 pr-12 py-2.5 border ${errors.password ? "border-red-500 focus:ring-red-500" : "border-gray-300 dark:border-gray-600 focus:ring-blue-500"} rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent transition-shadow`}
                           placeholder="••••••••"
                         />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
                           {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
                       </div>
                       {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
-                      <p className="mt-2 text-xs text-gray-500">Minimum 6 caractères</p>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Rôle de l'utilisateur</label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {ROLES.map((role) => (
-                          <label
-                            key={role.id}
-                            className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.role === role.id ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"}`}
-                          >
-                            <input type="radio" name="role" value={role.id} checked={formData.role === role.id} onChange={(e) => setFormData({ ...formData, role: e.target.value })} className="sr-only" />
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.role === role.id ? "border-blue-600 bg-blue-600" : "border-gray-300 dark:border-gray-500"}`}>
-                              {formData.role === role.id && <Check className="w-3 h-3 text-white" />}
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900 dark:text-white">{role.name}</p>
-                              <p className="text-sm text-gray-500">{role.description}</p>
-                            </div>
-                          </label>
-                        ))}
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                        Rôle <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <select
+                          value={formData.role}
+                          onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                          className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer"
+                        >
+                          {ROLES.map((role) => (
+                            <option key={role.id} value={role.id}>{role.name} - {role.description}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                       </div>
                     </div>
-
-                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-white">Compte actif</p>
-                        <p className="text-sm text-gray-500">L'utilisateur peut se connecter au système</p>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                        Ministère de rattachement
+                      </label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <select
+                          value={formData.ministryId}
+                          onChange={(e) => setFormData({ ...formData, ministryId: e.target.value })}
+                          className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer"
+                        >
+                          <option value="">-- Aucun ministère --</option>
+                          {ministries.map((ministry) => (
+                            <option key={ministry.id} value={ministry.id}>{ministry.name}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="sr-only peer" />
-                        <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600"></div>
+                    </div>
+                    <div className="flex items-center">
+                      <label className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl w-full cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <div className="relative">
+                          <input
+                            type="checkbox"
+                            checked={formData.isActive}
+                            onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600"></div>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-white text-sm">Compte actif</p>
+                          <p className="text-xs text-gray-500">Peut se connecter</p>
+                        </div>
                       </label>
                     </div>
                   </div>
-                )}
+                </div>
 
-                {/* Tab: Modules */}
-                {activeTab === "modules" && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Sélectionnez les modules auxquels l'utilisateur aura accès</p>
-                      <div className="flex gap-2">
-                        <button type="button" onClick={selectAllModules} className="text-sm text-blue-600 hover:text-blue-700 font-medium">Tout sélectionner</button>
-                        <span className="text-gray-300">|</span>
-                        <button type="button" onClick={deselectAllModules} className="text-sm text-gray-600 hover:text-gray-700 font-medium">Tout désélectionner</button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {AVAILABLE_MODULES.map((module) => (
-                        <label
-                          key={module.id}
-                          className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.modules.includes(module.id) ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"}`}
-                        >
-                          <input type="checkbox" checked={formData.modules.includes(module.id)} onChange={() => handleModuleToggle(module.id)} className="sr-only" />
-                          <div className={`w-5 h-5 rounded flex items-center justify-center ${formData.modules.includes(module.id) ? "bg-blue-600 text-white" : "bg-gray-200 dark:bg-gray-600"}`}>
-                            {formData.modules.includes(module.id) && <Check className="w-3 h-3" />}
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-white">{module.name}</p>
-                            <p className="text-sm text-gray-500">{module.description}</p>
-                          </div>
-                        </label>
-                      ))}
+                {/* Divider */}
+                <div className="border-t border-gray-200 dark:border-gray-700" />
+
+                {/* Section: Modules */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                      <LayoutGrid className="w-4 h-4" />
+                      Modules autorisés ({formData.modules.length})
+                    </h3>
+                    <div className="flex gap-2 text-sm">
+                      <button
+                        type="button"
+                        onClick={selectAllModules}
+                        className="text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        Tout sélectionner
+                      </button>
+                      <span className="text-gray-300 dark:text-gray-600">|</span>
+                      <button
+                        type="button"
+                        onClick={deselectAllModules}
+                        className="text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 font-medium"
+                      >
+                        Tout désélectionner
+                      </button>
                     </div>
                   </div>
-                )}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {AVAILABLE_MODULES.map((module) => (
+                      <label
+                        key={module.id}
+                        className={`flex items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                          formData.modules.includes(module.id)
+                            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                            : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.modules.includes(module.id)}
+                          onChange={() => handleModuleToggle(module.id)}
+                          className="sr-only"
+                        />
+                        <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${
+                          formData.modules.includes(module.id)
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-200 dark:bg-gray-600"
+                        }`}>
+                          {formData.modules.includes(module.id) && <Check className="w-3 h-3" />}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+                          {module.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Footer */}
-              <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 px-6 py-4">
-                {/* Progress bar when saving */}
+              <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-800/80 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700 px-6 py-4">
                 {saving && (
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
                         {editingUser ? "Mise à jour en cours..." : "Création en cours..."}
                       </span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">Veuillez patienter</span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
-                      <div className="bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 h-2.5 rounded-full animate-progress-bar"></div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 h-1.5 rounded-full animate-pulse" style={{ width: '100%' }}></div>
                     </div>
                   </div>
                 )}
                 <div className="flex justify-end gap-3">
-                  <button type="button" onClick={handleCloseModal} disabled={saving} className="px-5 py-2.5 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    disabled={saving}
+                    className="px-5 py-2.5 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
                     Annuler
                   </button>
-                  <button type="submit" disabled={saving} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 font-medium shadow-lg shadow-blue-600/20 min-w-[180px] justify-center">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 font-medium shadow-lg shadow-blue-600/20 min-w-[160px] justify-center transition-all hover:shadow-xl hover:shadow-blue-600/30"
+                  >
                     {saving ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -851,7 +898,7 @@ export default function UsersPage() {
                     ) : (
                       <>
                         <Save className="w-5 h-5" />
-                        <span>{editingUser ? "Mettre à jour" : "Créer l'utilisateur"}</span>
+                        <span>{editingUser ? "Mettre à jour" : "Créer"}</span>
                       </>
                     )}
                   </button>
@@ -877,10 +924,10 @@ export default function UsersPage() {
               <span className="text-sm text-red-500">Cette action est irréversible.</span>
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setShowDeleteConfirm(null)} className="flex-1 px-4 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 font-medium">
+              <button onClick={() => setShowDeleteConfirm(null)} className="flex-1 px-4 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 font-medium transition-colors">
                 Annuler
               </button>
-              <button onClick={() => handleDelete(showDeleteConfirm.id)} className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 font-medium">
+              <button onClick={() => handleDelete(showDeleteConfirm.id)} className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 font-medium transition-colors">
                 Supprimer
               </button>
             </div>

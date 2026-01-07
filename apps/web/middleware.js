@@ -47,9 +47,10 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
+     * - images (images publiques)
      * - data (GeoJSON and static data files)
      * - api (toutes les routes API - gérées par leur propre auth)
      */
-    '/((?!_next/static|_next/image|favicon.ico|public|data|api).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public|images|data|api).*)',
   ],
 };

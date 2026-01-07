@@ -61,7 +61,7 @@ export async function PUT(request, { params }) {
     }
 
     // Vérifier le rôle admin
-    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN') {
+    if (session.user.role !== 'admin' && session.user.role !== 'super_admin') {
       return NextResponse.json(
         { error: 'Accès refusé' },
         { status: 403 }
@@ -184,7 +184,7 @@ export async function DELETE(request, { params }) {
     }
 
     // Vérifier le rôle admin
-    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN') {
+    if (session.user.role !== 'admin' && session.user.role !== 'super_admin') {
       return NextResponse.json(
         { error: 'Accès refusé' },
         { status: 403 }

@@ -6,66 +6,101 @@ class User extends Model {}
 User.init(
   {
     id: {
-      type: DataTypes.TEXT,
+      type: DataTypes.UUID,
       primaryKey: true,
+      defaultValue: DataTypes.UUIDV4,
     },
     email: {
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
     },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
     password: {
       type: DataTypes.STRING,
+      allowNull: false,
+    },
+    firstName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      field: 'first_name',
+    },
+    lastName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      field: 'last_name',
+    },
+    phone: {
+      type: DataTypes.STRING,
       allowNull: true,
     },
-    image: {
-      type: DataTypes.TEXT,
+    avatar: {
+      type: DataTypes.STRING,
       allowNull: true,
     },
     role: {
       type: DataTypes.STRING,
-      defaultValue: 'USER',
+      defaultValue: 'agent',
     },
-    department: {
-      type: DataTypes.TEXT,
+    language: {
+      type: DataTypes.STRING,
+      defaultValue: 'fr',
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      field: 'is_active',
+    },
+    isVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: 'is_verified',
+    },
+    lastLoginAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'last_login_at',
+    },
+    provinceId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'province_id',
+    },
+    cityId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'city_id',
+    },
+    name: {
+      type: DataTypes.STRING,
       allowNull: true,
     },
-    phone: {
-      type: DataTypes.TEXT,
+    image: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    department: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    modules: {
+      type: DataTypes.ARRAY(DataTypes.TEXT),
       allowNull: true,
     },
     ministryId: {
       type: DataTypes.UUID,
       allowNull: true,
-      references: {
-        model: 'ministries',
-        key: 'id',
-      },
-    },
-    modules: {
-      type: DataTypes.JSONB,
-      allowNull: true,
-      defaultValue: [],
-      comment: 'Liste des modules auxquels l\'utilisateur a accès',
-    },
-    isActive: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true,
-    },
-    emailVerified: {
-      type: DataTypes.DATE,
-      allowNull: true,
+      field: 'ministry_id',
     },
   },
   {
     sequelize,
-    tableName: 'User',
+    tableName: 'users',
     modelName: 'User',
+    underscored: true,
     freezeTableName: true,
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
   }
 );
 

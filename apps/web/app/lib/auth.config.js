@@ -1,6 +1,8 @@
 // Configuration NextAuth pour le Edge Runtime (middleware)
 // Ne contient PAS d'accès à la base de données (Sequelize)
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 /** @type {import('next-auth').NextAuthConfig} */
 export const authConfig = {
   pages: {
@@ -11,6 +13,18 @@ export const authConfig = {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 jours
   },
+  cookies: {
+    sessionToken: {
+      name: isProduction ? '__Secure-authjs.session-token' : 'authjs.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: isProduction,
+      },
+    },
+  },
+  trustHost: true,
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;

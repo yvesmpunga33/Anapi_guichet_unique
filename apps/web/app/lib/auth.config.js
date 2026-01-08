@@ -1,5 +1,6 @@
 // Configuration NextAuth pour le Edge Runtime (middleware)
 // Ne contient PAS d'accès à la base de données (Sequelize)
+// Détection automatique de l'environnement (local vs production)
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -32,7 +33,10 @@ export const authConfig = {
       const isOnHR = nextUrl.pathname.startsWith('/hr');
       const isOnGuichet = nextUrl.pathname.startsWith('/guichet-unique');
       const isOnMinistry = nextUrl.pathname.startsWith('/ministry-portal');
-      const isProtectedRoute = isOnDashboard || isOnHR || isOnGuichet || isOnMinistry;
+      const isOnAdmin = nextUrl.pathname.startsWith('/admin');
+      const isOnInvestments = nextUrl.pathname.startsWith('/investments');
+      const isOnJuridique = nextUrl.pathname.startsWith('/juridique');
+      const isProtectedRoute = isOnDashboard || isOnHR || isOnGuichet || isOnMinistry || isOnAdmin || isOnInvestments || isOnJuridique;
 
       const isAuthRoute = nextUrl.pathname === '/login' || nextUrl.pathname === '/register';
 

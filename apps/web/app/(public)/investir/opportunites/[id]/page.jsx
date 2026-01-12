@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { PublicOpportunityGetById } from "@/app/services/Public.service";
 import {
   MapPin,
   ArrowLeft,
@@ -75,12 +76,10 @@ export default function OpportunityDetailPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/public/opportunities/${params.id}`);
-        const data = await res.json();
-
-        if (data.opportunity) {
-          setOpportunity(data.opportunity);
-          setRelatedOpportunities(data.relatedOpportunities || []);
+        const response = await PublicOpportunityGetById(params.id);
+        if (response.data?.opportunity) {
+          setOpportunity(response.data.opportunity);
+          setRelatedOpportunities(response.data.relatedOpportunities || []);
         }
       } catch (err) {
         console.error("Error fetching opportunity:", err);

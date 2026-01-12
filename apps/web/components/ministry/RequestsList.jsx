@@ -25,6 +25,7 @@ import {
   FileBadge,
   FileKey,
 } from "lucide-react";
+import { MinistryRequestList, MinistryRequestUpdate } from "@/app/services/admin/Ministry.service";
 
 const statusConfig = {
   DRAFT: { label: "Brouillon", color: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300", icon: Clock },
@@ -86,21 +87,21 @@ export default function RequestsList({
     else setLoading(true);
 
     try {
-      const params = new URLSearchParams({
+      const params = {
         ministryId,
         requestType,
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
-      });
+      };
 
-      if (searchTerm) params.append("search", searchTerm);
-      if (statusFilter !== "all") params.append("status", statusFilter);
-      if (priorityFilter !== "all") params.append("priority", priorityFilter);
+      if (searchTerm) params.search = searchTerm;
+      if (statusFilter !== "all") params.status = statusFilter;
+      if (priorityFilter !== "all") params.priority = priorityFilter;
 
-      const response = await fetch(`/api/ministries/requests?${params}`);
-      const result = await response.json();
+      const response = await MinistryRequestList(params);
+      const result = response.data;
 
-      if (response.ok) {
+      if (result) {
         setRequests(result.data || []);
         setStats(result.stats || stats);
         setPagination((prev) => ({
@@ -136,17 +137,13 @@ export default function RequestsList({
     if (!selectedRequest) return;
 
     try {
-      const response = await fetch(`/api/ministries/requests/${selectedRequest.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action,
-          comment: actionComment,
-          reason: actionComment,
-        }),
+      const response = await MinistryRequestUpdate(selectedRequest.id, {
+        action,
+        comment: actionComment,
+        reason: actionComment,
       });
 
-      if (response.ok) {
+      if (response.data) {
         setSuccessMessage(
           action === "APPROVE"
             ? "Demande approuvee avec succes"

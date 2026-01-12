@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { BidderList, BidderDelete } from "@/app/services/admin/Procurement.service";
 import {
   Building2,
   Plus,
@@ -70,18 +71,18 @@ export default function BiddersPage() {
   const fetchBidders = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
-      });
+      };
 
-      if (search) params.append("search", search);
-      if (statusFilter) params.append("status", statusFilter);
-      if (categoryFilter) params.append("category", categoryFilter);
-      if (verifiedFilter) params.append("isVerified", verifiedFilter);
+      if (search) params.search = search;
+      if (statusFilter) params.status = statusFilter;
+      if (categoryFilter) params.category = categoryFilter;
+      if (verifiedFilter) params.isVerified = verifiedFilter;
 
-      const response = await fetch(`/api/procurement/bidders?${params}`);
-      const data = await response.json();
+      const response = await BidderList(params);
+      const data = response.data;
 
       if (data.success) {
         setBidders(data.data);
@@ -107,10 +108,8 @@ export default function BiddersPage() {
   const handleDelete = async (id) => {
     setDeleting(true);
     try {
-      const response = await fetch(`/api/procurement/bidders/${id}`, {
-        method: "DELETE",
-      });
-      const data = await response.json();
+      const response = await BidderDelete(id);
+      const data = response.data;
 
       if (data.success) {
         fetchBidders();

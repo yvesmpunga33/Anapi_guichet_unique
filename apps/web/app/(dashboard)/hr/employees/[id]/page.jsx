@@ -25,6 +25,9 @@ import {
   Shield,
 } from "lucide-react";
 
+// Services
+import { EmployeeGetById } from "@/app/services/admin/HR.service";
+
 const tabs = [
   { id: "personal", name: "Informations Personnelles", icon: User },
   { id: "family", name: "Agregat Familial", icon: Users },
@@ -50,11 +53,8 @@ export default function EmployeeDetailPage() {
   const fetchEmployee = async (id) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/hr/employees/${id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setEmployee(data.employee);
-      }
+      const response = await EmployeeGetById(id);
+      setEmployee(response.data?.employee || response.data);
     } catch (error) {
       console.error("Error fetching employee:", error);
     } finally {

@@ -29,6 +29,7 @@ import {
   Hash,
   ExternalLink,
 } from "lucide-react";
+import { BidGetById, BidDelete } from "@/app/services/admin/Procurement.service";
 
 const statusColors = {
   RECEIVED: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
@@ -78,8 +79,8 @@ export default function BidDetailPage() {
   useEffect(() => {
     const fetchBid = async () => {
       try {
-        const response = await fetch(`/api/procurement/bids/${params.id}`);
-        const data = await response.json();
+        const response = await BidGetById(params.id);
+        const data = response.data;
 
         if (data.success) {
           setBid(data.data);
@@ -101,10 +102,8 @@ export default function BidDetailPage() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      const response = await fetch(`/api/procurement/bids/${params.id}`, {
-        method: "DELETE",
-      });
-      const data = await response.json();
+      const response = await BidDelete(params.id);
+      const data = response.data;
 
       if (data.success) {
         router.push("/procurement/bids");

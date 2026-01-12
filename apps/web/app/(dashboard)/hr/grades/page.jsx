@@ -11,6 +11,9 @@ import {
   TrendingUp,
 } from "lucide-react";
 
+// Services
+import { GradeList, GradeCreate, GradeUpdate, GradeDelete } from "@/app/services/admin/HR.service";
+
 export default function GradesPage() {
   const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,11 +38,8 @@ export default function GradesPage() {
   const fetchGrades = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/hr/grades");
-      if (response.ok) {
-        const data = await response.json();
-        setGrades(data.grades || []);
-      }
+      const response = await GradeList();
+      setGrades(response.data?.grades || []);
     } catch (error) {
       console.error("Error fetching grades:", error);
     } finally {
@@ -50,22 +50,14 @@ export default function GradesPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const method = editingGrade ? "PUT" : "POST";
-      const url = editingGrade
-        ? `/api/hr/grades/${editingGrade.id}`
-        : "/api/hr/grades";
-
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        fetchGrades();
-        setShowModal(false);
-        resetForm();
+      if (editingGrade) {
+        await GradeUpdate(editingGrade.id, formData);
+      } else {
+        await GradeCreate(formData);
       }
+      fetchGrades();
+      setShowModal(false);
+      resetForm();
     } catch (error) {
       console.error("Error saving grade:", error);
     }
@@ -75,13 +67,8 @@ export default function GradesPage() {
     if (!confirm("Êtes-vous sûr de vouloir supprimer ce grade ?")) return;
 
     try {
-      const response = await fetch(`/api/hr/grades/${id}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        fetchGrades();
-      }
+      await GradeDelete(id);
+      fetchGrades();
     } catch (error) {
       console.error("Error deleting grade:", error);
     }

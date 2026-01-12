@@ -26,6 +26,13 @@ import {
   Briefcase,
   Building2,
 } from "lucide-react";
+import {
+  ReferentielSectorList,
+  ReferentielSectorCreate,
+  ReferentielSectorUpdate,
+  ReferentielSectorDelete,
+  ReferentielMinistryList,
+} from "@/app/services/admin/Referentiel.service";
 
 const sectorIcons = {
   mining: Pickaxe,
@@ -94,14 +101,14 @@ export default function SectorsPage() {
   const fetchSectors = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
+      const params = {
         page: currentPage.toString(),
         limit: "12",
         ...(searchTerm && { search: searchTerm }),
-      });
+      };
 
-      const response = await fetch(`/api/referentiels/sectors?${params}`);
-      const result = await response.json();
+      const response = await ReferentielSectorList(params);
+      const result = response.data;
 
       // Handle both response formats (with success/data or direct sectors array)
       const data = result.success ? result.data : (result.sectors || []);
@@ -123,8 +130,8 @@ export default function SectorsPage() {
 
   const fetchMinistries = async () => {
     try {
-      const response = await fetch("/api/referentiels/ministries?isActive=true");
-      const result = await response.json();
+      const response = await ReferentielMinistryList({ isActive: true });
+      const result = response.data;
       setMinistries(result.ministries || []);
     } catch (err) {
       console.error("Erreur chargement ministères:", err);
@@ -187,20 +194,14 @@ export default function SectorsPage() {
     setError(null);
 
     try {
-      const url = "/api/referentiels/sectors";
+      let response;
+      if (selectedSector) {
+        response = await ReferentielSectorUpdate(selectedSector.id, formData);
+      } else {
+        response = await ReferentielSectorCreate(formData);
+      }
 
-      // Inclure l'ID dans le body pour les mises à jour
-      const bodyData = selectedSector
-        ? { ...formData, id: selectedSector.id }
-        : formData;
-
-      const response = await fetch(url, {
-        method: selectedSector ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bodyData),
-      });
-
-      const result = await response.json();
+      const result = response.data;
 
       if (result.sector || result.success) {
         setShowModal(false);
@@ -227,11 +228,8 @@ export default function SectorsPage() {
   const handleDelete = async () => {
     setSaving(true);
     try {
-      const response = await fetch(
-        `/api/referentiels/sectors?id=${selectedSector.id}`,
-        { method: "DELETE" }
-      );
-      const result = await response.json();
+      const response = await ReferentielSectorDelete(selectedSector.id);
+      const result = response.data;
 
       if (result.success || result.message) {
         setShowDeleteModal(false);
@@ -255,16 +253,9 @@ export default function SectorsPage() {
 
   const toggleStatus = async (sector) => {
     try {
-      const response = await fetch(
-        `/api/referentiels/sectors?id=${sector.id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isActive: !sector.isActive }),
-        }
-      );
+      const response = await ReferentielSectorUpdate(sector.id, { isActive: !sector.isActive });
 
-      if (response.ok) {
+      if (response.data) {
         fetchSectors();
       }
     } catch (err) {

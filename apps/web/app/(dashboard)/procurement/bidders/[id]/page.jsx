@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { BidderGetById, BidderDelete } from "@/app/services/admin/Procurement.service";
 import {
   Building2,
   ArrowLeft,
@@ -73,8 +74,8 @@ export default function BidderDetailPage() {
   useEffect(() => {
     const fetchBidder = async () => {
       try {
-        const response = await fetch(`/api/procurement/bidders/${params.id}`);
-        const data = await response.json();
+        const response = await BidderGetById(params.id);
+        const data = response.data;
 
         if (data.success) {
           setBidder(data.data);
@@ -96,10 +97,8 @@ export default function BidderDetailPage() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      const response = await fetch(`/api/procurement/bidders/${params.id}`, {
-        method: "DELETE",
-      });
-      const data = await response.json();
+      const response = await BidderDelete(params.id);
+      const data = response.data;
 
       if (data.success) {
         router.push("/procurement/bidders");

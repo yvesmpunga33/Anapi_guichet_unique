@@ -20,6 +20,12 @@ import {
   Clock,
   XCircle,
 } from "lucide-react";
+import {
+  LegalTextList,
+  LegalTextDelete,
+  DocumentTypeList,
+  LegalDomainList,
+} from "@/app/services/admin/Legal.service";
 
 export default function LegalTextsPage() {
   const [texts, setTexts] = useState([]);
@@ -45,13 +51,11 @@ export default function LegalTextsPage() {
   const fetchReferentials = async () => {
     try {
       const [typesRes, domainsRes] = await Promise.all([
-        fetch("/api/legal/document-types?activeOnly=true"),
-        fetch("/api/legal/domains?activeOnly=true"),
+        DocumentTypeList({ activeOnly: true }),
+        LegalDomainList({ activeOnly: true }),
       ]);
-      const typesData = await typesRes.json();
-      const domainsData = await domainsRes.json();
-      setDocumentTypes(typesData.types || []);
-      setDomains(domainsData.domains || []);
+      setDocumentTypes(typesRes.data.types || []);
+      setDomains(domainsRes.data.domains || []);
     } catch (error) {
       console.error("Error fetching referentials:", error);
     }
@@ -60,24 +64,22 @@ export default function LegalTextsPage() {
   const fetchTexts = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page,
         limit: 20,
-      });
-      if (filters.search) params.append("search", filters.search);
-      if (filters.typeId) params.append("typeId", filters.typeId);
-      if (filters.domainId) params.append("domainId", filters.domainId);
-      if (filters.status) params.append("status", filters.status);
+      };
+      if (filters.search) params.search = filters.search;
+      if (filters.typeId) params.typeId = filters.typeId;
+      if (filters.domainId) params.domainId = filters.domainId;
+      if (filters.status) params.status = filters.status;
 
-      const response = await fetch(`/api/legal/texts?${params}`);
-      const data = await response.json();
-      if (response.ok) {
-        setTexts(data.texts || []);
-        setPagination((prev) => ({
-          ...prev,
-          totalPages: data.pagination?.totalPages || 1,
-        }));
-      }
+      const response = await LegalTextList(params);
+      const data = response.data;
+      setTexts(data.texts || []);
+      setPagination((prev) => ({
+        ...prev,
+        totalPages: data.pagination?.totalPages || 1,
+      }));
     } catch (error) {
       console.error("Error fetching texts:", error);
     } finally {
@@ -88,12 +90,8 @@ export default function LegalTextsPage() {
   const handleDelete = async (id) => {
     if (!confirm("Voulez-vous vraiment supprimer ce texte ?")) return;
     try {
-      const response = await fetch(`/api/legal/texts/${id}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        fetchTexts();
-      }
+      await LegalTextDelete(id);
+      fetchTexts();
     } catch (error) {
       console.error("Error deleting text:", error);
     }

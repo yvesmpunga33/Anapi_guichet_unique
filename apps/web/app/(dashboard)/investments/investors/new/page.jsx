@@ -14,6 +14,9 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
+// Services
+import { InvestorCreate } from "@/app/services/admin/Investor.service";
+
 const investorTypes = [
   { value: "company", label: "Societe", icon: Building2, description: "Entreprise ou societe commerciale" },
   { value: "individual", label: "Individuel", icon: User, description: "Personne physique" },
@@ -109,24 +112,11 @@ export default function NewInvestorPage() {
 
     setLoading(true);
     try {
-      const response = await fetch("/api/investments/investors", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Erreur lors de la creation");
-      }
-
+      await InvestorCreate(formData);
       router.push("/investments/investors");
     } catch (error) {
       console.error("Submit error:", error);
-      setErrors({ submit: error.message });
+      setErrors({ submit: error.response?.data?.message || error.message || "Erreur lors de la creation" });
       setLoading(false);
     }
   };

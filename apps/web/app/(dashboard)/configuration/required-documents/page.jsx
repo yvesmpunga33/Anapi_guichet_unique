@@ -22,6 +22,7 @@ import {
   ClipboardList,
   Factory,
 } from "lucide-react";
+import { RequiredDocumentList, RequiredDocumentCreate, RequiredDocumentUpdate, RequiredDocumentDelete } from "@/app/services/admin/Config.service";
 
 const dossierTypes = [
   { value: "AGREMENT_REGIME", label: "Agréments", icon: Shield, color: "blue" },
@@ -61,9 +62,8 @@ export default function RequiredDocumentsPage() {
   const fetchDocuments = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/config/required-documents?dossierType=${selectedType}`);
-      const data = await response.json();
-      setDocuments(data.documents || []);
+      const response = await RequiredDocumentList({ dossierType: selectedType });
+      setDocuments(response.data?.documents || []);
     } catch (error) {
       console.error("Erreur chargement documents:", error);
     } finally {
@@ -106,19 +106,14 @@ export default function RequiredDocumentsPage() {
     setSaving(true);
 
     try {
-      const url = "/api/config/required-documents";
-      const method = editingDoc ? "PUT" : "POST";
-      const body = editingDoc ? { ...formData, id: editingDoc.id } : formData;
+      let response;
+      if (editingDoc) {
+        response = await RequiredDocumentUpdate(editingDoc.id, formData);
+      } else {
+        response = await RequiredDocumentCreate(formData);
+      }
 
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      const result = await response.json();
-
-      if (result.document) {
+      if (response.data?.document) {
         setShowModal(false);
         fetchDocuments();
         Swal.fire({
@@ -132,7 +127,7 @@ export default function RequiredDocumentsPage() {
         Swal.fire({
           icon: "error",
           title: "Erreur",
-          text: result.error || "Une erreur est survenue",
+          text: response.data?.error || "Une erreur est survenue",
         });
       }
     } catch (error) {
@@ -156,19 +151,14 @@ export default function RequiredDocumentsPage() {
 
     if (result.isConfirmed) {
       try {
-        const response = await fetch(`/api/config/required-documents?id=${doc.id}`, {
-          method: "DELETE",
+        await RequiredDocumentDelete(doc.id);
+        fetchDocuments();
+        Swal.fire({
+          icon: "success",
+          title: "Supprimé",
+          timer: 2000,
+          showConfirmButton: false,
         });
-
-        if (response.ok) {
-          fetchDocuments();
-          Swal.fire({
-            icon: "success",
-            title: "Supprimé",
-            timer: 2000,
-            showConfirmButton: false,
-          });
-        }
       } catch (error) {
         console.error("Erreur suppression:", error);
       }
@@ -177,11 +167,7 @@ export default function RequiredDocumentsPage() {
 
   const toggleRequired = async (doc) => {
     try {
-      await fetch("/api/config/required-documents", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: doc.id, isRequired: !doc.isRequired }),
-      });
+      await RequiredDocumentUpdate(doc.id, { isRequired: !doc.isRequired });
       fetchDocuments();
     } catch (error) {
       console.error("Erreur:", error);
@@ -190,11 +176,7 @@ export default function RequiredDocumentsPage() {
 
   const toggleActive = async (doc) => {
     try {
-      await fetch("/api/config/required-documents", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: doc.id, isActive: !doc.isActive }),
-      });
+      await RequiredDocumentUpdate(doc.id, { isActive: !doc.isActive });
       fetchDocuments();
     } catch (error) {
       console.error("Erreur:", error);

@@ -32,6 +32,9 @@ import Link from "next/link";
 import { useIntl } from "react-intl";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+// Services
+import { ProjectList } from "@/app/services/admin/Project.service";
+
 // Statuts de projet (workflow d'approbation) - fonction dynamique pour l'internationalisation
 const getProjectStatusConfig = (intl) => ({
   DRAFT: { label: intl.formatMessage({ id: "status.draft", defaultMessage: "Brouillon" }), color: "text-gray-600", bgColor: "bg-gray-100", icon: Clock },
@@ -73,25 +76,21 @@ export default function TrackingPage() {
       setLoading(true);
       setError(null);
 
-      const params = new URLSearchParams();
+      const params = {};
       if (statusFilter !== "all") {
-        params.append("status", statusFilter);
+        params.status = statusFilter;
       }
       if (searchTerm) {
-        params.append("search", searchTerm);
+        params.search = searchTerm;
       }
 
-      const response = await fetch(`/api/investments/projects?${params.toString()}`);
+      const response = await ProjectList(params);
+      const data = response.data;
 
-      if (!response.ok) {
-        throw new Error("Erreur lors du chargement des projets");
-      }
-
-      const data = await response.json();
       setProjects(data.projects || []);
     } catch (err) {
       console.error("Error fetching projects:", err);
-      setError(err.message);
+      setError(err.response?.data?.message || err.message || intl.formatMessage({ id: "tracking.error.loading", defaultMessage: "Erreur lors du chargement des projets" }));
     } finally {
       setLoading(false);
     }

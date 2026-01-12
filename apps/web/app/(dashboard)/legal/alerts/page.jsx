@@ -21,6 +21,12 @@ import {
   Zap,
   TrendingUp,
 } from "lucide-react";
+import {
+  LegalAlertList,
+  LegalAlertUpdate,
+  LegalAlertGenerate,
+  LegalAlertGenerateStats,
+} from "@/app/services/admin/Legal.service";
 
 export default function LegalAlertsPage() {
   const [alerts, setAlerts] = useState([]);
@@ -42,11 +48,8 @@ export default function LegalAlertsPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch("/api/legal/alerts/generate");
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data.stats);
-      }
+      const response = await LegalAlertGenerateStats();
+      setStats(response.data.stats);
     } catch (error) {
       console.error("Error fetching stats:", error);
     }
@@ -56,28 +59,19 @@ export default function LegalAlertsPage() {
     setGenerating(true);
     setNotification(null);
     try {
-      const response = await fetch("/api/legal/alerts/generate", {
-        method: "POST",
+      const response = await LegalAlertGenerate();
+      const data = response.data;
+      setNotification({
+        type: "success",
+        message: data.message,
+        details: data.alertsCreated,
       });
-      const data = await response.json();
-      if (response.ok) {
-        setNotification({
-          type: "success",
-          message: data.message,
-          details: data.alertsCreated,
-        });
-        fetchAlerts();
-        fetchStats();
-      } else {
-        setNotification({
-          type: "error",
-          message: data.error || "Erreur lors de la generation",
-        });
-      }
+      fetchAlerts();
+      fetchStats();
     } catch (error) {
       setNotification({
         type: "error",
-        message: "Erreur de connexion au serveur",
+        message: error.response?.data?.error || "Erreur lors de la generation",
       });
     } finally {
       setGenerating(false);
@@ -87,23 +81,21 @@ export default function LegalAlertsPage() {
   const fetchAlerts = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page,
         limit: 20,
-      });
-      if (filters.status) params.append("status", filters.status);
-      if (filters.priority) params.append("priority", filters.priority);
-      if (filters.type) params.append("type", filters.type);
+      };
+      if (filters.status) params.status = filters.status;
+      if (filters.priority) params.priority = filters.priority;
+      if (filters.type) params.type = filters.type;
 
-      const response = await fetch(`/api/legal/alerts?${params}`);
-      const data = await response.json();
-      if (response.ok) {
-        setAlerts(data.alerts || []);
-        setPagination((prev) => ({
-          ...prev,
-          totalPages: data.pagination?.totalPages || 1,
-        }));
-      }
+      const response = await LegalAlertList(params);
+      const data = response.data;
+      setAlerts(data.alerts || []);
+      setPagination((prev) => ({
+        ...prev,
+        totalPages: data.pagination?.totalPages || 1,
+      }));
     } catch (error) {
       console.error("Error fetching alerts:", error);
     } finally {
@@ -113,14 +105,8 @@ export default function LegalAlertsPage() {
 
   const handleResolve = async (id) => {
     try {
-      const response = await fetch(`/api/legal/alerts/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "RESOLVED", resolvedAt: new Date() }),
-      });
-      if (response.ok) {
-        fetchAlerts();
-      }
+      await LegalAlertUpdate(id, { status: "RESOLVED", resolvedAt: new Date() });
+      fetchAlerts();
     } catch (error) {
       console.error("Error resolving alert:", error);
     }
@@ -129,14 +115,8 @@ export default function LegalAlertsPage() {
   const handleDismiss = async (id) => {
     if (!confirm("Voulez-vous vraiment ignorer cette alerte ?")) return;
     try {
-      const response = await fetch(`/api/legal/alerts/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "DISMISSED" }),
-      });
-      if (response.ok) {
-        fetchAlerts();
-      }
+      await LegalAlertUpdate(id, { status: "DISMISSED" });
+      fetchAlerts();
     } catch (error) {
       console.error("Error dismissing alert:", error);
     }

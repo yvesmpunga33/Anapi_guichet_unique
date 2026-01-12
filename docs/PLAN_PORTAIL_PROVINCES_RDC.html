@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Plan Portail Provinces RDC</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Plan Portail Provinces RDC</h1>
+</header>
+<h1 id="plan-de-développement---portail-multi-province-rdc">PLAN DE
+DÉVELOPPEMENT - PORTAIL MULTI-PROVINCE RDC</h1>
+<h2 id="projet-système-de-gestion-des-26-provinces-de-la-rdc">PROJET :
+Système de Gestion des 26 Provinces de la RDC</h2>
+<p><strong>Date de création :</strong> 11 Janvier 2026 <strong>Version
+:</strong> 1.0 <strong>Client :</strong> ANAPI - Agence Nationale pour
+la Promotion des Investissements</p>
+<hr />
+<h2 id="vision-du-projet">1. VISION DU PROJET</h2>
+<p>Créer un portail unifié permettant aux 26 provinces de la RDC de : -
+Gérer leurs opportunités d’investissement - Promouvoir leurs
+réalisations et attraits - Attirer les investisseurs nationaux et
+internationaux - Centraliser les informations économiques et
+administratives</p>
+<hr />
+<h2 id="architecture-technique">2. ARCHITECTURE TECHNIQUE</h2>
+<h3 id="stack-technologique">Stack Technologique</h3>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Technologie</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Frontend</td>
+<td>Next.js 15 (App Router)</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td>Node.js + Express</td>
+</tr>
+<tr>
+<td>Base de données</td>
+<td>PostgreSQL</td>
+</tr>
+<tr>
+<td>ORM</td>
+<td>Sequelize</td>
+</tr>
+<tr>
+<td>Authentification</td>
+<td>NextAuth.js (séparé par portail)</td>
+</tr>
+<tr>
+<td>Styling</td>
+<td>Tailwind CSS</td>
+</tr>
+<tr>
+<td>Déploiement</td>
+<td>PM2 + Nginx</td>
+</tr>
+</tbody>
+</table>
+<h3 id="architecture-multi-tenant">Architecture Multi-Tenant</h3>
+<ul>
+<li><strong>Une seule base de code</strong> pour les 26 provinces</li>
+<li><strong>Menu dynamique</strong> configurable par province</li>
+<li><strong>Authentification séparée</strong> (ANAPI vs Province vs
+Investisseur)</li>
+</ul>
+<hr />
+<h2 id="phases-de-développement">3. PHASES DE DÉVELOPPEMENT</h2>
+<h3 id="phase-1-authentification-fondations">PHASE 1 : AUTHENTIFICATION
+&amp; FONDATIONS</h3>
+<p><strong>Durée estimée :</strong> À définir <strong>Statut :</strong>
+🔄 En cours</p>
+<table>
+<thead>
+<tr>
+<th>Tâche</th>
+<th>Description</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.1</td>
+<td>Modèle <code>ProvinceUser</code> - Utilisateurs province</td>
+<td>✅ Fait</td>
+</tr>
+<tr>
+<td>1.2</td>
+<td>Modèle <code>ProvinceSettings</code> - Configuration province</td>
+<td>✅ Fait</td>
+</tr>
+<tr>
+<td>1.3</td>
+<td>Modèle <code>ProvinceMessage</code> - Messages officiels</td>
+<td>✅ Fait</td>
+</tr>
+<tr>
+<td>1.4</td>
+<td>Page login province élégante</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>1.5</td>
+<td>Layout admin avec menu dynamique</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>1.6</td>
+<td>Dashboard province avec KPIs</td>
+<td>⏳ En attente</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Modèles créés :</strong> - <code>ProvinceUser</code> -
+Authentification séparée avec rôles (ADMIN, MANAGER, EDITOR, VIEWER) -
+<code>ProvinceSettings</code> - Logo, couleurs, menu configurable, infos
+Gouverneur/Président - <code>ProvinceMessage</code> - Messages du
+Gouverneur, Président, Vice-Gouverneur</p>
+<hr />
+<h3 id="phase-2-contenu-public">PHASE 2 : CONTENU PUBLIC</h3>
+<p><strong>Durée estimée :</strong> À définir <strong>Statut :</strong>
+⏳ En attente</p>
+<table>
+<thead>
+<tr>
+<th>Tâche</th>
+<th>Description</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2.1</td>
+<td>Modèle <code>ProvinceBanner</code> - Bannières dynamiques</td>
+<td>✅ Fait</td>
+</tr>
+<tr>
+<td>2.2</td>
+<td>Modèle <code>ProvinceNews</code> - Actualités temps réel</td>
+<td>✅ Fait</td>
+</tr>
+<tr>
+<td>2.3</td>
+<td>Modèle <code>ProvinceAchievement</code> - Réalisations</td>
+<td>✅ Fait</td>
+</tr>
+<tr>
+<td>2.4</td>
+<td>Modèle <code>ProvinceAchievementMedia</code> - Médias</td>
+<td>✅ Fait</td>
+</tr>
+<tr>
+<td>2.5</td>
+<td>Modèle <code>ProvinceEvent</code> - Événements</td>
+<td>✅ Fait</td>
+</tr>
+<tr>
+<td>2.6</td>
+<td>Modèle <code>ProvinceEventRegistration</code> - Inscriptions</td>
+<td>✅ Fait</td>
+</tr>
+<tr>
+<td>2.7</td>
+<td>Modèle <code>ProvinceGallery</code> - Galerie photos/vidéos</td>
+<td>✅ Fait</td>
+</tr>
+<tr>
+<td>2.8</td>
+<td>CRUD Bannières</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>2.9</td>
+<td>CRUD Actualités</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>2.10</td>
+<td>CRUD Réalisations</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>2.11</td>
+<td>CRUD Événements</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>2.12</td>
+<td>CRUD Galerie</td>
+<td>⏳ En attente</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Modèles créés :</strong> - <code>ProvinceBanner</code> -
+Slider images/vidéos avec dates d’affichage - <code>ProvinceNews</code>
+- Actualités avec catégories, tags, breaking news -
+<code>ProvinceAchievement</code> - Projets terminés avec budget,
+bénéficiaires - <code>ProvinceAchievementMedia</code> - Photos/vidéos
+des réalisations - <code>ProvinceEvent</code> - Conférences, forums,
+ateliers avec inscription - <code>ProvinceEventRegistration</code> -
+Gestion des participants - <code>ProvinceGallery</code> - Médiathèque de
+la province</p>
+<hr />
+<h3 id="phase-3-infrastructure">PHASE 3 : INFRASTRUCTURE</h3>
+<p><strong>Durée estimée :</strong> À définir <strong>Statut :</strong>
+⏳ En attente</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 46%" />
+<col style="width: 28%" />
+</colgroup>
+<thead>
+<tr>
+<th>Tâche</th>
+<th>Description</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3.1</td>
+<td>Modèle <code>ProvinceInfrastructure</code></td>
+<td>✅ Fait</td>
+</tr>
+<tr>
+<td>3.2</td>
+<td>Modèle <code>ProvinceMasterPlan</code> - Plan directeur</td>
+<td>✅ Fait</td>
+</tr>
+<tr>
+<td>3.3</td>
+<td>CRUD Routes (existantes, en construction, planifiées)</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>3.4</td>
+<td>CRUD Ponts</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>3.5</td>
+<td>CRUD Aéroports/Ports</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>3.6</td>
+<td>CRUD Barrages/Centrales</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>3.7</td>
+<td>Affichage Plan Directeur</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>3.8</td>
+<td>Carte interactive des infrastructures</td>
+<td>⏳ En attente</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Modèles créés :</strong> -
+<code>ProvinceInfrastructure</code> - Routes, ponts, ports, aéroports,
+barrages avec coordonnées GPS - <code>ProvinceMasterPlan</code> - Vision
+stratégique, phases, KPIs, projets clés</p>
+<hr />
+<h3 id="phase-4-éducation-santé">PHASE 4 : ÉDUCATION &amp; SANTÉ</h3>
+<p><strong>Durée estimée :</strong> À définir <strong>Statut :</strong>
+⏳ En attente</p>
+<table>
+<thead>
+<tr>
+<th>Tâche</th>
+<th>Description</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4.1</td>
+<td>Modèle <code>ProvinceSchool</code> - Écoles</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>4.2</td>
+<td>Modèle <code>ProvinceUniversity</code> - Universités</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>4.3</td>
+<td>Modèle <code>ProvinceHospital</code> - Hôpitaux</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>4.4</td>
+<td>CRUD Établissements scolaires</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>4.5</td>
+<td>CRUD Universités/Instituts</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>4.6</td>
+<td>CRUD Hôpitaux/Centres de santé</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>4.7</td>
+<td>Statistiques éducation/santé</td>
+<td>⏳ En attente</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="phase-5-tourisme-culture">PHASE 5 : TOURISME &amp; CULTURE</h3>
+<p><strong>Durée estimée :</strong> À définir <strong>Statut :</strong>
+⏳ En attente</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 46%" />
+<col style="width: 28%" />
+</colgroup>
+<thead>
+<tr>
+<th>Tâche</th>
+<th>Description</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5.1</td>
+<td>Modèle <code>ProvinceMuseum</code> - Musées</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>5.2</td>
+<td>Modèle <code>ProvinceTouristSite</code> - Sites touristiques</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>5.3</td>
+<td>Modèle <code>ProvinceLeisure</code> - Bars, restaurants,
+magasins</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>5.4</td>
+<td>Historique de la province</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>5.5</td>
+<td>CRUD Sites touristiques</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>5.6</td>
+<td>CRUD Lieux de loisir</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>5.7</td>
+<td>Carte touristique</td>
+<td>⏳ En attente</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="phase-6-organisation-provinciale">PHASE 6 : ORGANISATION
+PROVINCIALE</h3>
+<p><strong>Durée estimée :</strong> À définir <strong>Statut :</strong>
+⏳ En attente</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 46%" />
+<col style="width: 28%" />
+</colgroup>
+<thead>
+<tr>
+<th>Tâche</th>
+<th>Description</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6.1</td>
+<td>Modèle <code>ProvinceOrgChart</code> - Organigramme</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>6.2</td>
+<td>Modèle <code>GovernmentMember</code> - Membres gouvernorat</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>6.3</td>
+<td>Modèle <code>AssemblyMember</code> - Députés provinciaux</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>6.4</td>
+<td>Modèle <code>AssemblyCommission</code> - Commissions</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>6.5</td>
+<td>Page Gouvernorat avec photos</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>6.6</td>
+<td>Page Assemblée Provinciale</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>6.7</td>
+<td>Organigramme interactif</td>
+<td>⏳ En attente</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="phase-7-module-investisseurs">PHASE 7 : MODULE
+INVESTISSEURS</h3>
+<p><strong>Durée estimée :</strong> À définir <strong>Statut :</strong>
+⏳ En attente</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 46%" />
+<col style="width: 28%" />
+</colgroup>
+<thead>
+<tr>
+<th>Tâche</th>
+<th>Description</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>7.1</td>
+<td>Modèle <code>ProvinceInvestor</code> - Investisseurs</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>7.2</td>
+<td>Modèle <code>InvestmentProject</code> - Projets
+d’investissement</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>7.3</td>
+<td>Modèle <code>InvestmentContract</code> - Contrats</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>7.4</td>
+<td>Modèle <code>InvestmentType</code> - Types (BOT, PPP, IDE,
+etc.)</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>7.5</td>
+<td>Liste des investisseurs</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>7.6</td>
+<td>Suivi des projets</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>7.7</td>
+<td>Gestion des contrats</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>7.8</td>
+<td>Dashboard investissements par secteur</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>7.9</td>
+<td>Rapports et statistiques</td>
+<td>⏳ En attente</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Types d’investissement :</strong> - BOT
+(Build-Operate-Transfer) - PPP (Partenariat Public-Privé) - IDE
+(Investissement Direct Étranger) - Joint-Venture - BOO
+(Build-Own-Operate) - BOOT (Build-Own-Operate-Transfer)</p>
+<hr />
+<h3 id="phase-8-module-emplois">PHASE 8 : MODULE EMPLOIS</h3>
+<p><strong>Durée estimée :</strong> À définir <strong>Statut :</strong>
+⏳ En attente</p>
+<table>
+<thead>
+<tr>
+<th>Tâche</th>
+<th>Description</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8.1</td>
+<td>Modèle <code>ProvinceJob</code> - Offres d’emploi</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>8.2</td>
+<td>Modèle <code>JobApplication</code> - Candidatures</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>8.3</td>
+<td>CRUD Offres d’emploi</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>8.4</td>
+<td>Gestion des candidatures</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>8.5</td>
+<td>Portail candidat</td>
+<td>⏳ En attente</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="phase-9-activités-économiques">PHASE 9 : ACTIVITÉS
+ÉCONOMIQUES</h3>
+<p><strong>Durée estimée :</strong> À définir <strong>Statut :</strong>
+⏳ En attente</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 46%" />
+<col style="width: 28%" />
+</colgroup>
+<thead>
+<tr>
+<th>Tâche</th>
+<th>Description</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>9.1</td>
+<td>Modèle <code>ProvinceMarket</code> - Marchés</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>9.2</td>
+<td>Modèle <code>ProvinceBusinessman</code> - Hommes d’affaires</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>9.3</td>
+<td>Modèle <code>ProvincePort</code> - Ports</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>9.4</td>
+<td>Modèle <code>ProvinceEnterprise</code> - Entreprises</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>9.5</td>
+<td>Gestion des imports/exports</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>9.6</td>
+<td>CRUD Marchés</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>9.7</td>
+<td>CRUD Entreprises locales</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>9.8</td>
+<td>Statistiques économiques</td>
+<td>⏳ En attente</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="phase-10-landing-page-publique">PHASE 10 : LANDING PAGE
+PUBLIQUE</h3>
+<p><strong>Durée estimée :</strong> À définir <strong>Statut :</strong>
+⏳ En attente</p>
+<table>
+<thead>
+<tr>
+<th>Tâche</th>
+<th>Description</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10.1</td>
+<td>Page d’accueil dynamique par province</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>10.2</td>
+<td>Section Gouverneur avec message</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>10.3</td>
+<td>Section Président avec discours</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>10.4</td>
+<td>Slider bannières</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>10.5</td>
+<td>Actualités en temps réel</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>10.6</td>
+<td>Opportunités d’investissement</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>10.7</td>
+<td>Réalisations phares</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>10.8</td>
+<td>Événements à venir</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>10.9</td>
+<td>Galerie photos</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>10.10</td>
+<td>Carte interactive</td>
+<td>⏳ En attente</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="phase-11-module-rh">PHASE 11 : MODULE RH</h3>
+<p><strong>Durée estimée :</strong> À définir <strong>Statut :</strong>
+⏳ En attente</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 46%" />
+<col style="width: 28%" />
+</colgroup>
+<thead>
+<tr>
+<th>Tâche</th>
+<th>Description</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>11.1</td>
+<td>Modèle <code>ProvinceEmployee</code> - Personnel avec photo</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>11.2</td>
+<td>Modèle <code>ProvinceLeave</code> - Congés</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>11.3</td>
+<td>Gestion du personnel</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>11.4</td>
+<td>Gestion des congés</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>11.5</td>
+<td>Annuaire du personnel</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>11.6</td>
+<td>Organigramme RH</td>
+<td>⏳ En attente</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="phase-12-configuration-dernier-menu">PHASE 12 : CONFIGURATION
+(Dernier menu)</h3>
+<p><strong>Durée estimée :</strong> À définir <strong>Statut :</strong>
+⏳ En attente</p>
+<table>
+<thead>
+<tr>
+<th>Tâche</th>
+<th>Description</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>12.1</td>
+<td>Gestion des types d’investissement</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>12.2</td>
+<td>Gestion des types de contrat</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>12.3</td>
+<td>Configuration du menu</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>12.4</td>
+<td>Gestion des utilisateurs province</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>12.5</td>
+<td>Paramètres généraux</td>
+<td>⏳ En attente</td>
+</tr>
+<tr>
+<td>12.6</td>
+<td>Personnalisation thème/couleurs</td>
+<td>⏳ En attente</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="modèles-de-données-créés">4. MODÈLES DE DONNÉES CRÉÉS</h2>
+<h3 id="phase-1---authentification">Phase 1 - Authentification</h3>
+<pre><code>ProvinceUser
+├── id (UUID)
+├── provinceId (FK -&gt; provinces)
+├── email (unique)
+├── password
+├── firstName, lastName
+├── phone, photo
+├── role (ADMIN, MANAGER, EDITOR, VIEWER)
+├── department, position
+├── permissions (JSONB)
+├── isActive, isVerified
+└── lastLoginAt
+
+ProvinceSettings
+├── id (UUID)
+├── provinceId (FK, unique)
+├── logo, banner, slogan
+├── description, history
+├── primaryColor, secondaryColor, accentColor
+├── email, phone, address, website
+├── socialMedia (JSONB)
+├── menuConfig (JSONB) - Menu dynamique
+├── governorName, governorPhoto, governorTitle, governorBio
+├── viceGovernorName, viceGovernorPhoto
+├── presidentPhoto, presidentName
+├── timezone, currency, language
+├── isPublic, maintenanceMode
+└── timestamps
+
+ProvinceMessage
+├── id (UUID)
+├── provinceId (FK)
+├── type (GOVERNOR, PRESIDENT, VICE_GOVERNOR, ASSEMBLY_PRESIDENT, OTHER)
+├── title, content
+├── authorName, authorTitle, authorPhoto
+├── signature
+├── displayOnHome, displayOrder
+├── isActive
+├── publishedAt, expiresAt
+└── createdById</code></pre>
+<h3 id="phase-2---contenu">Phase 2 - Contenu</h3>
+<pre><code>ProvinceBanner, ProvinceNews, ProvinceAchievement,
+ProvinceAchievementMedia, ProvinceEvent,
+ProvinceEventRegistration, ProvinceGallery</code></pre>
+<h3 id="phase-3---infrastructure">Phase 3 - Infrastructure</h3>
+<pre><code>ProvinceInfrastructure, ProvinceMasterPlan</code></pre>
+<hr />
+<h2 id="structure-des-menus">5. STRUCTURE DES MENUS</h2>
+<h3 id="menu-admin-province-configurable">Menu Admin Province
+(Configurable)</h3>
+<pre><code>📊 Tableau de bord
+📰 Actualités
+💰 Opportunités
+🏆 Réalisations
+📅 Événements
+🖼️ Galerie
+🛤️ Infrastructure
+🎓 Éducation
+🏥 Santé
+🏛️ Tourisme &amp; Culture
+🏢 Organisation
+💼 Investisseurs
+💼 Emplois
+📈 Activités Économiques
+👥 Ressources Humaines
+⚙️ Configuration (dernier)</code></pre>
+<hr />
+<h2 id="critères-de-design">6. CRITÈRES DE DESIGN</h2>
+<ul>
+<li>✅ Pages attrayantes et exceptionnelles</li>
+<li>✅ Couleurs sobres (éviter les couleurs vives)</li>
+<li>✅ Formulaires attractifs</li>
+<li>✅ Design professionnel et moderne</li>
+<li>✅ Support mode sombre</li>
+<li>✅ Responsive (mobile, tablette, desktop)</li>
+<li>✅ Photos pour tout le personnel (Gouverneur, Assemblée,
+Employés)</li>
+</ul>
+<hr />
+<h2 id="prochaines-étapes">7. PROCHAINES ÉTAPES</h2>
+<ol type="1">
+<li><strong>Déployer la correction</strong> de l’erreur utilisateurs sur
+le serveur</li>
+<li><strong>Terminer Phase 1</strong> - Login et Layout province</li>
+<li><strong>Créer les APIs</strong> pour chaque modèle</li>
+<li><strong>Développer les interfaces</strong> CRUD</li>
+<li><strong>Tester</strong> chaque module</li>
+<li><strong>Déployer</strong> sur production</li>
+</ol>
+<hr />
+<h2 id="notes-importantes">8. NOTES IMPORTANTES</h2>
+<ul>
+<li>Chaque province a son propre <strong>système
+d’authentification</strong></li>
+<li>Les <strong>opportunités</strong> des provinces s’affichent sur le
+landing ANAPI</li>
+<li>Le menu est <strong>100% dynamique</strong> et configurable par
+province</li>
+<li>Toutes les photos sont obligatoires pour le personnel officiel</li>
+<li>Les actualités peuvent être en <strong>temps réel</strong> (breaking
+news)</li>
+</ul>
+<hr />
+<p><strong>Document généré automatiquement</strong> <strong>Projet ANAPI
+- Portail Multi-Province RDC</strong></p>
+</body>
+</html>

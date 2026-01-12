@@ -27,6 +27,7 @@ import {
   Users,
   Target,
 } from "lucide-react";
+import { TenderList, TenderDelete } from "@/app/services/admin/Procurement.service";
 
 const statusColors = {
   DRAFT: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
@@ -92,19 +93,19 @@ export default function TendersPage() {
   const fetchTenders = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
-      });
+      };
 
-      if (search) params.append("search", search);
-      if (statusFilter) params.append("status", statusFilter);
-      if (typeFilter) params.append("type", typeFilter);
-      if (categoryFilter) params.append("category", categoryFilter);
-      if (yearFilter) params.append("year", yearFilter.toString());
+      if (search) params.search = search;
+      if (statusFilter) params.status = statusFilter;
+      if (typeFilter) params.type = typeFilter;
+      if (categoryFilter) params.category = categoryFilter;
+      if (yearFilter) params.year = yearFilter.toString();
 
-      const response = await fetch(`/api/procurement/tenders?${params}`);
-      const data = await response.json();
+      const response = await TenderList(params);
+      const data = response.data;
 
       if (data.success) {
         setTenders(data.data);
@@ -130,10 +131,8 @@ export default function TendersPage() {
   const handleDelete = async (id) => {
     setDeleting(true);
     try {
-      const response = await fetch(`/api/procurement/tenders/${id}`, {
-        method: "DELETE",
-      });
-      const data = await response.json();
+      const response = await TenderDelete(id);
+      const data = response.data;
 
       if (data.success) {
         fetchTenders();

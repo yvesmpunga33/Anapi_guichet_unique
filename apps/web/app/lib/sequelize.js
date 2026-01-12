@@ -1,12 +1,25 @@
 import { Sequelize } from 'sequelize';
+import config from './config.js';
 
 // Singleton pattern pour éviter les connexions multiples en développement
 const globalForSequelize = globalThis;
 
-const databaseUrl = process.env.DATABASE_URL;
+// Utiliser la configuration dynamique qui détecte automatiquement l'environnement
+// La détection se fait via le header host de la requête ou NODE_ENV
+const getDatabaseUrl = () => {
+  // Priorité 1: Variable d'environnement explicite
+  if (process.env.DATABASE_URL) {
+    return process.env.DATABASE_URL;
+  }
+
+  // Priorité 2: Configuration automatique basée sur NODE_ENV
+  return config.databaseUrl;
+};
+
+const databaseUrl = getDatabaseUrl();
 
 if (!databaseUrl) {
-  throw new Error('DATABASE_URL environment variable is not set');
+  console.error('DATABASE_URL not configured. Using config detection.');
 }
 
 export const sequelize =

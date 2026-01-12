@@ -40,6 +40,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 
+// Services
+import { DossierList, DossierDelete } from "@/app/services/admin/GuichetUnique.service";
+
 // Helper to get Lucide icon by name
 const getIcon = (iconName) => {
   return LucideIcons[iconName] || Circle;
@@ -306,37 +309,33 @@ export default function DossiersPage() {
   const fetchDossiers = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
-      });
+      };
 
       if (searchTerm) {
-        params.append('search', searchTerm);
+        params.search = searchTerm;
       }
 
       if (statusFilter !== 'all') {
-        params.append('status', statusFilter);
+        params.status = statusFilter;
       }
 
       if (typeFilter !== 'all') {
-        params.append('type', typeFilter);
+        params.type = typeFilter;
       }
 
-      const response = await fetch(`/api/guichet-unique/dossiers?${params}`);
-      const result = await response.json();
+      const response = await DossierList(params);
+      const result = response.data;
 
-      if (response.ok) {
-        setDossiers(result.data || []);
-        setStats(result.stats || stats);
-        setPagination(prev => ({
-          ...prev,
-          total: result.pagination?.total || 0,
-          totalPages: result.pagination?.totalPages || 0,
-        }));
-      } else {
-        console.error('Error fetching dossiers:', result.error);
-      }
+      setDossiers(result.data || []);
+      setStats(result.stats || stats);
+      setPagination(prev => ({
+        ...prev,
+        total: result.pagination?.total || 0,
+        totalPages: result.pagination?.totalPages || 0,
+      }));
     } catch (error) {
       console.error('Error fetching dossiers:', error);
     } finally {
@@ -403,33 +402,21 @@ export default function DossiersPage() {
 
     if (result.isConfirmed) {
       try {
-        const response = await fetch(`/api/guichet-unique/dossiers/${dossier.id}`, {
-          method: 'DELETE',
+        await DossierDelete(dossier.id);
+        Swal.fire({
+          icon: 'success',
+          title: intl.formatMessage({ id: "guichet.deleted", defaultMessage: "Supprime" }),
+          text: intl.formatMessage({ id: "guichet.deleteSuccess", defaultMessage: "Dossier supprime avec succes" }),
+          timer: 3000,
+          showConfirmButton: false,
         });
-
-        if (response.ok) {
-          Swal.fire({
-            icon: 'success',
-            title: intl.formatMessage({ id: "guichet.deleted", defaultMessage: "Supprime" }),
-            text: intl.formatMessage({ id: "guichet.deleteSuccess", defaultMessage: "Dossier supprime avec succes" }),
-            timer: 3000,
-            showConfirmButton: false,
-          });
-          fetchDossiers();
-        } else {
-          const data = await response.json();
-          Swal.fire({
-            icon: 'error',
-            title: intl.formatMessage({ id: "error.generic", defaultMessage: "Erreur" }),
-            text: data.error || intl.formatMessage({ id: "guichet.deleteError", defaultMessage: "Erreur lors de la suppression" }),
-          });
-        }
+        fetchDossiers();
       } catch (error) {
         console.error('Error deleting dossier:', error);
         Swal.fire({
           icon: 'error',
           title: intl.formatMessage({ id: "error.generic", defaultMessage: "Erreur" }),
-          text: intl.formatMessage({ id: "guichet.deleteError", defaultMessage: "Erreur lors de la suppression" }),
+          text: error.response?.data?.message || intl.formatMessage({ id: "guichet.deleteError", defaultMessage: "Erreur lors de la suppression" }),
         });
       }
     }

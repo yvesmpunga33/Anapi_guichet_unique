@@ -15,6 +15,11 @@ import {
   X,
   Plus,
 } from "lucide-react";
+import {
+  LegalTextCreateWithFormData,
+  DocumentTypeList,
+  LegalDomainList,
+} from "@/app/services/admin/Legal.service";
 
 export default function NewLegalTextPage() {
   const router = useRouter();
@@ -45,13 +50,11 @@ export default function NewLegalTextPage() {
   const fetchReferentials = async () => {
     try {
       const [typesRes, domainsRes] = await Promise.all([
-        fetch("/api/legal/document-types?activeOnly=true"),
-        fetch("/api/legal/domains?activeOnly=true"),
+        DocumentTypeList({ activeOnly: true }),
+        LegalDomainList({ activeOnly: true }),
       ]);
-      const typesData = await typesRes.json();
-      const domainsData = await domainsRes.json();
-      setDocumentTypes(typesData.types || []);
-      setDomains(domainsData.domains || []);
+      setDocumentTypes(typesRes.data.types || []);
+      setDomains(domainsRes.data.domains || []);
     } catch (error) {
       console.error("Error fetching referentials:", error);
     }
@@ -110,21 +113,11 @@ export default function NewLegalTextPage() {
         submitData.append("file", file);
       }
 
-      const response = await fetch("/api/legal/texts", {
-        method: "POST",
-        body: submitData,
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        router.push(`/legal/texts/${result.text.id}`);
-      } else {
-        const error = await response.json();
-        alert(error.error || "Erreur lors de la creation");
-      }
-    } catch (error) {
-      console.error("Error creating text:", error);
-      alert("Erreur lors de la creation du texte");
+      const response = await LegalTextCreateWithFormData(submitData);
+      router.push(`/legal/texts/${response.data.text.id}`);
+    } catch (err) {
+      console.error("Error creating text:", err);
+      alert(err.response?.data?.error || "Erreur lors de la creation du texte");
     } finally {
       setLoading(false);
     }

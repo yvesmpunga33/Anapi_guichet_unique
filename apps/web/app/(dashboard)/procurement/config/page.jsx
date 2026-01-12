@@ -3,6 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
+  DocumentTypeList,
+  DocumentTypeCreate,
+  DocumentTypeUpdate,
+  DocumentTypeDelete,
+} from "@/app/services/admin/Procurement.service";
+import {
   FileText,
   Plus,
   Search,
@@ -69,12 +75,12 @@ export default function ProcurementConfigPage() {
   const fetchDocumentTypes = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (search) params.append("search", search);
-      if (categoryFilter) params.append("category", categoryFilter);
+      const params = {};
+      if (search) params.search = search;
+      if (categoryFilter) params.category = categoryFilter;
 
-      const response = await fetch(`/api/procurement/document-types?${params}`);
-      const data = await response.json();
+      const response = await DocumentTypeList(params);
+      const data = response.data;
 
       if (data.success) {
         setDocumentTypes(data.data);
@@ -128,17 +134,11 @@ export default function ProcurementConfigPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const url = editingType
-        ? `/api/procurement/document-types/${editingType.id}`
-        : "/api/procurement/document-types";
+      const response = editingType
+        ? await DocumentTypeUpdate(editingType.id, formData)
+        : await DocumentTypeCreate(formData);
 
-      const response = await fetch(url, {
-        method: editingType ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
+      const data = response.data;
 
       if (data.success) {
         fetchDocumentTypes();
@@ -156,11 +156,8 @@ export default function ProcurementConfigPage() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      const response = await fetch(`/api/procurement/document-types/${deleteId}`, {
-        method: "DELETE",
-      });
-
-      const data = await response.json();
+      const response = await DocumentTypeDelete(deleteId);
+      const data = response.data;
 
       if (data.success) {
         fetchDocumentTypes();

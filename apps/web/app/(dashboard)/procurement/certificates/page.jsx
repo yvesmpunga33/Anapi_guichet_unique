@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import { ProcurementContractList, CertificateGetById } from "@/app/services/admin/Procurement.service";
 import {
   Award,
   Search,
@@ -52,14 +53,14 @@ export default function CertificatesPage() {
   const fetchContracts = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const params = {
         status: "ACTIVE,COMPLETED",
         year: yearFilter.toString(),
-      });
-      if (search) params.append("search", search);
+      };
+      if (search) params.search = search;
 
-      const response = await fetch(`/api/procurement/contracts?${params}`);
-      const data = await response.json();
+      const response = await ProcurementContractList(params);
+      const data = response.data;
 
       if (data.success) {
         setContracts(data.data);
@@ -84,8 +85,8 @@ export default function CertificatesPage() {
   const loadCertificate = async (contractId) => {
     setLoadingCertificate(true);
     try {
-      const response = await fetch(`/api/procurement/certificates/${contractId}`);
-      const data = await response.json();
+      const response = await CertificateGetById(contractId);
+      const data = response.data;
 
       if (data.success) {
         setCertificateData(data.data);

@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ProcurementContractGetById, ProcurementContractUpdate, TenderList, BidderList } from '@/app/services/admin/Procurement.service';
 
 const statusOptions = [
   { value: 'DRAFT', label: 'Brouillon' },
@@ -76,8 +77,8 @@ export default function EditContractPage({ params }) {
   const fetchContract = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/procurement/contracts/${resolvedParams.id}`);
-      const result = await response.json();
+      const response = await ProcurementContractGetById(resolvedParams.id);
+      const result = response.data;
 
       if (result.success) {
         const contract = result.data;
@@ -129,8 +130,8 @@ export default function EditContractPage({ params }) {
 
   const fetchBidders = async () => {
     try {
-      const response = await fetch('/api/procurement/bidders?limit=200');
-      const result = await response.json();
+      const response = await BidderList({ limit: 200 });
+      const result = response.data;
       if (result.success) {
         setBidders(result.data || []);
       }
@@ -141,8 +142,8 @@ export default function EditContractPage({ params }) {
 
   const fetchTenders = async () => {
     try {
-      const response = await fetch('/api/procurement/tenders?limit=200');
-      const result = await response.json();
+      const response = await TenderList({ limit: 200 });
+      const result = response.data;
       if (result.success) {
         setTenders(result.data || []);
       }
@@ -181,13 +182,8 @@ export default function EditContractPage({ params }) {
         tenderId: formData.tenderId || null,
       };
 
-      const response = await fetch(`/api/procurement/contracts/${resolvedParams.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dataToSend),
-      });
-
-      const result = await response.json();
+      const response = await ProcurementContractUpdate(resolvedParams.id, dataToSend);
+      const result = response.data;
 
       if (result.success) {
         router.push(`/procurement/contracts/${resolvedParams.id}`);

@@ -17,6 +17,9 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+// Services
+import { EmployeeList } from "@/app/services/admin/HR.service";
+
 export default function EmployeesPage() {
   const intl = useIntl();
   const { locale } = useLanguage();
@@ -33,11 +36,8 @@ export default function EmployeesPage() {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/hr/employees");
-      if (response.ok) {
-        const data = await response.json();
-        setEmployees(data.employees || []);
-      }
+      const response = await EmployeeList();
+      setEmployees(response.data?.employees || []);
     } catch (error) {
       console.error("Error fetching employees:", error);
     } finally {

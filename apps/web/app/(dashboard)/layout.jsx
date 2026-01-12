@@ -59,6 +59,10 @@ import {
   Megaphone,
   Target,
   MapPinned,
+  Share2,
+  Upload,
+  Star,
+  Activity,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import MessageNotifications from "../../components/notifications/MessageNotifications";
@@ -240,13 +244,16 @@ const getNavigation = (intl) => [
     ],
   },
   {
-    titleKey: "nav.configuration",
-    title: intl.formatMessage({ id: "nav.configuration", defaultMessage: "CONFIGURATION" }),
+    titleKey: "nav.documentSharing",
+    title: intl.formatMessage({ id: "nav.documentSharing", defaultMessage: "PARTAGE DE DOCUMENTS" }),
     items: [
-      { name: intl.formatMessage({ id: "nav.adminActs", defaultMessage: "Actes administratifs" }), href: "/configuration/actes-administratifs", icon: FileCheck },
-      { name: intl.formatMessage({ id: "nav.workflowSteps", defaultMessage: "Étapes de workflow" }), href: "/configuration/workflow-steps", icon: Workflow },
-      { name: intl.formatMessage({ id: "nav.ministryWorkflows", defaultMessage: "Workflows ministères" }), href: "/configuration/ministry-workflows", icon: Cog },
-      { name: intl.formatMessage({ id: "nav.ministryDepartments", defaultMessage: "Départements ministères" }), href: "/configuration/ministry-departments", icon: Building2 },
+      { name: intl.formatMessage({ id: "nav.sharingDashboard", defaultMessage: "Tableau de bord" }), href: "/partage", icon: Share2, isExternal: true },
+      { name: intl.formatMessage({ id: "nav.myDocuments", defaultMessage: "Mes documents" }), href: "/partage/documents", icon: FileText, isExternal: true },
+      { name: intl.formatMessage({ id: "nav.myFolders", defaultMessage: "Mes dossiers" }), href: "/partage/dossiers", icon: FolderOpen, isExternal: true },
+      { name: intl.formatMessage({ id: "nav.uploadDoc", defaultMessage: "Upload" }), href: "/partage/upload", icon: Upload, isExternal: true },
+      { name: intl.formatMessage({ id: "nav.sharedWithMe", defaultMessage: "Partagés avec moi" }), href: "/partage/partages/recus", icon: Share2, isExternal: true },
+      { name: intl.formatMessage({ id: "nav.favorites", defaultMessage: "Favoris" }), href: "/partage/favoris", icon: Star, isExternal: true },
+      { name: intl.formatMessage({ id: "nav.activityLog", defaultMessage: "Journal d'activités" }), href: "/partage/activites", icon: Activity, isExternal: true },
     ],
   },
   {
@@ -280,6 +287,16 @@ const getNavigation = (intl) => [
       { name: intl.formatMessage({ id: "nav.settings", defaultMessage: "Paramètres" }), href: "/admin/settings", icon: Settings },
     ],
   },
+  {
+    titleKey: "nav.configuration",
+    title: intl.formatMessage({ id: "nav.configuration", defaultMessage: "CONFIGURATION" }),
+    items: [
+      { name: intl.formatMessage({ id: "nav.adminActs", defaultMessage: "Actes administratifs" }), href: "/configuration/actes-administratifs", icon: FileCheck },
+      { name: intl.formatMessage({ id: "nav.workflowSteps", defaultMessage: "Étapes de workflow" }), href: "/configuration/workflow-steps", icon: Workflow },
+      { name: intl.formatMessage({ id: "nav.ministryWorkflows", defaultMessage: "Workflows ministères" }), href: "/configuration/ministry-workflows", icon: Cog },
+      { name: intl.formatMessage({ id: "nav.ministryDepartments", defaultMessage: "Départements ministères" }), href: "/configuration/ministry-departments", icon: Building2 },
+    ],
+  },
 ];
 
 // Header title component that uses PageTitleContext
@@ -299,7 +316,7 @@ function HeaderTitle({ navigation, pathname, intl, isActiveLink }) {
 }
 
 function DashboardLayoutContent({ children }) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const pathname = usePathname();
   const intl = useIntl();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -309,9 +326,15 @@ function DashboardLayoutContent({ children }) {
   // Get navigation with translations
   const navigation = getNavigation(intl);
 
-  const [expandedSections, setExpandedSections] = useState(
-    navigation.map((s) => s.title)
-  );
+  // IMPORTANT: Tous les hooks doivent être déclarés AVANT les conditions de retour
+  const [expandedSections, setExpandedSections] = useState([]);
+
+  // Initialiser les sections dépliées une fois que navigation est disponible
+  useEffect(() => {
+    if (navigation.length > 0) {
+      setExpandedSections(navigation.map((s) => s.title));
+    }
+  }, []);
 
   // Dark mode toggle
   useEffect(() => {
@@ -321,6 +344,37 @@ function DashboardLayoutContent({ children }) {
       document.documentElement.classList.add("dark");
     }
   }, []);
+
+  // Protection d'authentification - Rediriger vers login si non authentifié
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      window.location.href = `/login?callbackUrl=${encodeURIComponent(pathname)}`;
+    }
+  }, [status, pathname]);
+
+  // Afficher un écran de chargement pendant la vérification de session
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Vérification de la session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Ne pas afficher le contenu si non authentifié
+  if (status === "unauthenticated") {
+    return (
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Redirection vers la page de connexion...</p>
+        </div>
+      </div>
+    );
+  }
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);

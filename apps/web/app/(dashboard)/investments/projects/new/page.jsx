@@ -22,6 +22,11 @@ import {
   ChevronDown,
 } from "lucide-react";
 
+// Services
+import { InvestorList } from "@/app/services/admin/Investor.service";
+import { ProjectCreate } from "@/app/services/admin/Project.service";
+import { ReferentielProvinceList, ReferentielCityList } from "@/app/services/admin/Referentiel.service";
+
 const statusOptions = [
   { value: "DRAFT", label: "Brouillon", color: "bg-gray-100 text-gray-700" },
   { value: "SUBMITTED", label: "Soumis", color: "bg-blue-100 text-blue-700" },
@@ -111,11 +116,8 @@ export default function NewProjectPage() {
 
       setLoadingInvestors(true);
       try {
-        const response = await fetch(`/api/investments/investors?search=${encodeURIComponent(searchInvestor)}&limit=10`);
-        if (response.ok) {
-          const data = await response.json();
-          setInvestors(data.investors || []);
-        }
+        const response = await InvestorList({ search: searchInvestor, limit: 10 });
+        setInvestors(response.data?.investors || []);
       } catch (err) {
         console.error("Error fetching investors:", err);
       } finally {
@@ -131,11 +133,8 @@ export default function NewProjectPage() {
   useEffect(() => {
     const fetchProvinces = async () => {
       try {
-        const response = await fetch("/api/referentiels/provinces");
-        if (response.ok) {
-          const data = await response.json();
-          setProvinces(data || []);
-        }
+        const response = await ReferentielProvinceList();
+        setProvinces(response.data?.provinces || response.data || []);
       } catch (err) {
         console.error("Error fetching provinces:", err);
       }
@@ -151,11 +150,8 @@ export default function NewProjectPage() {
         return;
       }
       try {
-        const response = await fetch(`/api/referentiels/cities?province=${encodeURIComponent(formData.province)}`);
-        if (response.ok) {
-          const data = await response.json();
-          setCities(data || []);
-        }
+        const response = await ReferentielCityList({ province: formData.province });
+        setCities(response.data?.cities || response.data || []);
       } catch (err) {
         console.error("Error fetching cities:", err);
       }
@@ -213,18 +209,8 @@ export default function NewProjectPage() {
         priority: formData.priority,
       };
 
-      const response = await fetch("/api/investments/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Erreur lors de la creation du projet");
-      }
-
-      const newProject = await response.json();
+      const response = await ProjectCreate(payload);
+      const newProject = response.data;
       router.push(`/investments/projects/${newProject.id}`);
     } catch (err) {
       setError(err.message);

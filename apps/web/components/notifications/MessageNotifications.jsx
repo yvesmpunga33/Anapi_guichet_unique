@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+import { MessageUnreadCount, MessageMarkAsRead } from "@/app/services/admin/Message.service";
 
 export default function MessageNotifications() {
   const [isOpen, setIsOpen] = useState(false);
@@ -29,8 +30,8 @@ export default function MessageNotifications() {
 
   const fetchUnreadCount = useCallback(async () => {
     try {
-      const response = await fetch("/api/messages/unread-count");
-      const result = await response.json();
+      const response = await MessageUnreadCount();
+      const result = response.data;
 
       if (result.success) {
         setData({
@@ -50,7 +51,11 @@ export default function MessageNotifications() {
         }
       }
     } catch (error) {
-      console.error("Erreur chargement notifications:", error);
+      // Ignorer silencieusement les erreurs 404 (route non implementee)
+      if (error.response?.status !== 404) {
+        console.error("Erreur chargement notifications:", error);
+      }
+      // Garder les valeurs par defaut (0 messages)
     } finally {
       setLoading(false);
     }
@@ -87,7 +92,7 @@ export default function MessageNotifications() {
     e.stopPropagation();
 
     try {
-      await fetch(`/api/messages/${messageId}/read`, { method: "POST" });
+      await MessageMarkAsRead(messageId);
       fetchUnreadCount();
     } catch (error) {
       console.error("Erreur:", error);

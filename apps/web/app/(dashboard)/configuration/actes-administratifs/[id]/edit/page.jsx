@@ -17,6 +17,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
+import { ActeAdministratifGetById, ActeAdministratifUpdate } from "@/app/services/admin/Config.service";
+import { ReferentielMinistryList, ReferentielSectorList } from "@/app/services/admin/Referentiel.service";
 
 const categories = [
   { value: "LICENCE", label: "Licence" },
@@ -85,10 +87,9 @@ export default function EditActePage() {
 
   const fetchActe = async () => {
     try {
-      const response = await fetch(`/api/config/actes/${params.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        const acte = data.acte;
+      const response = await ActeAdministratifGetById(params.id);
+      if (response.data?.acte) {
+        const acte = response.data.acte;
         setFormData({
           id: acte.id,
           code: acte.code || "",
@@ -129,6 +130,7 @@ export default function EditActePage() {
       }
     } catch (error) {
       console.error("Error fetching acte:", error);
+      router.push("/configuration/actes-administratifs");
     } finally {
       setLoading(false);
     }
@@ -136,11 +138,8 @@ export default function EditActePage() {
 
   const fetchMinistries = async () => {
     try {
-      const response = await fetch("/api/referentiels/ministries?isActive=true");
-      if (response.ok) {
-        const data = await response.json();
-        setMinistries(data.ministries || []);
-      }
+      const response = await ReferentielMinistryList({ isActive: true });
+      setMinistries(response.data?.ministries || response.data?.data || []);
     } catch (error) {
       console.error("Error fetching ministries:", error);
     }
@@ -148,11 +147,8 @@ export default function EditActePage() {
 
   const fetchSectors = async () => {
     try {
-      const response = await fetch("/api/referentiels/sectors?isActive=true");
-      if (response.ok) {
-        const data = await response.json();
-        setSectors(data.sectors || []);
-      }
+      const response = await ReferentielSectorList({ isActive: true });
+      setSectors(response.data?.sectors || response.data?.data || []);
     } catch (error) {
       console.error("Error fetching sectors:", error);
     }
@@ -242,16 +238,10 @@ export default function EditActePage() {
         })),
       };
 
-      const response = await fetch("/api/config/actes", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dataToSend),
-      });
+      const response = await ActeAdministratifUpdate(params.id, dataToSend);
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Erreur lors de la mise à jour");
+      if (response.data?.error) {
+        throw new Error(response.data.error || "Erreur lors de la mise à jour");
       }
 
       router.push(`/configuration/actes-administratifs/${params.id}`);

@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ProcurementContractGetById, ProcurementContractDelete } from '@/app/services/admin/Procurement.service';
 
 const statusLabels = {
   DRAFT: 'Brouillon',
@@ -60,8 +61,8 @@ export default function ContractDetailPage({ params }) {
   const fetchContract = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/procurement/contracts/${resolvedParams.id}`);
-      const result = await response.json();
+      const response = await ProcurementContractGetById(resolvedParams.id);
+      const result = response.data;
 
       if (result.success) {
         setContract(result.data);
@@ -79,10 +80,8 @@ export default function ContractDetailPage({ params }) {
   const handleDelete = async () => {
     try {
       setDeleting(true);
-      const response = await fetch(`/api/procurement/contracts/${resolvedParams.id}`, {
-        method: 'DELETE',
-      });
-      const result = await response.json();
+      const response = await ProcurementContractDelete(resolvedParams.id);
+      const result = response.data;
 
       if (result.success) {
         router.push('/procurement/contracts');

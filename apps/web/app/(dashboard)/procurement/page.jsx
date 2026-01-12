@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { ProcurementDashboard } from "@/app/services/admin/Procurement.service";
 import {
   FileText,
   Building2,
@@ -130,11 +131,10 @@ export default function ProcurementDashboardPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/procurement/dashboard?year=${year}`);
-      const result = await response.json();
+      const response = await ProcurementDashboard(year);
 
-      if (result.success) {
-        setData(result.data);
+      if (response.data.success) {
+        setData(response.data.data);
       }
     } catch (error) {
       console.error("Erreur chargement dashboard:", error);

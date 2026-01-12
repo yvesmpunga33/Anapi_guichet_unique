@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { BidderCreate, SectorList, SectorCreate } from "@/app/services/admin/Procurement.service";
 import {
   ArrowLeft,
   Save,
@@ -126,14 +127,14 @@ export default function NewBidderPage() {
         const [countriesRes, provincesRes, sectorsRes] = await Promise.all([
           fetch("/api/referentiels/countries?limit=300"),
           fetch("/api/referentiels/provinces?limit=100"),
-          fetch("/api/referentiels/sectors?limit=100"),
+          SectorList({ limit: 100 }),
         ]);
 
-        const [countriesData, provincesData, sectorsData] = await Promise.all([
+        const [countriesData, provincesData] = await Promise.all([
           countriesRes.json(),
           provincesRes.json(),
-          sectorsRes.json(),
         ]);
+        const sectorsData = sectorsRes.data;
 
         // APIs return { countries: [...] }, { provinces: [...] }, { sectors: [...] }
         setCountries(countriesData.countries || countriesData.data || []);
@@ -200,18 +201,13 @@ export default function NewBidderPage() {
 
     setSavingSector(true);
     try {
-      const response = await fetch("/api/referentiels/sectors", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(sectorFormData),
-      });
-
-      const data = await response.json();
+      const response = await SectorCreate(sectorFormData);
+      const data = response.data;
 
       if (data.sector) {
         // Refresh sectors list
-        const sectorsResponse = await fetch("/api/referentiels/sectors?limit=100");
-        const sectorsData = await sectorsResponse.json();
+        const sectorsResponse = await SectorList({ limit: 100 });
+        const sectorsData = sectorsResponse.data;
         if (sectorsData.sectors) {
           setSectors(sectorsData.sectors);
         }
@@ -250,13 +246,8 @@ export default function NewBidderPage() {
         annualTurnover: formData.annualTurnover ? parseFloat(formData.annualTurnover) : null,
       };
 
-      const response = await fetch("/api/procurement/bidders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submitData),
-      });
-
-      const data = await response.json();
+      const response = await BidderCreate(submitData);
+      const data = response.data;
 
       if (data.success) {
         router.push(`/procurement/bidders/${data.data.id}`);

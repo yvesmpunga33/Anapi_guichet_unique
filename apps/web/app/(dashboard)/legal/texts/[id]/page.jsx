@@ -20,6 +20,10 @@ import {
   Eye,
   X,
 } from "lucide-react";
+import {
+  LegalTextGetById,
+  LegalTextDelete,
+} from "@/app/services/admin/Legal.service";
 
 export default function LegalTextDetailPage() {
   const params = useParams();
@@ -36,15 +40,11 @@ export default function LegalTextDetailPage() {
 
   const fetchText = async () => {
     try {
-      const response = await fetch(`/api/legal/texts/${params.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setText(data.text);
-      } else {
-        router.push("/legal/texts");
-      }
+      const response = await LegalTextGetById(params.id);
+      setText(response.data.text);
     } catch (error) {
       console.error("Error fetching text:", error);
+      router.push("/legal/texts");
     } finally {
       setLoading(false);
     }
@@ -53,12 +53,8 @@ export default function LegalTextDetailPage() {
   const handleDelete = async () => {
     if (!confirm("Voulez-vous vraiment supprimer ce texte ?")) return;
     try {
-      const response = await fetch(`/api/legal/texts/${params.id}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        router.push("/legal/texts");
-      }
+      await LegalTextDelete(params.id);
+      router.push("/legal/texts");
     } catch (error) {
       console.error("Error deleting text:", error);
     }

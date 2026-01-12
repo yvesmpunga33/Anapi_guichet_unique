@@ -20,6 +20,12 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Swal from "sweetalert2";
+import {
+  ReferentielProvinceList,
+  ReferentielProvinceCreate,
+  ReferentielProvinceUpdate,
+  ReferentielProvinceDelete,
+} from "@/app/services/admin/Referentiel.service";
 
 export default function ProvincesPage() {
   const [provinces, setProvinces] = useState([]);
@@ -48,12 +54,10 @@ export default function ProvincesPage() {
   const fetchProvinces = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/referentiels/provinces');
-      if (response.ok) {
-        const data = await response.json();
-        setProvinces(data.provinces || []);
-        setStats(data.stats || stats);
-      }
+      const response = await ReferentielProvinceList();
+      const data = response.data;
+      setProvinces(data.provinces || []);
+      setStats(data.stats || stats);
     } catch (error) {
       console.error('Error fetching provinces:', error);
       Swal.fire({
@@ -142,20 +146,16 @@ export default function ProvincesPage() {
     setSaving(true);
 
     try {
-      const url = selectedProvince
-        ? `/api/referentiels/provinces/${selectedProvince.id}`
-        : '/api/referentiels/provinces';
-      const method = selectedProvince ? 'PATCH' : 'POST';
+      let response;
+      if (selectedProvince) {
+        response = await ReferentielProvinceUpdate(selectedProvince.id, formData);
+      } else {
+        response = await ReferentielProvinceCreate(formData);
+      }
 
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (response.ok) {
+      if (data) {
         closeModals();
         fetchProvinces();
 
@@ -206,11 +206,9 @@ export default function ProvincesPage() {
 
     if (result.isConfirmed) {
       try {
-        const response = await fetch(`/api/referentiels/provinces/${province.id}`, {
-          method: 'DELETE',
-        });
+        const response = await ReferentielProvinceDelete(province.id);
 
-        if (response.ok) {
+        if (response.data) {
           fetchProvinces();
           Swal.fire({
             icon: 'success',
@@ -222,7 +220,7 @@ export default function ProvincesPage() {
             position: 'top-end',
           });
         } else {
-          const data = await response.json();
+          const data = response.data;
           Swal.fire({
             icon: 'error',
             title: 'Erreur',

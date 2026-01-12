@@ -18,6 +18,13 @@ import {
   Filter,
 } from "lucide-react";
 import Swal from "sweetalert2";
+import {
+  VilleList,
+  VilleCreate,
+  VilleUpdate,
+  VilleDelete,
+  ReferentielProvinceList,
+} from "@/app/services/admin/Referentiel.service";
 
 export default function VillesPage() {
   const [cities, setCities] = useState([]);
@@ -47,11 +54,9 @@ export default function VillesPage() {
   // Charger les provinces pour le filtre et le formulaire
   const fetchProvinces = async () => {
     try {
-      const response = await fetch('/api/referentiels/provinces?activeOnly=true');
-      if (response.ok) {
-        const data = await response.json();
-        setProvinces(data.provinces || []);
-      }
+      const response = await ReferentielProvinceList({ activeOnly: true });
+      const data = response.data;
+      setProvinces(data.provinces || []);
     } catch (error) {
       console.error('Error fetching provinces:', error);
     }
@@ -61,21 +66,15 @@ export default function VillesPage() {
   const fetchCities = async () => {
     setLoading(true);
     try {
-      let url = '/api/referentiels/cities';
-      const params = new URLSearchParams();
+      const params = {};
       if (selectedProvinceFilter) {
-        params.append('provinceId', selectedProvinceFilter);
-      }
-      if (params.toString()) {
-        url += '?' + params.toString();
+        params.provinceId = selectedProvinceFilter;
       }
 
-      const response = await fetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        setCities(data.cities || []);
-        setStats(data.stats || stats);
-      }
+      const response = await VilleList(params);
+      const data = response.data;
+      setCities(data.cities || []);
+      setStats(data.stats || stats);
     } catch (error) {
       console.error('Error fetching cities:', error);
       Swal.fire({
@@ -157,20 +156,16 @@ export default function VillesPage() {
     setSaving(true);
 
     try {
-      const url = selectedCity
-        ? `/api/referentiels/cities/${selectedCity.id}`
-        : '/api/referentiels/cities';
-      const method = selectedCity ? 'PATCH' : 'POST';
+      let response;
+      if (selectedCity) {
+        response = await VilleUpdate(selectedCity.id, formData);
+      } else {
+        response = await VilleCreate(formData);
+      }
 
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (response.ok) {
+      if (data) {
         closeModals();
         fetchCities();
 
@@ -221,11 +216,9 @@ export default function VillesPage() {
 
     if (result.isConfirmed) {
       try {
-        const response = await fetch(`/api/referentiels/cities/${city.id}`, {
-          method: 'DELETE',
-        });
+        const response = await VilleDelete(city.id);
 
-        if (response.ok) {
+        if (response.data) {
           fetchCities();
           Swal.fire({
             icon: 'success',
@@ -237,7 +230,7 @@ export default function VillesPage() {
             position: 'top-end',
           });
         } else {
-          const data = await response.json();
+          const data = response.data;
           Swal.fire({
             icon: 'error',
             title: 'Erreur',

@@ -16,6 +16,8 @@ import {
   X,
   Plus,
 } from "lucide-react";
+import { ContractTypeList, ContractCreateWithFormData } from "@/app/services/admin/Legal.service";
+import { CurrencyList } from "@/app/services/admin/Referentiel.service";
 
 export default function NewContractPage() {
   const router = useRouter();
@@ -48,15 +50,13 @@ export default function NewContractPage() {
   const fetchReferentials = async () => {
     try {
       const [typesRes, currenciesRes] = await Promise.all([
-        fetch("/api/legal/contract-types?activeOnly=true"),
-        fetch("/api/referentiels/currencies?activeOnly=true"),
+        ContractTypeList({ activeOnly: true }),
+        CurrencyList({ activeOnly: true }),
       ]);
-      const typesData = await typesRes.json();
-      const currenciesData = await currenciesRes.json();
-      setContractTypes(typesData.types || []);
-      setCurrencies(currenciesData.currencies || []);
-    } catch (error) {
-      console.error("Error fetching referentials:", error);
+      setContractTypes(typesRes.data.types || []);
+      setCurrencies(currenciesRes.data.currencies || []);
+    } catch (err) {
+      console.error("Error fetching referentials:", err.response?.data?.message || err.message);
     }
   };
 
@@ -116,21 +116,11 @@ export default function NewContractPage() {
         submitData.append("file", file);
       }
 
-      const response = await fetch("/api/legal/contracts", {
-        method: "POST",
-        body: submitData,
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        router.push(`/legal/contracts/${result.contract.id}`);
-      } else {
-        const error = await response.json();
-        alert(error.error || "Erreur lors de la creation");
-      }
-    } catch (error) {
-      console.error("Error creating contract:", error);
-      alert("Erreur lors de la creation du contrat");
+      const response = await ContractCreateWithFormData(submitData);
+      router.push(`/legal/contracts/${response.data.contract.id}`);
+    } catch (err) {
+      console.error("Error creating contract:", err);
+      alert(err.response?.data?.error || "Erreur lors de la creation du contrat");
     } finally {
       setLoading(false);
     }

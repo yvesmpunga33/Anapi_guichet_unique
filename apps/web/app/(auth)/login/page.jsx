@@ -1,29 +1,152 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { signIn } from "next-auth/react";
+import { Suspense, useState, useEffect, useCallback } from "react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Captcha from "../../../components/auth/Captcha";
+import { AuthCaptchaStatus } from "@/app/services/admin/Auth.service";
+
+// Composant pour afficher quand l'utilisateur est déjà connecté
+function AlreadyLoggedIn({ session, onSignOut }) {
+  const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    await signOut({ redirect: false });
+    setSigningOut(false);
+    onSignOut();
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
+        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Session administrateur active</h3>
+        <p className="text-gray-600 mb-1">
+          Connecté en tant que <span className="font-medium text-blue-700">{session?.user?.name || session?.user?.email}</span>
+        </p>
+        <p className="text-sm text-gray-500">
+          {session?.user?.email}
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-blue-800 transform hover:-translate-y-0.5 transition-all duration-200"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          Accéder au tableau de bord
+        </button>
+
+        <button
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className="w-full flex items-center justify-center gap-2 py-3 px-4 border-2 border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50"
+        >
+          {signingOut ? (
+            <>
+              <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Déconnexion en cours...
+            </>
+          ) : (
+            <>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Se déconnecter et changer de compte
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session, status } = useSession();
   const [userType, setUserType] = useState(null); // null, 'admin', 'investor'
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [showLoginForm, setShowLoginForm] = useState(false);
 
-  const getCallbackUrl = () => {
+  const getCallbackUrl = useCallback(() => {
     const paramUrl = searchParams.get("callbackUrl");
     if (paramUrl) return paramUrl;
     return userType === 'investor' ? '/investor-home' : '/dashboard';
-  };
+  }, [searchParams, userType]);
+
+  // Vérifier le statut CAPTCHA au chargement
+  const checkCaptchaStatus = useCallback(async () => {
+    try {
+      const response = await AuthCaptchaStatus(email);
+      setCaptchaRequired(response.data?.required);
+      setFailedAttempts(response.data?.attempts || 0);
+    } catch {
+      // Ignorer les erreurs silencieusement
+    }
+  }, [email]);
+
+  useEffect(() => {
+    if (userType) {
+      checkCaptchaStatus();
+    }
+  }, [userType, checkCaptchaStatus]);
+
+  const handleCaptchaRequired = useCallback((required) => {
+    setCaptchaRequired(required);
+  }, []);
+
+  const handleCaptchaVerified = useCallback((verified) => {
+    setCaptchaVerified(verified);
+  }, []);
+
+  // Si l'utilisateur est déjà connecté, afficher le composant AlreadyLoggedIn
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <svg className="animate-spin h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
+      </div>
+    );
+  }
+
+  // Si connecté et qu'on n'a pas forcé l'affichage du formulaire
+  if (status === "authenticated" && !showLoginForm) {
+    return <AlreadyLoggedIn session={session} onSignOut={() => setShowLoginForm(true)} />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    // Vérifier si CAPTCHA est requis mais non validé
+    if (captchaRequired && !captchaVerified) {
+      setError("Veuillez d'abord valider le CAPTCHA");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -35,6 +158,11 @@ function LoginForm() {
 
       if (result?.error) {
         setError("Email ou mot de passe incorrect");
+        setFailedAttempts((prev) => prev + 1);
+        // Réinitialiser le CAPTCHA après échec
+        setCaptchaVerified(false);
+        // Revérifier si CAPTCHA est maintenant requis
+        checkCaptchaStatus();
       } else {
         router.push(getCallbackUrl());
         router.refresh();
@@ -202,6 +330,25 @@ function LoginForm() {
           </div>
         </div>
 
+        {/* CAPTCHA */}
+        {userType && (
+          <Captcha
+            email={email}
+            onCaptchaRequired={handleCaptchaRequired}
+            onVerified={handleCaptchaVerified}
+          />
+        )}
+
+        {/* Message si CAPTCHA validé */}
+        {captchaVerified && (
+          <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            Verification reussie
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <input
@@ -220,7 +367,7 @@ function LoginForm() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || (captchaRequired && !captchaVerified)}
           className={`w-full flex items-center justify-center gap-2 py-3 px-4 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-lg ${
             userType === 'admin'
               ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
@@ -280,10 +427,10 @@ export default function LoginPage() {
               Agence Nationale pour la Promotion des Investissements
             </p>
             <h2 className="mt-6 text-xl font-semibold text-gray-900">
-              Bienvenue
+              Connexion Administrateur
             </h2>
             <p className="mt-2 text-sm text-gray-500">
-              Connectez-vous pour acceder a votre espace
+              Espace réservé au personnel ANAPI
             </p>
           </div>
 

@@ -20,6 +20,7 @@ import {
   Users,
   AlertTriangle,
 } from "lucide-react";
+import { ContractList, ContractDelete, ContractTypeList } from "@/app/services/admin/Legal.service";
 
 export default function ContractsPage() {
   const searchParams = useSearchParams();
@@ -43,36 +44,32 @@ export default function ContractsPage() {
 
   const fetchContractTypes = async () => {
     try {
-      const response = await fetch("/api/legal/contract-types?activeOnly=true");
-      const data = await response.json();
-      setContractTypes(data.types || []);
-    } catch (error) {
-      console.error("Error fetching contract types:", error);
+      const response = await ContractTypeList({ activeOnly: true });
+      setContractTypes(response.data.types || []);
+    } catch (err) {
+      console.error("Error fetching contract types:", err.response?.data?.message || err.message);
     }
   };
 
   const fetchContracts = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page,
         limit: 20,
-      });
-      if (filters.typeId) params.append("typeId", filters.typeId);
-      if (filters.status) params.append("status", filters.status);
-      if (filters.expiring) params.append("expiring", filters.expiring);
+      };
+      if (filters.typeId) params.typeId = filters.typeId;
+      if (filters.status) params.status = filters.status;
+      if (filters.expiring) params.expiring = filters.expiring;
 
-      const response = await fetch(`/api/legal/contracts?${params}`);
-      const data = await response.json();
-      if (response.ok) {
-        setContracts(data.contracts || []);
-        setPagination((prev) => ({
-          ...prev,
-          totalPages: data.pagination?.totalPages || 1,
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching contracts:", error);
+      const response = await ContractList(params);
+      setContracts(response.data.contracts || []);
+      setPagination((prev) => ({
+        ...prev,
+        totalPages: response.data.pagination?.totalPages || 1,
+      }));
+    } catch (err) {
+      console.error("Error fetching contracts:", err.response?.data?.message || err.message);
     } finally {
       setLoading(false);
     }
@@ -81,14 +78,10 @@ export default function ContractsPage() {
   const handleDelete = async (id) => {
     if (!confirm("Voulez-vous vraiment supprimer ce contrat ?")) return;
     try {
-      const response = await fetch(`/api/legal/contracts/${id}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        fetchContracts();
-      }
-    } catch (error) {
-      console.error("Error deleting contract:", error);
+      await ContractDelete(id);
+      fetchContracts();
+    } catch (err) {
+      console.error("Error deleting contract:", err.response?.data?.message || err.message);
     }
   };
 

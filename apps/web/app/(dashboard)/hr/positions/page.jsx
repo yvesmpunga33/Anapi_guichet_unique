@@ -11,6 +11,9 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+// Services
+import { PositionList, PositionCreate, PositionUpdate, PositionDelete, HRDepartmentList, GradeList } from "@/app/services/admin/HR.service";
+
 export default function PositionsPage() {
   const [positions, setPositions] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -36,23 +39,14 @@ export default function PositionsPage() {
     try {
       setLoading(true);
       const [posRes, deptRes, gradeRes] = await Promise.all([
-        fetch("/api/hr/positions"),
-        fetch("/api/hr/departments"),
-        fetch("/api/hr/grades"),
+        PositionList(),
+        HRDepartmentList(),
+        GradeList(),
       ]);
 
-      if (posRes.ok) {
-        const data = await posRes.json();
-        setPositions(data.positions || []);
-      }
-      if (deptRes.ok) {
-        const data = await deptRes.json();
-        setDepartments(data.departments || []);
-      }
-      if (gradeRes.ok) {
-        const data = await gradeRes.json();
-        setGrades(data.grades || []);
-      }
+      setPositions(posRes.data?.positions || []);
+      setDepartments(deptRes.data?.departments || []);
+      setGrades(gradeRes.data?.grades || []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -63,22 +57,14 @@ export default function PositionsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const method = editingPosition ? "PUT" : "POST";
-      const url = editingPosition
-        ? `/api/hr/positions/${editingPosition.id}`
-        : "/api/hr/positions";
-
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        fetchData();
-        setShowModal(false);
-        resetForm();
+      if (editingPosition) {
+        await PositionUpdate(editingPosition.id, formData);
+      } else {
+        await PositionCreate(formData);
       }
+      fetchData();
+      setShowModal(false);
+      resetForm();
     } catch (error) {
       console.error("Error saving position:", error);
     }
@@ -88,13 +74,8 @@ export default function PositionsPage() {
     if (!confirm("Êtes-vous sûr de vouloir supprimer ce poste ?")) return;
 
     try {
-      const response = await fetch(`/api/hr/positions/${id}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        fetchData();
-      }
+      await PositionDelete(id);
+      fetchData();
     } catch (error) {
       console.error("Error deleting position:", error);
     }

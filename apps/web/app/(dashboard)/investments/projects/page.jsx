@@ -32,6 +32,9 @@ import Link from "next/link";
 import { useIntl } from "react-intl";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+// Services
+import { ProjectList } from "@/app/services/admin/Project.service";
+
 // Fonction dynamique pour le statusConfig avec internationalisation
 const getStatusConfig = (intl) => ({
   DRAFT: { label: intl.formatMessage({ id: "status.draft", defaultMessage: "Brouillon" }), color: "text-gray-600", bgColor: "bg-gray-100", icon: Clock },
@@ -85,28 +88,23 @@ export default function ProjectsPage() {
       setLoading(true);
       setError(null);
 
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
-      });
+      };
 
       if (searchTerm) {
-        params.append('search', searchTerm);
+        params.search = searchTerm;
       }
       if (statusFilter !== 'all') {
-        params.append('status', statusFilter);
+        params.status = statusFilter;
       }
       if (sectorFilter !== 'all') {
-        params.append('sector', sectorFilter);
+        params.sector = sectorFilter;
       }
 
-      const response = await fetch(`/api/investments/projects?${params.toString()}`);
-
-      if (!response.ok) {
-        throw new Error('Erreur lors du chargement des projets');
-      }
-
-      const data = await response.json();
+      const response = await ProjectList(params);
+      const data = response.data;
 
       setProjects(data.projects || []);
       setStats(data.stats || { total: 0, inProgress: 0, totalAmount: 0, totalJobs: 0 });
@@ -118,7 +116,7 @@ export default function ProjectsPage() {
       }));
     } catch (err) {
       console.error('Error fetching projects:', err);
-      setError(err.message);
+      setError(err.response?.data?.message || err.message || intl.formatMessage({ id: "projects.error.loading", defaultMessage: "Erreur lors du chargement des projets" }));
     } finally {
       setLoading(false);
     }

@@ -22,6 +22,7 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
+import { WorkflowStepList, WorkflowStepCreate, WorkflowStepUpdate, WorkflowStepDelete } from "@/app/services/admin/Config.service";
 
 const workflowTypes = [
   { value: "AGREMENT", label: "Demandes d'agrement", category: "general" },
@@ -83,11 +84,8 @@ export default function WorkflowStepsPage() {
   const fetchSteps = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/config/workflow-steps?type=${selectedType}&activeOnly=false`);
-      if (response.ok) {
-        const data = await response.json();
-        setSteps(data.steps || []);
-      }
+      const response = await WorkflowStepList({ type: selectedType, activeOnly: false });
+      setSteps(response.data?.steps || []);
     } catch (error) {
       console.error("Error fetching steps:", error);
     } finally {
@@ -104,23 +102,15 @@ export default function WorkflowStepsPage() {
     try {
       setSaving(true);
 
-      const url = "/api/config/workflow-steps";
-      const method = editingStep ? "PUT" : "POST";
       const body = {
         ...formData,
         workflowType: selectedType,
-        ...(editingStep && { id: editingStep.id }),
       };
 
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Erreur lors de la sauvegarde");
+      if (editingStep) {
+        await WorkflowStepUpdate(editingStep.id, body);
+      } else {
+        await WorkflowStepCreate(body);
       }
 
       await fetchSteps();
@@ -138,15 +128,7 @@ export default function WorkflowStepsPage() {
     if (!confirm(`Supprimer l'etape "${step.name}" ?`)) return;
 
     try {
-      const response = await fetch(`/api/config/workflow-steps?id=${step.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Erreur lors de la suppression");
-      }
-
+      await WorkflowStepDelete(step.id);
       await fetchSteps();
     } catch (error) {
       alert(error.message);
@@ -161,18 +143,18 @@ export default function WorkflowStepsPage() {
 
     [newSteps[index], newSteps[newIndex]] = [newSteps[newIndex], newSteps[index]];
 
-    try {
-      const response = await fetch("/api/config/workflow-steps/reorder", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ steps: newSteps }),
-      });
+    // Update local state immediately for better UX
+    setSteps(newSteps);
 
-      if (response.ok) {
-        setSteps(newSteps);
+    // Update each step with new order
+    try {
+      for (let i = 0; i < newSteps.length; i++) {
+        await WorkflowStepUpdate(newSteps[i].id, { stepNumber: i + 1 });
       }
     } catch (error) {
       console.error("Error reordering:", error);
+      // Revert on error
+      fetchSteps();
     }
   };
 
@@ -193,15 +175,8 @@ export default function WorkflowStepsPage() {
 
   const handleToggleActive = async (step) => {
     try {
-      const response = await fetch("/api/config/workflow-steps", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: step.id, isActive: !step.isActive }),
-      });
-
-      if (response.ok) {
-        await fetchSteps();
-      }
+      await WorkflowStepUpdate(step.id, { isActive: !step.isActive });
+      await fetchSteps();
     } catch (error) {
       console.error("Error toggling active:", error);
     }

@@ -34,6 +34,15 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { fr, enUS, pt, ar, zhCN, de, ru, es } from "date-fns/locale";
 import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  MessageList,
+  ExternalEmailInboxList,
+  ExternalEmailList,
+  ExternalEmailSync,
+  MessageMarkAsRead,
+  MessageMarkAsUnread,
+  MessageDelete,
+} from "@/app/services/admin/Message.service";
 
 const dateLocales = { fr, en: enUS, pt, ar, zh: zhCN, de, ru, es };
 
@@ -79,18 +88,18 @@ export default function MessagesInboxPage() {
   const fetchMessages = useCallback(async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
         folder: folder,
-      });
+      };
 
-      if (filters.search) params.append("search", filters.search);
-      if (filters.priority) params.append("priority", filters.priority);
-      if (filters.status) params.append("status", filters.status);
+      if (filters.search) params.search = filters.search;
+      if (filters.priority) params.priority = filters.priority;
+      if (filters.status) params.status = filters.status;
 
-      const response = await fetch(`/api/messages?${params.toString()}`);
-      const result = await response.json();
+      const response = await MessageList(params);
+      const result = response.data;
 
       if (result.success) {
         setMessages(result.data);
@@ -115,20 +124,18 @@ export default function MessagesInboxPage() {
   const fetchExternalMessages = useCallback(async () => {
     try {
       setExternalLoading(true);
-      const params = new URLSearchParams({
+      const params = {
         page: externalPagination.page.toString(),
         limit: externalPagination.limit.toString(),
-      });
+      };
 
-      if (filters.search) params.append("search", filters.search);
+      if (filters.search) params.search = filters.search;
 
-      // Different endpoint based on folder
-      const endpoint = folder === 'inbox'
-        ? `/api/messages/external/inbox?${params.toString()}`
-        : `/api/messages/external?${params.toString()}`;
-
-      const response = await fetch(endpoint);
-      const result = await response.json();
+      // Different service based on folder
+      const response = folder === 'inbox'
+        ? await ExternalEmailInboxList(params)
+        : await ExternalEmailList(params);
+      const result = response.data;
 
       if (result.success) {
         setExternalMessages(result.data);
@@ -149,10 +156,8 @@ export default function MessagesInboxPage() {
   const syncExternalEmails = async () => {
     try {
       setSyncingEmails(true);
-      const response = await fetch('/api/messages/external/inbox', {
-        method: 'POST',
-      });
-      const result = await response.json();
+      const response = await ExternalEmailSync();
+      const result = response.data;
 
       if (result.success) {
         alert(`${result.message}`);
@@ -195,9 +200,7 @@ export default function MessagesInboxPage() {
   const handleMarkAsRead = async (messageIds) => {
     try {
       await Promise.all(
-        messageIds.map((id) =>
-          fetch(`/api/messages/${id}/read`, { method: "POST" })
-        )
+        messageIds.map((id) => MessageMarkAsRead(id))
       );
       fetchMessages();
       setSelectedMessages([]);
@@ -209,9 +212,7 @@ export default function MessagesInboxPage() {
   const handleMarkAsUnread = async (messageIds) => {
     try {
       await Promise.all(
-        messageIds.map((id) =>
-          fetch(`/api/messages/${id}/read`, { method: "DELETE" })
-        )
+        messageIds.map((id) => MessageMarkAsUnread(id))
       );
       fetchMessages();
       setSelectedMessages([]);
@@ -225,9 +226,7 @@ export default function MessagesInboxPage() {
 
     try {
       await Promise.all(
-        messageIds.map((id) =>
-          fetch(`/api/messages/${id}`, { method: "DELETE" })
-        )
+        messageIds.map((id) => MessageDelete(id))
       );
       if (category === 'external') {
         fetchExternalMessages();

@@ -26,6 +26,10 @@ import {
   PieChart,
 } from "lucide-react";
 
+// Services
+import { ProjectList } from "@/app/services/admin/Project.service";
+import { InvestorList } from "@/app/services/admin/Investor.service";
+
 const statusConfig = {
   DRAFT: { label: "Brouillon", color: "bg-gray-100 text-gray-700", bgColor: "bg-gray-500" },
   SUBMITTED: { label: "Soumis", color: "bg-blue-100 text-blue-700", bgColor: "bg-blue-500" },
@@ -68,17 +72,13 @@ export default function InvestmentsDashboardPage() {
       setError(null);
 
       // Fetch projects and investors in parallel
-      const [projectsRes, investorsRes] = await Promise.all([
-        fetch("/api/investments/projects?limit=100"),
-        fetch("/api/investments/investors?limit=100"),
+      const [projectsResponse, investorsResponse] = await Promise.all([
+        ProjectList({ limit: 100 }),
+        InvestorList({ limit: 100 }),
       ]);
 
-      if (!projectsRes.ok || !investorsRes.ok) {
-        throw new Error("Erreur lors du chargement des donnees");
-      }
-
-      const projectsData = await projectsRes.json();
-      const investorsData = await investorsRes.json();
+      const projectsData = projectsResponse.data;
+      const investorsData = investorsResponse.data;
 
       // Calculate additional stats
       const projects = projectsData.projects || [];

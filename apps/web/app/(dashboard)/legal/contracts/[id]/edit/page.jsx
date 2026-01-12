@@ -22,6 +22,8 @@ import {
   File,
   FileImage,
 } from "lucide-react";
+import { ContractTypeList, ContractGetById, ContractUpdateWithFormData } from "@/app/services/admin/Legal.service";
+import { CurrencyList } from "@/app/services/admin/Referentiel.service";
 
 export default function EditContractPage() {
   const params = useParams();
@@ -63,58 +65,52 @@ export default function EditContractPage() {
   const fetchReferentials = async () => {
     try {
       const [typesRes, currenciesRes] = await Promise.all([
-        fetch("/api/legal/contract-types?activeOnly=true"),
-        fetch("/api/referentiels/currencies?activeOnly=true"),
+        ContractTypeList({ activeOnly: true }),
+        CurrencyList({ activeOnly: true }),
       ]);
-      const typesData = await typesRes.json();
-      const currenciesData = await currenciesRes.json();
-      setContractTypes(typesData.types || []);
-      setCurrencies(currenciesData.currencies || []);
-    } catch (error) {
-      console.error("Error fetching referentials:", error);
+      setContractTypes(typesRes.data.types || []);
+      setCurrencies(currenciesRes.data.currencies || []);
+    } catch (err) {
+      console.error("Error fetching referentials:", err.response?.data?.message || err.message);
     }
   };
 
   const fetchContract = async () => {
     try {
-      const response = await fetch(`/api/legal/contracts/${params.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        const contract = data.contract;
+      const response = await ContractGetById(params.id);
+      const contract = response.data.contract;
 
-        setFormData({
-          title: contract.title || "",
-          typeId: contract.typeId || "",
-          reference: contract.reference || "",
-          startDate: contract.startDate ? contract.startDate.split("T")[0] : "",
-          endDate: contract.endDate ? contract.endDate.split("T")[0] : "",
-          value: contract.value || "",
-          currency: contract.currency || "USD",
-          description: contract.description || "",
-          status: contract.status || "DRAFT",
-          alertEnabled: contract.alertEnabled !== false,
-          alertDays: contract.alertDays || [30, 60, 90],
-          renewalType: contract.renewalType || "MANUAL",
-        });
+      setFormData({
+        title: contract.title || "",
+        typeId: contract.typeId || "",
+        reference: contract.reference || "",
+        startDate: contract.startDate ? contract.startDate.split("T")[0] : "",
+        endDate: contract.endDate ? contract.endDate.split("T")[0] : "",
+        value: contract.value || "",
+        currency: contract.currency || "USD",
+        description: contract.description || "",
+        status: contract.status || "DRAFT",
+        alertEnabled: contract.alertEnabled !== false,
+        alertDays: contract.alertDays || [30, 60, 90],
+        renewalType: contract.renewalType || "MANUAL",
+      });
 
-        setParties(contract.parties || []);
+      setParties(contract.parties || []);
 
-        // Support multiple files - convert single file to array format
-        if (contract.files && contract.files.length > 0) {
-          setExistingFiles(contract.files);
-        } else if (contract.filePath) {
-          setExistingFiles([{
-            id: 'main',
-            name: contract.fileName,
-            path: contract.filePath,
-            size: contract.fileSize,
-          }]);
-        }
-      } else {
-        router.push("/legal/contracts");
+      // Support multiple files - convert single file to array format
+      if (contract.files && contract.files.length > 0) {
+        setExistingFiles(contract.files);
+      } else if (contract.filePath) {
+        setExistingFiles([{
+          id: 'main',
+          name: contract.fileName,
+          path: contract.filePath,
+          size: contract.fileSize,
+        }]);
       }
-    } catch (error) {
-      console.error("Error fetching contract:", error);
+    } catch (err) {
+      console.error("Error fetching contract:", err.response?.data?.message || err.message);
+      router.push("/legal/contracts");
     } finally {
       setLoading(false);
     }
@@ -241,24 +237,15 @@ export default function EditContractPage() {
         submitFormData.append(`files`, fileWrapper.file);
       });
 
-      const response = await fetch(`/api/legal/contracts/${params.id}`, {
-        method: "PUT",
-        body: submitFormData,
+      await ContractUpdateWithFormData(params.id, submitFormData);
+      // Clean up preview URLs
+      files.forEach(f => {
+        if (f.previewUrl) URL.revokeObjectURL(f.previewUrl);
       });
-
-      if (response.ok) {
-        // Clean up preview URLs
-        files.forEach(f => {
-          if (f.previewUrl) URL.revokeObjectURL(f.previewUrl);
-        });
-        router.push(`/legal/contracts/${params.id}`);
-      } else {
-        const error = await response.json();
-        alert(error.error || "Erreur lors de la mise a jour");
-      }
-    } catch (error) {
-      console.error("Error updating contract:", error);
-      alert("Erreur lors de la mise a jour du contrat");
+      router.push(`/legal/contracts/${params.id}`);
+    } catch (err) {
+      console.error("Error updating contract:", err);
+      alert(err.response?.data?.error || "Erreur lors de la mise a jour du contrat");
     } finally {
       setSaving(false);
     }

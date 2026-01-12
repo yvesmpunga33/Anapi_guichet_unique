@@ -19,6 +19,7 @@ import {
   AlertCircle,
   Info,
 } from "lucide-react";
+import { TenderCreate } from "@/app/services/admin/Procurement.service";
 
 const tenderTypes = [
   { value: "OPEN", label: "Appel d'offres ouvert", description: "Ouvert à tous les soumissionnaires qualifiés" },
@@ -192,13 +193,8 @@ export default function NewTenderPage() {
         })),
       };
 
-      const response = await fetch("/api/procurement/tenders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submitData),
-      });
-
-      const data = await response.json();
+      const response = await TenderCreate(submitData);
+      const data = response.data;
 
       if (data.success) {
         router.push(`/procurement/tenders/${data.data.id}`);

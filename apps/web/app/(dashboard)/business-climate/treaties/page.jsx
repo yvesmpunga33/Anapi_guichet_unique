@@ -21,6 +21,9 @@ import {
   X,
 } from "lucide-react";
 
+// Services
+import { TreatyList } from "@/app/services/admin/BusinessClimate.service";
+
 const treatyTypeConfig = {
   BIT: { label: "Traite bilateral d'investissement", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-100 dark:bg-blue-900/40" },
   FTA: { label: "Accord de libre-echange", color: "text-green-600 dark:text-green-400", bg: "bg-green-100 dark:bg-green-900/40" },
@@ -73,24 +76,22 @@ export default function TreatiesPage() {
   const fetchTreaties = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page,
         limit: pagination.limit,
-        ...(filters.status && { status: filters.status }),
-        ...(filters.treatyType && { treatyType: filters.treatyType }),
-        ...(search && { search }),
-      });
+      };
+      if (filters.status) params.status = filters.status;
+      if (filters.treatyType) params.treatyType = filters.treatyType;
+      if (search) params.search = search;
 
-      const response = await fetch(`/api/business-climate/treaties?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setTreaties(data.data || []);
-        setPagination((prev) => ({
-          ...prev,
-          total: data.pagination?.total || 0,
-          totalPages: data.pagination?.totalPages || 0,
-        }));
-      }
+      const response = await TreatyList(params);
+      const data = response.data;
+      setTreaties(data.data || []);
+      setPagination((prev) => ({
+        ...prev,
+        total: data.pagination?.total || 0,
+        totalPages: data.pagination?.totalPages || 0,
+      }));
     } catch (error) {
       console.error("Error fetching treaties:", error);
     } finally {

@@ -31,6 +31,10 @@ import {
   ChevronDown,
 } from "lucide-react";
 
+// Services
+import { UserList, UserCreate, UserUpdate, UserDelete } from "@/app/services/admin/User.service";
+import { ReferentielMinistryList } from "@/app/services/admin/Referentiel.service";
+
 // Liste des modules disponibles
 const AVAILABLE_MODULES = [
   { id: "dashboard", name: "Tableau de bord", description: "Accès au tableau de bord principal" },
@@ -105,16 +109,13 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (searchTerm) params.append("search", searchTerm);
-      if (roleFilter) params.append("role", roleFilter);
-      if (statusFilter) params.append("status", statusFilter);
+      const params = {};
+      if (searchTerm) params.search = searchTerm;
+      if (roleFilter) params.role = roleFilter;
+      if (statusFilter) params.status = statusFilter;
 
-      const response = await fetch(`/api/users?${params.toString()}`);
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data.users || []);
-      }
+      const response = await UserList(params);
+      setUsers(response.data?.users || []);
     } catch (error) {
       console.error("Error fetching users:", error);
     } finally {
@@ -124,11 +125,8 @@ export default function UsersPage() {
 
   const fetchMinistries = async () => {
     try {
-      const response = await fetch("/api/referentiels/ministries");
-      if (response.ok) {
-        const data = await response.json();
-        setMinistries(data.ministries || data || []);
-      }
+      const response = await ReferentielMinistryList();
+      setMinistries(response.data?.ministries || response.data || []);
     } catch (error) {
       console.error("Error fetching ministries:", error);
     }
@@ -281,44 +279,32 @@ export default function UsersPage() {
         formDataToSend.append("photo", formData.photo);
       }
 
-      const url = editingUser ? `/api/users/${editingUser.id}` : "/api/users";
-      const method = editingUser ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        body: formDataToSend,
-      });
-
-      if (response.ok) {
-        handleCloseModal();
-        fetchUsers();
-
-        Swal.fire({
-          icon: 'success',
-          title: editingUser ? 'Utilisateur modifié' : 'Utilisateur créé',
-          text: editingUser
-            ? 'Les modifications ont été enregistrées avec succès.'
-            : 'Le nouvel utilisateur a été créé avec succès.',
-          timer: 3000,
-          showConfirmButton: false,
-          toast: true,
-          position: 'top-end',
-        });
+      if (editingUser) {
+        await UserUpdate(editingUser.id, formDataToSend);
       } else {
-        const data = await response.json();
-        Swal.fire({
-          icon: 'error',
-          title: 'Erreur',
-          text: data.error || "Une erreur est survenue lors de l'enregistrement.",
-          confirmButtonColor: '#3B82F6',
-        });
+        await UserCreate(formDataToSend);
       }
+
+      handleCloseModal();
+      fetchUsers();
+
+      Swal.fire({
+        icon: 'success',
+        title: editingUser ? 'Utilisateur modifié' : 'Utilisateur créé',
+        text: editingUser
+          ? 'Les modifications ont été enregistrées avec succès.'
+          : 'Le nouvel utilisateur a été créé avec succès.',
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end',
+      });
     } catch (error) {
       console.error("Error saving user:", error);
       Swal.fire({
         icon: 'error',
         title: 'Erreur',
-        text: "Une erreur est survenue lors de l'enregistrement.",
+        text: error.response?.data?.error || "Une erreur est survenue lors de l'enregistrement.",
         confirmButtonColor: '#3B82F6',
       });
     } finally {
@@ -328,38 +314,26 @@ export default function UsersPage() {
 
   const handleDelete = async (id) => {
     try {
-      const response = await fetch(`/api/users/${id}`, {
-        method: "DELETE",
+      await UserDelete(id);
+
+      setShowDeleteConfirm(null);
+      fetchUsers();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Utilisateur supprimé',
+        text: 'L\'utilisateur a été supprimé avec succès.',
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end',
       });
-
-      if (response.ok) {
-        setShowDeleteConfirm(null);
-        fetchUsers();
-
-        Swal.fire({
-          icon: 'success',
-          title: 'Utilisateur supprimé',
-          text: 'L\'utilisateur a été supprimé avec succès.',
-          timer: 3000,
-          showConfirmButton: false,
-          toast: true,
-          position: 'top-end',
-        });
-      } else {
-        const data = await response.json();
-        Swal.fire({
-          icon: 'error',
-          title: 'Erreur',
-          text: data.error || "Une erreur est survenue lors de la suppression.",
-          confirmButtonColor: '#3B82F6',
-        });
-      }
     } catch (error) {
       console.error("Error deleting user:", error);
       Swal.fire({
         icon: 'error',
         title: 'Erreur',
-        text: "Une erreur est survenue lors de la suppression.",
+        text: error.response?.data?.error || "Une erreur est survenue lors de la suppression.",
         confirmButtonColor: '#3B82F6',
       });
     }

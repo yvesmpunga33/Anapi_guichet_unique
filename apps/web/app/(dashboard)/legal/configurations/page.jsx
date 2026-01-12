@@ -13,6 +13,16 @@ import {
   Loader2,
   Search,
 } from "lucide-react";
+import {
+  DocumentTypeList,
+  DocumentTypeCreate,
+  DocumentTypeUpdate,
+  DocumentTypeDelete,
+  LegalDomainList,
+  LegalDomainCreate,
+  LegalDomainUpdate,
+  LegalDomainDelete,
+} from "@/app/services/admin/Legal.service";
 
 export default function LegalConfigurationsPage() {
   const [activeTab, setActiveTab] = useState("document-types");
@@ -61,9 +71,8 @@ export default function LegalConfigurationsPage() {
   const fetchDocumentTypes = async () => {
     setLoadingTypes(true);
     try {
-      const response = await fetch("/api/legal/document-types");
-      const data = await response.json();
-      setDocumentTypes(data.types || []);
+      const response = await DocumentTypeList();
+      setDocumentTypes(response.data.types || []);
     } catch (error) {
       console.error("Error fetching document types:", error);
     } finally {
@@ -108,27 +117,16 @@ export default function LegalConfigurationsPage() {
 
     setSavingType(true);
     try {
-      const url = editingTypeId
-        ? `/api/legal/document-types/${editingTypeId}`
-        : "/api/legal/document-types";
-      const method = editingTypeId ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(typeFormData),
-      });
-
-      if (response.ok) {
-        fetchDocumentTypes();
-        resetTypeForm();
+      if (editingTypeId) {
+        await DocumentTypeUpdate(editingTypeId, typeFormData);
       } else {
-        const error = await response.json();
-        alert(error.error || "Erreur lors de l'enregistrement");
+        await DocumentTypeCreate(typeFormData);
       }
+      fetchDocumentTypes();
+      resetTypeForm();
     } catch (error) {
       console.error("Error saving document type:", error);
-      alert("Erreur lors de l'enregistrement");
+      alert(error.response?.data?.error || "Erreur lors de l'enregistrement");
     } finally {
       setSavingType(false);
     }
@@ -137,30 +135,18 @@ export default function LegalConfigurationsPage() {
   const handleDeleteType = async (id) => {
     if (!confirm("Voulez-vous vraiment supprimer ce type de document ?")) return;
     try {
-      const response = await fetch(`/api/legal/document-types/${id}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        fetchDocumentTypes();
-      } else {
-        const error = await response.json();
-        alert(error.error || "Erreur lors de la suppression");
-      }
+      await DocumentTypeDelete(id);
+      fetchDocumentTypes();
     } catch (error) {
       console.error("Error deleting document type:", error);
+      alert(error.response?.data?.error || "Erreur lors de la suppression");
     }
   };
 
   const handleToggleTypeActive = async (type) => {
     try {
-      const response = await fetch(`/api/legal/document-types/${type.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: !type.isActive }),
-      });
-      if (response.ok) {
-        fetchDocumentTypes();
-      }
+      await DocumentTypeUpdate(type.id, { isActive: !type.isActive });
+      fetchDocumentTypes();
     } catch (error) {
       console.error("Error toggling type:", error);
     }
@@ -171,9 +157,8 @@ export default function LegalConfigurationsPage() {
   const fetchDomains = async () => {
     setLoadingDomains(true);
     try {
-      const response = await fetch("/api/legal/domains");
-      const data = await response.json();
-      setDomains(data.domains || []);
+      const response = await LegalDomainList();
+      setDomains(response.data.domains || []);
     } catch (error) {
       console.error("Error fetching domains:", error);
     } finally {
@@ -216,27 +201,16 @@ export default function LegalConfigurationsPage() {
 
     setSavingDomain(true);
     try {
-      const url = editingDomainId
-        ? `/api/legal/domains/${editingDomainId}`
-        : "/api/legal/domains";
-      const method = editingDomainId ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(domainFormData),
-      });
-
-      if (response.ok) {
-        fetchDomains();
-        resetDomainForm();
+      if (editingDomainId) {
+        await LegalDomainUpdate(editingDomainId, domainFormData);
       } else {
-        const error = await response.json();
-        alert(error.error || "Erreur lors de l'enregistrement");
+        await LegalDomainCreate(domainFormData);
       }
+      fetchDomains();
+      resetDomainForm();
     } catch (error) {
       console.error("Error saving domain:", error);
-      alert("Erreur lors de l'enregistrement");
+      alert(error.response?.data?.error || "Erreur lors de l'enregistrement");
     } finally {
       setSavingDomain(false);
     }
@@ -245,30 +219,18 @@ export default function LegalConfigurationsPage() {
   const handleDeleteDomain = async (id) => {
     if (!confirm("Voulez-vous vraiment supprimer ce domaine ?")) return;
     try {
-      const response = await fetch(`/api/legal/domains/${id}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        fetchDomains();
-      } else {
-        const error = await response.json();
-        alert(error.error || "Erreur lors de la suppression");
-      }
+      await LegalDomainDelete(id);
+      fetchDomains();
     } catch (error) {
       console.error("Error deleting domain:", error);
+      alert(error.response?.data?.error || "Erreur lors de la suppression");
     }
   };
 
   const handleToggleDomainActive = async (domain) => {
     try {
-      const response = await fetch(`/api/legal/domains/${domain.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: !domain.isActive }),
-      });
-      if (response.ok) {
-        fetchDomains();
-      }
+      await LegalDomainUpdate(domain.id, { isActive: !domain.isActive });
+      fetchDomains();
     } catch (error) {
       console.error("Error toggling domain:", error);
     }

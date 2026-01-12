@@ -21,6 +21,9 @@ import {
   FileText,
 } from "lucide-react";
 
+// Services
+import { MediationList } from "@/app/services/admin/BusinessClimate.service";
+
 const disputeTypeOptions = [
   { value: "", label: "Tous types" },
   { value: "CONTRACT", label: "Contrat" },
@@ -115,22 +118,20 @@ export default function MediationsPage() {
   const fetchMediations = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page,
         limit: 20,
-      });
+      };
 
-      if (search) params.append("search", search);
-      if (filters.status) params.append("status", filters.status);
-      if (filters.disputeType) params.append("disputeType", filters.disputeType);
-      if (filters.urgencyLevel) params.append("urgencyLevel", filters.urgencyLevel);
+      if (search) params.search = search;
+      if (filters.status) params.status = filters.status;
+      if (filters.disputeType) params.disputeType = filters.disputeType;
+      if (filters.urgencyLevel) params.urgencyLevel = filters.urgencyLevel;
 
-      const response = await fetch(`/api/business-climate/mediations?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setMediations(data.data || []);
-        setPagination(data.pagination);
-      }
+      const response = await MediationList(params);
+      const data = response.data;
+      setMediations(data.data || []);
+      setPagination(data.pagination);
     } catch (error) {
       console.error("Error fetching mediations:", error);
     } finally {

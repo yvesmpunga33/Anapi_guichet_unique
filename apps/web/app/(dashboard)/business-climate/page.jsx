@@ -35,6 +35,9 @@ import {
   Briefcase,
 } from "lucide-react";
 
+// Services
+import { BusinessClimateStatistics } from "@/app/services/admin/BusinessClimate.service";
+
 const categoryLabels = {
   ADMINISTRATIVE: "Administratif",
   FISCAL: "Fiscal",
@@ -161,11 +164,8 @@ export default function BusinessClimateDashboard() {
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
 
-      const response = await fetch(`/api/business-climate/statistics?year=${selectedYear}`);
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      }
+      const response = await BusinessClimateStatistics({ year: selectedYear });
+      setStats(response.data);
     } catch (error) {
       console.error("Error fetching stats:", error);
     } finally {

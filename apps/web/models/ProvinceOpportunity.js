@@ -30,7 +30,7 @@ ProvinceOpportunity.init(
       type: DataTypes.TEXT,
       allowNull: false,
       references: {
-        model: 'Province',
+        model: 'provinces',
         key: 'id',
       },
       comment: 'Province qui propose l\'opportunite',

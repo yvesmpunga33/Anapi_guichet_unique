@@ -17,6 +17,12 @@ import {
   Settings,
   ArrowLeft,
 } from "lucide-react";
+import {
+  LegalNotificationList,
+  LegalNotificationSend,
+  ContractList,
+  LegalAlertList,
+} from "@/app/services/admin/Legal.service";
 
 export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
@@ -38,26 +44,17 @@ export default function NotificationsPage() {
     setLoading(true);
     try {
       // Recuperer le statut des notifications
-      const statusRes = await fetch("/api/legal/notifications");
-      const statusData = await statusRes.json();
-      if (statusRes.ok) {
-        setStats(statusData.stats);
-        setEmailConfig(statusData.config);
-      }
+      const statusRes = await LegalNotificationList();
+      setStats(statusRes.data.stats);
+      setEmailConfig(statusRes.data.config);
 
       // Recuperer les contrats expirant
-      const contractsRes = await fetch("/api/legal/contracts?expiring=30");
-      const contractsData = await contractsRes.json();
-      if (contractsRes.ok) {
-        setExpiringContracts(contractsData.contracts || []);
-      }
+      const contractsRes = await ContractList({ expiring: 30 });
+      setExpiringContracts(contractsRes.data.contracts || []);
 
       // Recuperer les alertes en attente
-      const alertsRes = await fetch("/api/legal/alerts?status=PENDING&limit=10");
-      const alertsData = await alertsRes.json();
-      if (alertsRes.ok) {
-        setPendingAlerts(alertsData.alerts || []);
-      }
+      const alertsRes = await LegalAlertList({ status: "PENDING", limit: 10 });
+      setPendingAlerts(alertsRes.data.alerts || []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -69,29 +66,18 @@ export default function NotificationsPage() {
     setSending(true);
     setMessage(null);
     try {
-      const response = await fetch("/api/legal/notifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, ...data }),
-      });
-      const result = await response.json();
+      const response = await LegalNotificationSend({ type, ...data });
+      const result = response.data;
 
-      if (response.ok) {
-        setMessage({
-          type: "success",
-          text: result.message || "Notification envoyee avec succes",
-        });
-        fetchData(); // Rafraichir les donnees
-      } else {
-        setMessage({
-          type: "error",
-          text: result.error || "Erreur lors de l'envoi",
-        });
-      }
+      setMessage({
+        type: "success",
+        text: result.message || "Notification envoyee avec succes",
+      });
+      fetchData(); // Rafraichir les donnees
     } catch (error) {
       setMessage({
         type: "error",
-        text: "Erreur de connexion",
+        text: error.response?.data?.error || "Erreur lors de l'envoi",
       });
     } finally {
       setSending(false);

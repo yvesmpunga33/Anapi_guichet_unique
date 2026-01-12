@@ -34,6 +34,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+// Services
+import { InvestorList, InvestorDelete } from "@/app/services/admin/Investor.service";
+
 export default function InvestorsPage() {
   const intl = useIntl();
   const { locale } = useLanguage();
@@ -78,28 +81,23 @@ export default function InvestorsPage() {
       setLoading(true);
       setError(null);
 
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
-      });
+      };
 
       if (searchTerm) {
-        params.append('search', searchTerm);
+        params.search = searchTerm;
       }
       if (statusFilter !== 'all') {
-        params.append('status', statusFilter);
+        params.status = statusFilter;
       }
       if (typeFilter !== 'all') {
-        params.append('type', typeFilter);
+        params.type = typeFilter;
       }
 
-      const response = await fetch(`/api/investments/investors?${params.toString()}`);
-
-      if (!response.ok) {
-        throw new Error(intl.formatMessage({ id: "investors.error.loading", defaultMessage: "Erreur lors du chargement des investisseurs" }));
-      }
-
-      const data = await response.json();
+      const response = await InvestorList(params);
+      const data = response.data;
 
       setInvestors(data.investors || []);
       setStats(data.stats || { total: 0, active: 0, verified: 0, pending: 0 });
@@ -110,7 +108,7 @@ export default function InvestorsPage() {
       }));
     } catch (err) {
       console.error('Error fetching investors:', err);
-      setError(err.message);
+      setError(err.response?.data?.message || err.message || intl.formatMessage({ id: "investors.error.loading", defaultMessage: "Erreur lors du chargement des investisseurs" }));
     } finally {
       setLoading(false);
     }
@@ -141,19 +139,11 @@ export default function InvestorsPage() {
 
     try {
       setDeleting(investor.id);
-      const response = await fetch(`/api/investments/investors/${investor.id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || intl.formatMessage({ id: "investors.error.delete", defaultMessage: "Erreur lors de la suppression" }));
-      }
-
+      await InvestorDelete(investor.id);
       // Refresh the list
       fetchInvestors();
     } catch (err) {
-      alert(err.message);
+      alert(err.response?.data?.message || err.message || intl.formatMessage({ id: "investors.error.delete", defaultMessage: "Erreur lors de la suppression" }));
     } finally {
       setDeleting(null);
     }

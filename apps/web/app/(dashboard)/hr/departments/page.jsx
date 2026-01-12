@@ -12,6 +12,9 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+// Services
+import { HRDepartmentList, HRDepartmentCreate, HRDepartmentUpdate, HRDepartmentDelete } from "@/app/services/admin/HR.service";
+
 export default function DepartmentsPage() {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,11 +36,8 @@ export default function DepartmentsPage() {
   const fetchDepartments = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/hr/departments");
-      if (response.ok) {
-        const data = await response.json();
-        setDepartments(data.departments || []);
-      }
+      const response = await HRDepartmentList();
+      setDepartments(response.data?.departments || []);
     } catch (error) {
       console.error("Error fetching departments:", error);
     } finally {
@@ -48,22 +48,14 @@ export default function DepartmentsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const method = editingDepartment ? "PUT" : "POST";
-      const url = editingDepartment
-        ? `/api/hr/departments/${editingDepartment.id}`
-        : "/api/hr/departments";
-
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        fetchDepartments();
-        setShowModal(false);
-        resetForm();
+      if (editingDepartment) {
+        await HRDepartmentUpdate(editingDepartment.id, formData);
+      } else {
+        await HRDepartmentCreate(formData);
       }
+      fetchDepartments();
+      setShowModal(false);
+      resetForm();
     } catch (error) {
       console.error("Error saving department:", error);
     }
@@ -73,13 +65,8 @@ export default function DepartmentsPage() {
     if (!confirm("Etes-vous sur de vouloir supprimer ce departement ?")) return;
 
     try {
-      const response = await fetch(`/api/hr/departments/${id}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        fetchDepartments();
-      }
+      await HRDepartmentDelete(id);
+      fetchDepartments();
     } catch (error) {
       console.error("Error deleting department:", error);
     }

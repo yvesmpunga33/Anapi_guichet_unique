@@ -18,6 +18,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { ActeAdministratifCreate } from "@/app/services/admin/Config.service";
+import { ReferentielMinistryList, ReferentielSectorList } from "@/app/services/admin/Referentiel.service";
 
 const categories = [
   { value: "LICENCE", label: "Licence" },
@@ -82,11 +84,8 @@ export default function NouvelActePage() {
 
   const fetchMinistries = async () => {
     try {
-      const response = await fetch("/api/referentiels/ministries?isActive=true");
-      if (response.ok) {
-        const data = await response.json();
-        setMinistries(data.ministries || []);
-      }
+      const response = await ReferentielMinistryList({ isActive: true });
+      setMinistries(response.data?.ministries || response.data?.data || []);
     } catch (error) {
       console.error("Error fetching ministries:", error);
     }
@@ -94,11 +93,8 @@ export default function NouvelActePage() {
 
   const fetchSectors = async () => {
     try {
-      const response = await fetch("/api/referentiels/sectors?isActive=true");
-      if (response.ok) {
-        const data = await response.json();
-        setSectors(data.sectors || []);
-      }
+      const response = await ReferentielSectorList({ isActive: true });
+      setSectors(response.data?.sectors || response.data?.data || []);
     } catch (error) {
       console.error("Error fetching sectors:", error);
     }
@@ -189,16 +185,10 @@ export default function NouvelActePage() {
         })),
       };
 
-      const response = await fetch("/api/config/actes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dataToSend),
-      });
+      const response = await ActeAdministratifCreate(dataToSend);
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Erreur lors de la création");
+      if (response.data?.error) {
+        throw new Error(response.data.error || "Erreur lors de la création");
       }
 
       router.push("/configuration/actes-administratifs");

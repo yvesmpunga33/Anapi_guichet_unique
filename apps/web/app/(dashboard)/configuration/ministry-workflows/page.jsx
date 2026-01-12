@@ -20,6 +20,8 @@ import {
   Clock,
   Edit3,
 } from "lucide-react";
+import { MinistryWorkflowList, MinistryWorkflowCreate, MinistryWorkflowUpdate, MinistryWorkflowDelete } from "@/app/services/admin/Config.service";
+import { ReferentielMinistryList } from "@/app/services/admin/Referentiel.service";
 
 const requestTypes = [
   { value: "AUTORISATION", label: "Autorisations", icon: FileCheck, color: "blue" },
@@ -50,13 +52,11 @@ export default function MinistryWorkflowsPage() {
   useEffect(() => {
     const fetchMinistries = async () => {
       try {
-        const response = await fetch("/api/referentiels/ministries");
-        const result = await response.json();
-        if (response.ok) {
-          setMinistries(result.data || []);
-          if (result.data?.length > 0) {
-            setSelectedMinistry(result.data[0]);
-          }
+        const response = await ReferentielMinistryList();
+        const data = response.data?.ministries || response.data?.data || [];
+        setMinistries(data);
+        if (data.length > 0) {
+          setSelectedMinistry(data[0]);
         }
       } catch (error) {
         console.error("Error fetching ministries:", error);
@@ -76,14 +76,13 @@ export default function MinistryWorkflowsPage() {
 
   const fetchWorkflow = async () => {
     try {
-      const params = new URLSearchParams({
+      const response = await MinistryWorkflowList({
         ministryId: selectedMinistry.id,
         requestType: selectedType,
       });
-      const response = await fetch(`/api/ministries/workflows?${params}`);
-      const result = await response.json();
+      const result = response.data;
 
-      if (response.ok && result.data?.length > 0) {
+      if (result?.data?.length > 0) {
         const workflowData = result.data[0];
         setSteps(workflowData.steps || []);
       } else {
@@ -105,20 +104,14 @@ export default function MinistryWorkflowsPage() {
 
     setSaving(true);
     try {
-      const response = await fetch("/api/ministries/workflows", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ministryId: selectedMinistry.id,
-          requestType: selectedType,
-          steps,
-        }),
+      await MinistryWorkflowCreate({
+        ministryId: selectedMinistry.id,
+        requestType: selectedType,
+        steps,
       });
 
-      if (response.ok) {
-        setSuccessMessage("Workflow enregistre avec succes");
-        setTimeout(() => setSuccessMessage(null), 3000);
-      }
+      setSuccessMessage("Workflow enregistre avec succes");
+      setTimeout(() => setSuccessMessage(null), 3000);
     } catch (error) {
       console.error("Error saving workflow:", error);
     } finally {

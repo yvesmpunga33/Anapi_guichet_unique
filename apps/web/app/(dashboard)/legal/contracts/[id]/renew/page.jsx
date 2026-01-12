@@ -21,6 +21,7 @@ import {
   Bell,
   Save,
 } from "lucide-react";
+import { ContractRenewalInfo, ContractRenew } from "@/app/services/admin/Legal.service";
 
 export default function RenewContractPage() {
   const params = useParams();
@@ -49,31 +50,26 @@ export default function RenewContractPage() {
 
   const fetchRenewalInfo = async () => {
     try {
-      const response = await fetch(`/api/legal/contracts/${params.id}/renew`);
-      if (response.ok) {
-        const data = await response.json();
-        setRenewalData(data);
+      const response = await ContractRenewalInfo(params.id);
+      const data = response.data;
+      setRenewalData(data);
 
-        // Pre-remplir le formulaire avec les suggestions
-        setFormData({
-          title: `${data.contract.title} (Renouvellement)`,
-          reference: "",
-          startDate: data.suggestions.startDate,
-          endDate: data.suggestions.endDate,
-          value: data.suggestions.value || "",
-          currency: data.suggestions.currency || "USD",
-          keepParties: true,
-          keepObligations: true,
-          notifyParties: false,
-          notes: "",
-        });
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Erreur lors du chargement");
-      }
+      // Pre-remplir le formulaire avec les suggestions
+      setFormData({
+        title: `${data.contract.title} (Renouvellement)`,
+        reference: "",
+        startDate: data.suggestions.startDate,
+        endDate: data.suggestions.endDate,
+        value: data.suggestions.value || "",
+        currency: data.suggestions.currency || "USD",
+        keepParties: true,
+        keepObligations: true,
+        notifyParties: false,
+        notes: "",
+      });
     } catch (err) {
       console.error("Error fetching renewal info:", err);
-      setError("Erreur de connexion");
+      setError(err.response?.data?.error || "Erreur de connexion");
     } finally {
       setLoading(false);
     }
@@ -88,22 +84,11 @@ export default function RenewContractPage() {
 
     setSaving(true);
     try {
-      const response = await fetch(`/api/legal/contracts/${params.id}/renew`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        router.push(`/legal/contracts/${data.renewedContract.id}`);
-      } else {
-        const errorData = await response.json();
-        alert(errorData.error || "Erreur lors du renouvellement");
-      }
+      const response = await ContractRenew(params.id, formData);
+      router.push(`/legal/contracts/${response.data.renewedContract.id}`);
     } catch (err) {
       console.error("Error renewing contract:", err);
-      alert("Erreur lors du renouvellement");
+      alert(err.response?.data?.error || "Erreur lors du renouvellement");
     } finally {
       setSaving(false);
     }

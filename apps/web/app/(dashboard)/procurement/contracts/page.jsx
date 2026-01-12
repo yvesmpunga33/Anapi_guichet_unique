@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ProcurementContractList } from '@/app/services/admin/Procurement.service';
 
 const statusLabels = {
   DRAFT: 'Brouillon',
@@ -75,16 +76,16 @@ export default function ContractsPage() {
     try {
       setLoading(true);
       setError(null);
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
-      });
-      if (filters.search) params.append('search', filters.search);
-      if (filters.status) params.append('status', filters.status);
-      if (filters.year) params.append('year', filters.year);
+      };
+      if (filters.search) params.search = filters.search;
+      if (filters.status) params.status = filters.status;
+      if (filters.year) params.year = filters.year;
 
-      const response = await fetch(`/api/procurement/contracts?${params}`);
-      const result = await response.json();
+      const response = await ProcurementContractList(params);
+      const result = response.data;
 
       if (result.success) {
         setContracts(result.data || []);

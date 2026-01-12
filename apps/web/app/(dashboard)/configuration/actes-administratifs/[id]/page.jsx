@@ -22,6 +22,7 @@ import {
   Briefcase,
   Info,
 } from "lucide-react";
+import { ActeAdministratifGetById, ActeAdministratifDelete, ActeAdministratifUpdate } from "@/app/services/admin/Config.service";
 
 const categoryConfig = {
   LICENCE: { label: "Licence", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200", icon: FileText },
@@ -54,15 +55,15 @@ export default function ActeDetailPage() {
 
   const fetchActe = async () => {
     try {
-      const response = await fetch(`/api/config/actes/${params.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setActe(data.acte);
+      const response = await ActeAdministratifGetById(params.id);
+      if (response.data?.acte) {
+        setActe(response.data.acte);
       } else {
         router.push("/configuration/actes-administratifs");
       }
     } catch (error) {
       console.error("Error fetching acte:", error);
+      router.push("/configuration/actes-administratifs");
     } finally {
       setLoading(false);
     }
@@ -70,12 +71,8 @@ export default function ActeDetailPage() {
 
   const handleDelete = async () => {
     try {
-      const response = await fetch(`/api/config/actes/${params.id}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        router.push("/configuration/actes-administratifs");
-      }
+      await ActeAdministratifDelete(params.id);
+      router.push("/configuration/actes-administratifs");
     } catch (error) {
       console.error("Error deleting acte:", error);
     }
@@ -83,14 +80,8 @@ export default function ActeDetailPage() {
 
   const handleToggleStatus = async () => {
     try {
-      const response = await fetch(`/api/config/actes/${params.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "toggle" }),
-      });
-      if (response.ok) {
-        fetchActe();
-      }
+      await ActeAdministratifUpdate(params.id, { isActive: !acte.isActive });
+      fetchActe();
     } catch (error) {
       console.error("Error toggling status:", error);
     }

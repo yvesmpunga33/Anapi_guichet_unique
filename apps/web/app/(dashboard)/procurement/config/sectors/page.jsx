@@ -3,6 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
+  ReferentielSectorList,
+  ReferentielSectorCreate,
+  ReferentielSectorUpdate,
+  ReferentielSectorDelete,
+} from "@/app/services/admin/Procurement.service";
+import {
   Briefcase,
   Plus,
   Search,
@@ -58,11 +64,11 @@ export default function SectorsConfigPage() {
   const fetchSectors = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (search) params.append("search", search);
+      const params = {};
+      if (search) params.search = search;
 
-      const response = await fetch(`/api/referentiels/sectors?${params}`);
-      const data = await response.json();
+      const response = await ReferentielSectorList(params);
+      const data = response.data;
 
       if (data.sectors) {
         setSectors(data.sectors);
@@ -108,19 +114,15 @@ export default function SectorsConfigPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const url = "/api/referentiels/sectors";
-      const method = editingSector ? "PUT" : "POST";
       const body = editingSector
         ? { ...formData, id: editingSector.id }
         : formData;
 
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const response = editingSector
+        ? await ReferentielSectorUpdate(body)
+        : await ReferentielSectorCreate(body);
 
-      const data = await response.json();
+      const data = response.data;
 
       if (data.sector) {
         fetchSectors();
@@ -138,11 +140,8 @@ export default function SectorsConfigPage() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      const response = await fetch(`/api/referentiels/sectors?id=${deleteId}`, {
-        method: "DELETE",
-      });
-
-      const data = await response.json();
+      const response = await ReferentielSectorDelete(deleteId);
+      const data = response.data;
 
       if (data.message) {
         fetchSectors();

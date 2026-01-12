@@ -48,6 +48,9 @@ import {
   HeartHandshake,
 } from "lucide-react";
 
+// Services
+import { ProjectGetById, ProjectUpdate, ProjectDelete } from "@/app/services/admin/Project.service";
+
 const statusConfig = {
   DRAFT: { label: "Brouillon", color: "bg-gray-100 text-gray-700", bgColor: "bg-gray-500", icon: Clock },
   SUBMITTED: { label: "Soumis", color: "bg-blue-100 text-blue-700", bgColor: "bg-blue-500", icon: Clock },
@@ -138,21 +141,18 @@ export default function ProjectDetailPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/investments/projects/${params.id}`);
+      const response = await ProjectGetById(params.id);
+      const data = response.data;
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("Projet non trouve");
-        }
-        throw new Error("Erreur lors du chargement du projet");
-      }
-
-      const data = await response.json();
       setProject(data);
       setEditedProject(data);
     } catch (err) {
       console.error("Error fetching project:", err);
-      setError(err.message);
+      if (err.response?.status === 404) {
+        setError("Projet non trouve");
+      } else {
+        setError(err.response?.data?.message || err.message || "Erreur lors du chargement du projet");
+      }
     } finally {
       setLoading(false);
     }
@@ -185,20 +185,9 @@ export default function ProjectDetailPage() {
     try {
       setSaving(true);
 
-      const response = await fetch(`/api/investments/projects/${params.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(editedProject),
-      });
+      const response = await ProjectUpdate(params.id, editedProject);
+      const updatedProject = response.data;
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Erreur lors de la sauvegarde");
-      }
-
-      const updatedProject = await response.json();
       setProject(updatedProject);
       setEditedProject(updatedProject);
       setIsEditing(false);
@@ -206,7 +195,7 @@ export default function ProjectDetailPage() {
       // Remove edit param from URL
       router.replace(`/investments/projects/${params.id}`);
     } catch (err) {
-      alert(err.message);
+      alert(err.response?.data?.message || err.message || "Erreur lors de la sauvegarde");
     } finally {
       setSaving(false);
     }
@@ -222,19 +211,10 @@ export default function ProjectDetailPage() {
   const handleDelete = async () => {
     try {
       setDeleting(true);
-
-      const response = await fetch(`/api/investments/projects/${params.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Erreur lors de la suppression");
-      }
-
+      await ProjectDelete(params.id);
       router.push("/investments/projects");
     } catch (err) {
-      alert(err.message);
+      alert(err.response?.data?.message || err.message || "Erreur lors de la suppression");
       setDeleting(false);
       setShowDeleteConfirm(false);
     }

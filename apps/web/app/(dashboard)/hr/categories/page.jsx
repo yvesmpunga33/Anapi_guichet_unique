@@ -12,6 +12,9 @@ import {
   Users,
 } from "lucide-react";
 
+// Services
+import { WorkerCategoryList, WorkerCategoryCreate, WorkerCategoryUpdate, WorkerCategoryDelete } from "@/app/services/admin/HR.service";
+
 export default function CategoriesPage() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,11 +37,8 @@ export default function CategoriesPage() {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/hr/worker-categories");
-      if (response.ok) {
-        const data = await response.json();
-        setCategories(data.categories || []);
-      }
+      const response = await WorkerCategoryList();
+      setCategories(response.data?.categories || []);
     } catch (error) {
       console.error("Error fetching categories:", error);
     } finally {
@@ -49,22 +49,14 @@ export default function CategoriesPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const method = editingCategory ? "PUT" : "POST";
-      const url = editingCategory
-        ? `/api/hr/worker-categories/${editingCategory.id}`
-        : "/api/hr/worker-categories";
-
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        fetchCategories();
-        setShowModal(false);
-        resetForm();
+      if (editingCategory) {
+        await WorkerCategoryUpdate(editingCategory.id, formData);
+      } else {
+        await WorkerCategoryCreate(formData);
       }
+      fetchCategories();
+      setShowModal(false);
+      resetForm();
     } catch (error) {
       console.error("Error saving category:", error);
     }
@@ -74,13 +66,8 @@ export default function CategoriesPage() {
     if (!confirm("Etes-vous sur de vouloir supprimer cette categorie ?")) return;
 
     try {
-      const response = await fetch(`/api/hr/worker-categories/${id}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        fetchCategories();
-      }
+      await WorkerCategoryDelete(id);
+      fetchCategories();
     } catch (error) {
       console.error("Error deleting category:", error);
     }

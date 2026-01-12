@@ -22,10 +22,9 @@ export default auth((req) => {
     return; // Laisser la landing page s'afficher
   }
 
-  // Si connecté et sur page auth, rediriger vers dashboard
-  if (isLoggedIn && isAuthRoute) {
-    return Response.redirect(new URL('/dashboard', req.url));
-  }
+  // NE PAS rediriger automatiquement vers dashboard si déjà connecté sur page auth
+  // Cela permet à l'utilisateur de voir la page de login et de se déconnecter/reconnecter
+  // La page de login affichera un message approprié si l'utilisateur est déjà connecté
 
   // Si route protégée et non connecté, rediriger vers login
   if (!isPublicRoute && !isLoggedIn) {

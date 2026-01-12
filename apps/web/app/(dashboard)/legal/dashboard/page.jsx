@@ -18,6 +18,7 @@ import {
   BarChart3,
   Mail,
 } from "lucide-react";
+import { LegalStats } from "@/app/services/admin/Legal.service";
 
 export default function LegalDashboardPage() {
   const [stats, setStats] = useState(null);
@@ -29,11 +30,8 @@ export default function LegalDashboardPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch("/api/legal/stats");
-      const data = await response.json();
-      if (response.ok) {
-        setStats(data);
-      }
+      const response = await LegalStats();
+      setStats(response.data);
     } catch (error) {
       console.error("Error fetching stats:", error);
     } finally {

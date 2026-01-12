@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { AuthRegister } from "@/app/services/admin/Auth.service";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -82,34 +83,24 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          password: formData.password,
-          role: "INVESTOR",
-          companyName: formData.companyName,
-          companyType: formData.companyType,
-          country: formData.country,
-          sector: formData.sector,
-          investmentRange: formData.investmentRange,
-        }),
+      const response = await AuthRegister({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        role: "INVESTOR",
+        companyName: formData.companyName,
+        companyType: formData.companyType,
+        country: formData.country,
+        sector: formData.sector,
+        investmentRange: formData.investmentRange,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || "Une erreur est survenue");
-      } else {
+      if (response.data) {
         router.push("/login?registered=true");
       }
     } catch (err) {
-      setError("Une erreur est survenue lors de l'inscription");
+      setError(err.response?.data?.error || "Une erreur est survenue lors de l'inscription");
     } finally {
       setLoading(false);
     }

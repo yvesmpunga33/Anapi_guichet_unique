@@ -23,6 +23,7 @@ import {
   Printer,
   RefreshCcw,
 } from "lucide-react";
+import { ContractGetById, ContractDelete } from "@/app/services/admin/Legal.service";
 
 export default function ContractDetailPage() {
   const params = useParams();
@@ -40,15 +41,11 @@ export default function ContractDetailPage() {
 
   const fetchContract = async () => {
     try {
-      const response = await fetch(`/api/legal/contracts/${params.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setContract(data.contract);
-      } else {
-        router.push("/legal/contracts");
-      }
-    } catch (error) {
-      console.error("Error fetching contract:", error);
+      const response = await ContractGetById(params.id);
+      setContract(response.data.contract);
+    } catch (err) {
+      console.error("Error fetching contract:", err.response?.data?.message || err.message);
+      router.push("/legal/contracts");
     } finally {
       setLoading(false);
     }
@@ -57,14 +54,10 @@ export default function ContractDetailPage() {
   const handleDelete = async () => {
     if (!confirm("Voulez-vous vraiment supprimer ce contrat ?")) return;
     try {
-      const response = await fetch(`/api/legal/contracts/${params.id}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        router.push("/legal/contracts");
-      }
-    } catch (error) {
-      console.error("Error deleting contract:", error);
+      await ContractDelete(params.id);
+      router.push("/legal/contracts");
+    } catch (err) {
+      console.error("Error deleting contract:", err.response?.data?.message || err.message);
     }
   };
 

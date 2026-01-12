@@ -22,6 +22,10 @@ import {
   Send,
   Loader2,
 } from "lucide-react";
+import {
+  LegalAnalytics,
+  LegalNotificationSend,
+} from "@/app/services/admin/Legal.service";
 
 // Composant de graphique en barres simple
 const BarChart = ({ data, labelKey, valueKey, color = "#22c55e", height = 200 }) => {
@@ -153,11 +157,8 @@ export default function LegalAnalyticsPage() {
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/legal/analytics?period=${period}`);
-      if (response.ok) {
-        const data = await response.json();
-        setAnalytics(data);
-      }
+      const response = await LegalAnalytics({ period });
+      setAnalytics(response.data);
     } catch (error) {
       console.error("Error fetching analytics:", error);
     } finally {
@@ -168,13 +169,8 @@ export default function LegalAnalyticsPage() {
   const sendDigestEmail = async () => {
     setSendingNotifications(true);
     try {
-      const response = await fetch("/api/legal/notifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sendDigest: true }),
-      });
-      const data = await response.json();
-      setNotificationStatus(data);
+      const response = await LegalNotificationSend({ sendDigest: true });
+      setNotificationStatus(response.data);
       setTimeout(() => setNotificationStatus(null), 5000);
     } catch (error) {
       console.error("Error sending notifications:", error);

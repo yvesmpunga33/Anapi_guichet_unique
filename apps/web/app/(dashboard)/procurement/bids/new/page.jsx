@@ -19,6 +19,7 @@ import {
   Shield,
   Search,
 } from "lucide-react";
+import { BidCreate, TenderList, BidderList } from "@/app/services/admin/Procurement.service";
 
 const deliveryUnits = [
   { value: "DAYS", label: "Jours" },
@@ -88,14 +89,12 @@ export default function NewBidPage() {
       try {
         // Charger tous les appels d'offres (pas seulement PUBLISHED pour les tests)
         const [tendersRes, biddersRes] = await Promise.all([
-          fetch("/api/procurement/tenders?limit=100"),
-          fetch("/api/procurement/bidders?limit=100"),
+          TenderList({ limit: 100 }),
+          BidderList({ limit: 100 }),
         ]);
 
-        const [tendersData, biddersData] = await Promise.all([
-          tendersRes.json(),
-          biddersRes.json(),
-        ]);
+        const tendersData = tendersRes.data;
+        const biddersData = biddersRes.data;
 
         if (tendersData.success) setTenders(tendersData.data || []);
         if (biddersData.success) setBidders(biddersData.data || []);
@@ -188,13 +187,8 @@ export default function NewBidPage() {
         lotId: formData.lotId || null,
       };
 
-      const response = await fetch("/api/procurement/bids", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submitData),
-      });
-
-      const data = await response.json();
+      const response = await BidCreate(submitData);
+      const data = response.data;
 
       if (data.success) {
         router.push(`/procurement/bids`);

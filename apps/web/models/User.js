@@ -83,8 +83,43 @@ User.init(
       allowNull: true,
     },
     modules: {
-      type: DataTypes.ARRAY(DataTypes.TEXT),
+      type: DataTypes.JSONB,
       allowNull: true,
+      defaultValue: [],
+      get() {
+        const value = this.getDataValue('modules');
+        if (!value) return [];
+        if (Array.isArray(value)) return value;
+        if (typeof value === 'string') {
+          try {
+            return JSON.parse(value);
+          } catch {
+            return [];
+          }
+        }
+        return [];
+      },
+      set(value) {
+        // S'assurer que la valeur est un tableau valide avant de la sauvegarder
+        if (!value) {
+          this.setDataValue('modules', []);
+          return;
+        }
+        if (Array.isArray(value)) {
+          this.setDataValue('modules', value);
+          return;
+        }
+        if (typeof value === 'string') {
+          try {
+            const parsed = JSON.parse(value);
+            this.setDataValue('modules', Array.isArray(parsed) ? parsed : []);
+          } catch {
+            this.setDataValue('modules', []);
+          }
+          return;
+        }
+        this.setDataValue('modules', []);
+      },
     },
     ministryId: {
       type: DataTypes.UUID,

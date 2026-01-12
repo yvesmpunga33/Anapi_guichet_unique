@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { PublicProvinceOpportunities } from "@/app/services/Public.service";
 import {
   MapPin,
   ArrowLeft,
@@ -53,16 +54,17 @@ export default function ProvinceOpportunitiesPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const searchQuery = search ? `&search=${encodeURIComponent(search)}` : "";
-        const res = await fetch(
-          `/api/public/provinces/${params.id}/opportunities?page=${currentPage}&limit=12${searchQuery}`
-        );
-        const data = await res.json();
+        const queryParams = {
+          page: currentPage,
+          limit: 12,
+        };
+        if (search) queryParams.search = search;
 
-        if (data.province) {
-          setProvince(data.province);
-          setOpportunities(data.opportunities || []);
-          setPagination(data.pagination || null);
+        const response = await PublicProvinceOpportunities(params.id, queryParams);
+        if (response.data?.province) {
+          setProvince(response.data.province);
+          setOpportunities(response.data.opportunities || []);
+          setPagination(response.data.pagination || null);
         }
       } catch (err) {
         console.error("Error fetching data:", err);

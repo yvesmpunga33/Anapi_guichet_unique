@@ -19,10 +19,17 @@ function parseModules(modules) {
   if (!modules) return [];
   if (Array.isArray(modules)) return modules;
   if (typeof modules === 'string') {
+    // Si c'est une chaîne vide ou "[]"
+    if (modules.trim() === '' || modules.trim() === '[]') {
+      return [];
+    }
     try {
       const parsed = JSON.parse(modules);
       return Array.isArray(parsed) ? parsed : [];
-    } catch {
+    } catch (e) {
+      console.error('Error parsing modules:', e.message, 'Input:', modules);
+      // Si le parsing JSON échoue, essayer de parser comme une liste séparée par des virgules
+      // ou retourner un tableau vide
       return [];
     }
   }
@@ -212,8 +219,25 @@ export async function POST(request) {
     return NextResponse.json(newUser, { status: 201 });
   } catch (error) {
     console.error('Error creating user:', error);
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+
+    // Retourner un message d'erreur plus détaillé
+    let errorMessage = 'Erreur lors de la création de l\'utilisateur';
+
+    // Erreurs Sequelize courantes
+    if (error.name === 'SequelizeValidationError') {
+      errorMessage = `Validation: ${error.errors.map(e => e.message).join(', ')}`;
+    } else if (error.name === 'SequelizeUniqueConstraintError') {
+      errorMessage = 'Cet email est déjà utilisé';
+    } else if (error.name === 'SequelizeDatabaseError') {
+      errorMessage = `Erreur base de données: ${error.message}`;
+    } else if (error.name === 'SequelizeConnectionError') {
+      errorMessage = 'Impossible de se connecter à la base de données';
+    }
+
     return NextResponse.json(
-      { error: 'Erreur lors de la création de l\'utilisateur' },
+      { error: errorMessage, details: error.message },
       { status: 500 }
     );
   }

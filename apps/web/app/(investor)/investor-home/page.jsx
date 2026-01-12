@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { OpportunitiesByProvince, OpportunityList } from "@/app/services/Investor.service";
 import {
   Briefcase,
   FileCheck,
@@ -75,11 +76,8 @@ export default function InvestorDashboard() {
 
   const fetchMapData = async () => {
     try {
-      const res = await fetch("/api/opportunities/by-province");
-      if (res.ok) {
-        const data = await res.json();
-        setMapData(data);
-      }
+      const response = await OpportunitiesByProvince();
+      setMapData(response.data);
     } catch (error) {
       console.error("Error fetching map data:", error);
     }
@@ -91,11 +89,8 @@ export default function InvestorDashboard() {
     setShowOpportunitiesModal(true);
 
     try {
-      const res = await fetch(`/api/opportunities?provinceId=${province.id}&status=PUBLISHED`);
-      if (res.ok) {
-        const data = await res.json();
-        setProvinceOpportunities(data.opportunities || []);
-      }
+      const response = await OpportunityList({ provinceId: province.id, status: 'PUBLISHED' });
+      setProvinceOpportunities(response.data?.opportunities || []);
     } catch (error) {
       console.error("Error fetching province opportunities:", error);
       setProvinceOpportunities([]);

@@ -21,6 +21,9 @@ import {
   Target,
 } from "lucide-react";
 
+// Services
+import { DialogueList } from "@/app/services/admin/BusinessClimate.service";
+
 const eventTypeOptions = [
   { value: "", label: "Tous types" },
   { value: "ROUNDTABLE", label: "Table ronde" },
@@ -112,23 +115,21 @@ export default function DialoguesPage() {
   const fetchDialogues = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page,
         limit: 20,
-      });
+      };
 
-      if (search) params.append("search", search);
-      if (filters.status) params.append("status", filters.status);
-      if (filters.eventType) params.append("eventType", filters.eventType);
-      if (filters.thematicArea) params.append("thematicArea", filters.thematicArea);
-      if (viewMode === "upcoming") params.append("upcoming", "true");
+      if (search) params.search = search;
+      if (filters.status) params.status = filters.status;
+      if (filters.eventType) params.eventType = filters.eventType;
+      if (filters.thematicArea) params.thematicArea = filters.thematicArea;
+      if (viewMode === "upcoming") params.upcoming = "true";
 
-      const response = await fetch(`/api/business-climate/dialogues?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setDialogues(data.data || []);
-        setPagination(data.pagination);
-      }
+      const response = await DialogueList(params);
+      const data = response.data;
+      setDialogues(data.data || []);
+      setPagination(data.pagination);
     } catch (error) {
       console.error("Error fetching dialogues:", error);
     } finally {

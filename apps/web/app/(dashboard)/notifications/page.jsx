@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { NotificationAlertList } from '@/app/services/admin/Notification.service';
 import Link from "next/link";
 import {
   Bell,
@@ -65,12 +66,9 @@ export default function NotificationsPage() {
       if (selectedPriority !== "all") params.append("priority", selectedPriority);
       params.append("limit", "50");
 
-      const response = await fetch(`/api/notifications/alerts?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setAlerts(data.data || []);
-        setSummary(data.summary);
-      }
+      const response = await NotificationAlertList(Object.fromEntries(params));
+      setAlerts(response.data?.data || []);
+      setSummary(response.data?.summary);
     } catch (error) {
       console.error("Error fetching alerts:", error);
     } finally {

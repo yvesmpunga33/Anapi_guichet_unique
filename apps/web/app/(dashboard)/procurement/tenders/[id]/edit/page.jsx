@@ -19,6 +19,7 @@ import {
   AlertCircle,
   Info,
 } from "lucide-react";
+import { TenderGetById, TenderUpdate } from "@/app/services/admin/Procurement.service";
 
 const tenderTypes = [
   { value: "OPEN", label: "Appel d'offres ouvert", description: "Ouvert à tous les soumissionnaires qualifiés" },
@@ -86,8 +87,8 @@ export default function EditTenderPage() {
   useEffect(() => {
     const fetchTender = async () => {
       try {
-        const response = await fetch(`/api/procurement/tenders/${params.id}`);
-        const data = await response.json();
+        const response = await TenderGetById(params.id);
+        const data = response.data;
 
         if (data.success && data.data) {
           const tender = data.data;
@@ -264,13 +265,8 @@ export default function EditTenderPage() {
         })),
       };
 
-      const response = await fetch(`/api/procurement/tenders/${params.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submitData),
-      });
-
-      const data = await response.json();
+      const response = await TenderUpdate(params.id, submitData);
+      const data = response.data;
 
       if (data.success) {
         router.push(`/procurement/tenders/${params.id}`);

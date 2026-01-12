@@ -22,6 +22,9 @@ import {
 } from "lucide-react";
 import Swal from "sweetalert2";
 
+// Services
+import { IndicatorList } from "@/app/services/admin/BusinessClimate.service";
+
 const categoryOptions = [
   { value: "", label: "Toutes catégories" },
   { value: "DOING_BUSINESS", label: "Doing Business" },
@@ -102,26 +105,24 @@ export default function IndicatorsPage() {
   const fetchIndicators = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page,
         limit: 20,
         withLatestValue: "true",
-      });
+      };
 
-      if (search) params.append("search", search);
-      if (filters.category) params.append("category", filters.category);
-      if (filters.measureType) params.append("measureType", filters.measureType);
+      if (search) params.search = search;
+      if (filters.category) params.category = filters.category;
+      if (filters.measureType) params.measureType = filters.measureType;
 
-      const response = await fetch(`/api/business-climate/indicators?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setIndicators(data.data || []);
-        setPagination(prev => ({
-          ...prev,
-          total: data.pagination?.total || 0,
-          totalPages: data.pagination?.totalPages || 0,
-        }));
-      }
+      const response = await IndicatorList(params);
+      const data = response.data;
+      setIndicators(data.data || []);
+      setPagination(prev => ({
+        ...prev,
+        total: data.pagination?.total || 0,
+        totalPages: data.pagination?.totalPages || 0,
+      }));
     } catch (error) {
       console.error("Error fetching indicators:", error);
       Swal.fire({

@@ -14,6 +14,8 @@ import {
   ChevronDown,
   Filter,
 } from "lucide-react";
+import { MinistryDepartmentList, MinistryDepartmentCreate, MinistryDepartmentUpdate, MinistryDepartmentDelete } from "@/app/services/admin/Config.service";
+import { ReferentielMinistryList } from "@/app/services/admin/Referentiel.service";
 
 export default function MinistryDepartmentsPage() {
   const [departments, setDepartments] = useState([]);
@@ -43,11 +45,11 @@ export default function MinistryDepartmentsPage() {
   useEffect(() => {
     const fetchMinistries = async () => {
       try {
-        const response = await fetch("/api/referentiels/ministries?limit=100");
-        const data = await response.json();
-        if (data.ministries) {
+        const response = await ReferentielMinistryList({ limit: 100 });
+        const data = response.data;
+        if (data?.ministries) {
           setMinistries(data.ministries);
-        } else if (data.success && data.data) {
+        } else if (data?.data) {
           setMinistries(data.data);
         }
       } catch (err) {
@@ -61,19 +63,21 @@ export default function MinistryDepartmentsPage() {
   const fetchDepartments = useCallback(async () => {
     setLoading(true);
     try {
-      let url = "/api/referentiels/ministry-departments?";
+      const params = {};
       if (selectedMinistry) {
-        url += `ministryId=${selectedMinistry}&`;
+        params.ministryId = selectedMinistry;
       }
       if (search) {
-        url += `search=${encodeURIComponent(search)}&`;
+        params.search = search;
       }
 
-      const response = await fetch(url);
-      const data = await response.json();
+      const response = await MinistryDepartmentList(params);
+      const data = response.data;
 
-      if (data.success && data.data) {
+      if (data?.success && data?.data) {
         setDepartments(data.data);
+      } else if (data?.departments) {
+        setDepartments(data.departments);
       } else {
         setDepartments([]);
       }
@@ -151,23 +155,20 @@ export default function MinistryDepartmentsPage() {
     setError(null);
 
     try {
-      const url = editingDepartment
-        ? `/api/referentiels/ministry-departments/${editingDepartment.id}`
-        : "/api/referentiels/ministry-departments";
+      let response;
+      if (editingDepartment) {
+        response = await MinistryDepartmentUpdate(editingDepartment.id, formData);
+      } else {
+        response = await MinistryDepartmentCreate(formData);
+      }
 
-      const response = await fetch(url, {
-        method: editingDepartment ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (data?.success || data?.department) {
         handleCloseModal();
         fetchDepartments();
       } else {
-        setError(data.error || "Erreur lors de la sauvegarde");
+        setError(data?.error || "Erreur lors de la sauvegarde");
       }
     } catch (err) {
       setError("Erreur lors de la sauvegarde");
@@ -178,17 +179,14 @@ export default function MinistryDepartmentsPage() {
 
   const handleDelete = async (id) => {
     try {
-      const response = await fetch(`/api/referentiels/ministry-departments/${id}`, {
-        method: "DELETE",
-      });
+      const response = await MinistryDepartmentDelete(id);
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (data?.success !== false) {
         setDeleteConfirm(null);
         fetchDepartments();
       } else {
-        setError(data.error || "Erreur lors de la suppression");
+        setError(data?.error || "Erreur lors de la suppression");
       }
     } catch (err) {
       setError("Erreur lors de la suppression");

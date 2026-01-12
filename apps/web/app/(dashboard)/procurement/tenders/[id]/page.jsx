@@ -35,6 +35,7 @@ import {
   Printer,
   X,
 } from "lucide-react";
+import { TenderGetById, TenderDelete, TenderUpdateStatus } from "@/app/services/admin/Procurement.service";
 
 const statusColors = {
   DRAFT: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
@@ -113,8 +114,8 @@ export default function TenderDetailPage({ params }) {
   useEffect(() => {
     const fetchTender = async () => {
       try {
-        const response = await fetch(`/api/procurement/tenders/${id}`);
-        const data = await response.json();
+        const response = await TenderGetById(id);
+        const data = response.data;
 
         if (data.success) {
           setTender(data.data);
@@ -169,13 +170,8 @@ export default function TenderDetailPage({ params }) {
   const handleStatusChange = async (newStatus) => {
     setUpdatingStatus(true);
     try {
-      const response = await fetch(`/api/procurement/tenders/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      const data = await response.json();
+      const response = await TenderUpdateStatus(id, newStatus);
+      const data = response.data;
 
       if (data.success) {
         setTender((prev) => ({ ...prev, status: newStatus }));
@@ -193,11 +189,8 @@ export default function TenderDetailPage({ params }) {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      const response = await fetch(`/api/procurement/tenders/${id}`, {
-        method: "DELETE",
-      });
-
-      const data = await response.json();
+      const response = await TenderDelete(id);
+      const data = response.data;
 
       if (data.success) {
         router.push("/procurement/tenders");

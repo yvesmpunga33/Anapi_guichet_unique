@@ -31,6 +31,15 @@ import {
 } from "lucide-react";
 import { usePageTitle } from "../../../../contexts/PageTitleContext";
 
+// Services
+import {
+  OpportunityList,
+  OpportunityCreate,
+  OpportunityUpdate,
+  OpportunityDelete
+} from "@/app/services/admin/Opportunity.service";
+import { ReferentielProvinceList, ReferentielSectorList } from "@/app/services/admin/Referentiel.service";
+
 // Status badge component
 function StatusBadge({ status }) {
   const statusConfig = {
@@ -549,23 +558,21 @@ export default function OpportunitiesPage() {
   const fetchOpportunities = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page,
         limit: pagination.limit,
-        ...(search && { search }),
-        ...(filterProvince && { provinceId: filterProvince }),
-        ...(filterSector && { sectorId: filterSector }),
-        ...(filterStatus && { status: filterStatus }),
-      });
+      };
+      if (search) params.search = search;
+      if (filterProvince) params.provinceId = filterProvince;
+      if (filterSector) params.sectorId = filterSector;
+      if (filterStatus) params.status = filterStatus;
 
-      const res = await fetch(`/api/opportunities?${params}`);
-      const data = await res.json();
+      const response = await OpportunityList(params);
+      const data = response.data;
 
-      if (res.ok) {
-        setOpportunities(data.opportunities || []);
-        setStats(data.stats || {});
-        setPagination((prev) => ({ ...prev, ...data.pagination }));
-      }
+      setOpportunities(data.opportunities || []);
+      setStats(data.stats || {});
+      setPagination((prev) => ({ ...prev, ...data.pagination }));
     } catch (error) {
       console.error("Error fetching opportunities:", error);
     } finally {
@@ -575,9 +582,8 @@ export default function OpportunitiesPage() {
 
   const fetchProvinces = async () => {
     try {
-      const res = await fetch("/api/referentiels/provinces?activeOnly=true");
-      const data = await res.json();
-      if (res.ok) setProvinces(data.provinces || []);
+      const response = await ReferentielProvinceList({ activeOnly: true });
+      setProvinces(response.data?.provinces || []);
     } catch (error) {
       console.error("Error fetching provinces:", error);
     }
@@ -585,9 +591,8 @@ export default function OpportunitiesPage() {
 
   const fetchSectors = async () => {
     try {
-      const res = await fetch("/api/referentiels/sectors?activeOnly=true");
-      const data = await res.json();
-      if (res.ok) setSectors(data.sectors || []);
+      const response = await ReferentielSectorList({ activeOnly: true });
+      setSectors(response.data?.sectors || []);
     } catch (error) {
       console.error("Error fetching sectors:", error);
     }
@@ -596,22 +601,12 @@ export default function OpportunitiesPage() {
   const handleCreate = async (formData) => {
     try {
       setSaving(true);
-      const res = await fetch("/api/opportunities", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      if (res.ok) {
-        setShowCreateModal(false);
-        fetchOpportunities();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Erreur lors de la creation");
-      }
+      await OpportunityCreate(formData);
+      setShowCreateModal(false);
+      fetchOpportunities();
     } catch (error) {
       console.error("Error creating opportunity:", error);
-      alert("Erreur lors de la creation");
+      alert(error.response?.data?.message || "Erreur lors de la creation");
     } finally {
       setSaving(false);
     }
@@ -620,23 +615,13 @@ export default function OpportunitiesPage() {
   const handleUpdate = async (formData) => {
     try {
       setSaving(true);
-      const res = await fetch(`/api/opportunities/${selectedOpportunity.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      if (res.ok) {
-        setShowEditModal(false);
-        setSelectedOpportunity(null);
-        fetchOpportunities();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Erreur lors de la mise a jour");
-      }
+      await OpportunityUpdate(selectedOpportunity.id, formData);
+      setShowEditModal(false);
+      setSelectedOpportunity(null);
+      fetchOpportunities();
     } catch (error) {
       console.error("Error updating opportunity:", error);
-      alert("Erreur lors de la mise a jour");
+      alert(error.response?.data?.message || "Erreur lors de la mise a jour");
     } finally {
       setSaving(false);
     }
@@ -644,33 +629,20 @@ export default function OpportunitiesPage() {
 
   const handleDelete = async () => {
     try {
-      const res = await fetch(`/api/opportunities/${selectedOpportunity.id}`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        setShowDeleteConfirm(false);
-        setSelectedOpportunity(null);
-        fetchOpportunities();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Erreur lors de la suppression");
-      }
+      await OpportunityDelete(selectedOpportunity.id);
+      setShowDeleteConfirm(false);
+      setSelectedOpportunity(null);
+      fetchOpportunities();
     } catch (error) {
       console.error("Error deleting opportunity:", error);
-      alert("Erreur lors de la suppression");
+      alert(error.response?.data?.message || "Erreur lors de la suppression");
     }
   };
 
   const toggleFeatured = async (opp) => {
     try {
-      const res = await fetch(`/api/opportunities/${opp.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isFeatured: !opp.isFeatured }),
-      });
-
-      if (res.ok) fetchOpportunities();
+      await OpportunityUpdate(opp.id, { isFeatured: !opp.isFeatured });
+      fetchOpportunities();
     } catch (error) {
       console.error("Error toggling featured:", error);
     }

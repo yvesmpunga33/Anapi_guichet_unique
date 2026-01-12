@@ -25,6 +25,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
+import { ActeAdministratifList, ActeAdministratifDelete } from "@/app/services/admin/Config.service";
+import { ReferentielMinistryList } from "@/app/services/admin/Referentiel.service";
 
 const categoryConfig = {
   LICENCE: { label: "Licence", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
@@ -58,17 +60,15 @@ export default function ActesAdministratifsPage() {
 
   const fetchActes = async () => {
     try {
-      const params = new URLSearchParams();
-      if (search) params.append("search", search);
-      if (categoryFilter) params.append("category", categoryFilter);
-      if (ministryFilter) params.append("ministryId", ministryFilter);
-      if (statusFilter !== "") params.append("isActive", statusFilter);
+      const params = {};
+      if (search) params.search = search;
+      if (categoryFilter) params.category = categoryFilter;
+      if (ministryFilter) params.ministryId = ministryFilter;
+      if (statusFilter !== "") params.isActive = statusFilter;
 
-      const response = await fetch(`/api/config/actes?${params.toString()}`);
-      if (response.ok) {
-        const data = await response.json();
-        setActes(data.actes || []);
-      }
+      const response = await ActeAdministratifList(params);
+      setActes(response.data?.actes || []);
+      setStats(response.data?.stats || null);
     } catch (error) {
       console.error("Error fetching actes:", error);
     } finally {
@@ -77,24 +77,13 @@ export default function ActesAdministratifsPage() {
   };
 
   const fetchStats = async () => {
-    try {
-      const response = await fetch("/api/config/actes/stats");
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      }
-    } catch (error) {
-      console.error("Error fetching stats:", error);
-    }
+    // Stats are now included in ActeAdministratifList response
   };
 
   const fetchMinistries = async () => {
     try {
-      const response = await fetch("/api/referentiels/ministries?isActive=true");
-      if (response.ok) {
-        const data = await response.json();
-        setMinistries(data.ministries || []);
-      }
+      const response = await ReferentielMinistryList({ isActive: true });
+      setMinistries(response.data?.ministries || response.data?.data || []);
     } catch (error) {
       console.error("Error fetching ministries:", error);
     }
@@ -102,15 +91,9 @@ export default function ActesAdministratifsPage() {
 
   const handleToggleStatus = async (acte) => {
     try {
-      const response = await fetch(`/api/config/actes/${acte.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "toggle" }),
-      });
-      if (response.ok) {
-        fetchActes();
-        fetchStats();
-      }
+      const { ActeAdministratifUpdate } = await import("@/app/services/admin/Config.service");
+      await ActeAdministratifUpdate(acte.id, { isActive: !acte.isActive });
+      fetchActes();
     } catch (error) {
       console.error("Error toggling status:", error);
     }
@@ -118,14 +101,9 @@ export default function ActesAdministratifsPage() {
 
   const handleDelete = async (id) => {
     try {
-      const response = await fetch(`/api/config/actes/${id}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        setDeleteConfirm(null);
-        fetchActes();
-        fetchStats();
-      }
+      await ActeAdministratifDelete(id);
+      setDeleteConfirm(null);
+      fetchActes();
     } catch (error) {
       console.error("Error deleting acte:", error);
     }

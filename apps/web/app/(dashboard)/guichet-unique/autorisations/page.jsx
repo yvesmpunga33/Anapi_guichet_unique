@@ -29,6 +29,9 @@ import {
 import * as LucideIcons from "lucide-react";
 import Link from "next/link";
 
+// Services
+import { DossierList } from "@/app/services/admin/GuichetUnique.service";
+
 // Helper function to get icon dynamically
 const getIcon = (iconName) => {
   if (!iconName) return Circle;
@@ -193,32 +196,30 @@ export default function AutorisationsPage() {
   const fetchDossiers = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
         type: 'AUTORISATION_ACTIVITE',
-      });
+      };
 
       if (searchTerm) {
-        params.append('search', searchTerm);
+        params.search = searchTerm;
       }
 
       if (statusFilter !== 'all') {
-        params.append('status', statusFilter);
+        params.status = statusFilter;
       }
 
-      const response = await fetch(`/api/guichet-unique/dossiers?${params}`);
-      const result = await response.json();
+      const response = await DossierList(params);
+      const result = response.data;
 
-      if (response.ok) {
-        setDossiers(result.data || []);
-        setStats(result.stats || stats);
-        setPagination(prev => ({
-          ...prev,
-          total: result.pagination?.total || 0,
-          totalPages: result.pagination?.totalPages || 0,
-        }));
-      }
+      setDossiers(result.data || []);
+      setStats(result.stats || stats);
+      setPagination(prev => ({
+        ...prev,
+        total: result.pagination?.total || 0,
+        totalPages: result.pagination?.totalPages || 0,
+      }));
     } catch (error) {
       console.error('Error fetching autorisations:', error);
     } finally {

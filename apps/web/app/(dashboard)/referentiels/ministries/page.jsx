@@ -23,6 +23,12 @@ import {
   AlertCircle,
   User,
 } from "lucide-react";
+import {
+  ReferentielMinistryList,
+  ReferentielMinistryCreate,
+  ReferentielMinistryUpdate,
+  ReferentielMinistryDelete,
+} from "@/app/services/admin/Referentiel.service";
 
 export default function MinistriesPage() {
   const [ministries, setMinistries] = useState([]);
@@ -59,14 +65,14 @@ export default function MinistriesPage() {
   const fetchMinistries = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
+      const params = {
         page: currentPage.toString(),
         limit: "10",
         ...(searchTerm && { search: searchTerm }),
-      });
+      };
 
-      const response = await fetch(`/api/referentiels/ministries?${params}`);
-      const result = await response.json();
+      const response = await ReferentielMinistryList(params);
+      const result = response.data;
 
       // Handle both response formats (with success/data or direct ministries array)
       const data = result.success ? result.data : (result.ministries || []);
@@ -151,20 +157,14 @@ export default function MinistriesPage() {
     setError(null);
 
     try {
-      const url = "/api/referentiels/ministries";
+      let response;
+      if (selectedMinistry) {
+        response = await ReferentielMinistryUpdate(selectedMinistry.id, formData);
+      } else {
+        response = await ReferentielMinistryCreate(formData);
+      }
 
-      // Inclure l'ID dans le body pour les mises à jour
-      const bodyData = selectedMinistry
-        ? { ...formData, id: selectedMinistry.id }
-        : formData;
-
-      const response = await fetch(url, {
-        method: selectedMinistry ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bodyData),
-      });
-
-      const result = await response.json();
+      const result = response.data;
 
       if (result.ministry || result.success) {
         setShowModal(false);
@@ -191,11 +191,8 @@ export default function MinistriesPage() {
   const handleDelete = async () => {
     setSaving(true);
     try {
-      const response = await fetch(
-        `/api/referentiels/ministries?id=${selectedMinistry.id}`,
-        { method: "DELETE" }
-      );
-      const result = await response.json();
+      const response = await ReferentielMinistryDelete(selectedMinistry.id);
+      const result = response.data;
 
       if (result.success || result.message) {
         setShowDeleteModal(false);
@@ -219,16 +216,9 @@ export default function MinistriesPage() {
 
   const toggleStatus = async (ministry) => {
     try {
-      const response = await fetch(
-        `/api/referentiels/ministries?id=${ministry.id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isActive: !ministry.isActive }),
-        }
-      );
+      const response = await ReferentielMinistryUpdate(ministry.id, { isActive: !ministry.isActive });
 
-      if (response.ok) {
+      if (response.data) {
         fetchMinistries();
       }
     } catch (err) {

@@ -15,6 +15,13 @@ import {
   X,
   Plus,
 } from "lucide-react";
+import {
+  LegalTextGetById,
+  LegalTextUpdate,
+  DocumentTypeList,
+  LegalDomainList,
+} from "@/app/services/admin/Legal.service";
+import http from "@/app/http-common";
 
 export default function EditLegalTextPage() {
   const params = useParams();
@@ -51,13 +58,11 @@ export default function EditLegalTextPage() {
   const fetchReferentials = async () => {
     try {
       const [typesRes, domainsRes] = await Promise.all([
-        fetch("/api/legal/document-types?activeOnly=true"),
-        fetch("/api/legal/domains?activeOnly=true"),
+        DocumentTypeList({ activeOnly: true }),
+        LegalDomainList({ activeOnly: true }),
       ]);
-      const typesData = await typesRes.json();
-      const domainsData = await domainsRes.json();
-      setDocumentTypes(typesData.types || []);
-      setDomains(domainsData.domains || []);
+      setDocumentTypes(typesRes.data.types || []);
+      setDomains(domainsRes.data.domains || []);
     } catch (error) {
       console.error("Error fetching referentials:", error);
     }
@@ -65,38 +70,34 @@ export default function EditLegalTextPage() {
 
   const fetchText = async () => {
     try {
-      const response = await fetch(`/api/legal/texts/${params.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        const text = data.text;
+      const response = await LegalTextGetById(params.id);
+      const text = response.data.text;
 
-        setFormData({
-          title: text.title || "",
-          typeId: text.typeId || "",
-          domainId: text.domainId || "",
-          officialReference: text.officialReference || "",
-          journalOfficiel: text.journalOfficiel || "",
-          publicationDate: text.publicationDate ? text.publicationDate.split("T")[0] : "",
-          effectiveDate: text.effectiveDate ? text.effectiveDate.split("T")[0] : "",
-          expirationDate: text.expirationDate ? text.expirationDate.split("T")[0] : "",
-          summary: text.summary || "",
-          status: text.status || "DRAFT",
+      setFormData({
+        title: text.title || "",
+        typeId: text.typeId || "",
+        domainId: text.domainId || "",
+        officialReference: text.officialReference || "",
+        journalOfficiel: text.journalOfficiel || "",
+        publicationDate: text.publicationDate ? text.publicationDate.split("T")[0] : "",
+        effectiveDate: text.effectiveDate ? text.effectiveDate.split("T")[0] : "",
+        expirationDate: text.expirationDate ? text.expirationDate.split("T")[0] : "",
+        summary: text.summary || "",
+        status: text.status || "DRAFT",
+      });
+
+      setKeywords(text.keywords || []);
+
+      if (text.filePath) {
+        setExistingFile({
+          name: text.fileName,
+          path: text.filePath,
+          size: text.fileSize,
         });
-
-        setKeywords(text.keywords || []);
-
-        if (text.filePath) {
-          setExistingFile({
-            name: text.fileName,
-            path: text.filePath,
-            size: text.fileSize,
-          });
-        }
-      } else {
-        router.push("/legal/texts");
       }
     } catch (error) {
       console.error("Error fetching text:", error);
+      router.push("/legal/texts");
     } finally {
       setLoading(false);
     }
@@ -160,20 +161,13 @@ export default function EditLegalTextPage() {
         submitData.append("file", file);
       }
 
-      const response = await fetch(`/api/legal/texts/${params.id}`, {
-        method: "PUT",
-        body: submitData,
+      await http.put(`/legal/texts/${params.id}`, submitData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-
-      if (response.ok) {
-        router.push(`/legal/texts/${params.id}`);
-      } else {
-        const error = await response.json();
-        alert(error.error || "Erreur lors de la mise a jour");
-      }
-    } catch (error) {
-      console.error("Error updating text:", error);
-      alert("Erreur lors de la mise a jour du texte");
+      router.push(`/legal/texts/${params.id}`);
+    } catch (err) {
+      console.error("Error updating text:", err);
+      alert(err.response?.data?.error || "Erreur lors de la mise a jour du texte");
     } finally {
       setSaving(false);
     }

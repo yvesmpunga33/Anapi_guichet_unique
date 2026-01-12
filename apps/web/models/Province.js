@@ -33,7 +33,7 @@ const Province = sequelize.define('Province', {
     defaultValue: true,
   },
 }, {
-  tableName: 'Province',
+  tableName: 'provinces',
   timestamps: true,
 });
 

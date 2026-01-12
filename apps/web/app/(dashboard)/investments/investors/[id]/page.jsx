@@ -32,6 +32,9 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+// Services
+import { InvestorGetById, InvestorUpdate, InvestorDelete } from "@/app/services/admin/Investor.service";
+
 const investorTypes = {
   company: { label: "Societe", icon: Building2 },
   individual: { label: "Individuel", icon: User },
@@ -86,21 +89,18 @@ export default function InvestorDetailPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/investments/investors/${params.id}`);
+      const response = await InvestorGetById(params.id);
+      const data = response.data;
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("Investisseur non trouve");
-        }
-        throw new Error("Erreur lors du chargement de l'investisseur");
-      }
-
-      const data = await response.json();
       setInvestor(data);
       setEditedInvestor(data);
     } catch (err) {
       console.error("Error fetching investor:", err);
-      setError(err.message);
+      if (err.response?.status === 404) {
+        setError("Investisseur non trouve");
+      } else {
+        setError(err.response?.data?.message || err.message || "Erreur lors du chargement de l'investisseur");
+      }
     } finally {
       setLoading(false);
     }
@@ -133,20 +133,9 @@ export default function InvestorDetailPage() {
     try {
       setSaving(true);
 
-      const response = await fetch(`/api/investments/investors/${params.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(editedInvestor),
-      });
+      const response = await InvestorUpdate(params.id, editedInvestor);
+      const updatedInvestor = response.data;
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Erreur lors de la sauvegarde");
-      }
-
-      const updatedInvestor = await response.json();
       setInvestor(updatedInvestor);
       setEditedInvestor(updatedInvestor);
       setIsEditing(false);
@@ -154,7 +143,7 @@ export default function InvestorDetailPage() {
       // Remove edit param from URL
       router.replace(`/investments/investors/${params.id}`);
     } catch (err) {
-      alert(err.message);
+      alert(err.response?.data?.message || err.message || "Erreur lors de la sauvegarde");
     } finally {
       setSaving(false);
     }
@@ -170,19 +159,10 @@ export default function InvestorDetailPage() {
   const handleDelete = async () => {
     try {
       setDeleting(true);
-
-      const response = await fetch(`/api/investments/investors/${params.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Erreur lors de la suppression");
-      }
-
+      await InvestorDelete(params.id);
       router.push("/investments/investors");
     } catch (err) {
-      alert(err.message);
+      alert(err.response?.data?.message || err.message || "Erreur lors de la suppression");
       setDeleting(false);
       setShowDeleteConfirm(false);
     }

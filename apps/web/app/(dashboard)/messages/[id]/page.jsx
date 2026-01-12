@@ -31,6 +31,11 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import {
+  MessageGetById,
+  MessageDelete,
+  MessageMarkAsUnread,
+} from "@/app/services/admin/Message.service";
 
 export default function ReadMessagePage() {
   const params = useParams();
@@ -43,8 +48,8 @@ export default function ReadMessagePage() {
   useEffect(() => {
     const fetchMessage = async () => {
       try {
-        const response = await fetch(`/api/messages/${params.id}`);
-        const result = await response.json();
+        const response = await MessageGetById(params.id);
+        const result = response.data;
 
         if (result.success) {
           setMessage(result.data || result.message);
@@ -68,10 +73,8 @@ export default function ReadMessagePage() {
 
     setDeleting(true);
     try {
-      const response = await fetch(`/api/messages/${params.id}`, {
-        method: "DELETE",
-      });
-      const result = await response.json();
+      const response = await MessageDelete(params.id);
+      const result = response.data;
 
       if (result.success) {
         router.push("/messages");
@@ -88,7 +91,7 @@ export default function ReadMessagePage() {
 
   const handleMarkAsUnread = async () => {
     try {
-      await fetch(`/api/messages/${params.id}/read`, { method: "DELETE" });
+      await MessageMarkAsUnread(params.id);
       router.push("/messages");
     } catch (error) {
       console.error("Erreur:", error);

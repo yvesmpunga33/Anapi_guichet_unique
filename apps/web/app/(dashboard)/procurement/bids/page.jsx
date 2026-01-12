@@ -24,6 +24,7 @@ import {
   Award,
   Filter,
 } from "lucide-react";
+import { BidList, BidDelete, TenderList } from "@/app/services/admin/Procurement.service";
 
 const statusColors = {
   RECEIVED: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
@@ -88,17 +89,17 @@ export default function BidsPage() {
   const fetchBids = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
-      });
+      };
 
-      if (search) params.append("search", search);
-      if (statusFilter) params.append("status", statusFilter);
-      if (tenderFilter) params.append("tenderId", tenderFilter);
+      if (search) params.search = search;
+      if (statusFilter) params.status = statusFilter;
+      if (tenderFilter) params.tenderId = tenderFilter;
 
-      const response = await fetch(`/api/procurement/bids?${params}`);
-      const data = await response.json();
+      const response = await BidList(params);
+      const data = response.data;
 
       if (data.success) {
         setBids(data.data);
@@ -122,8 +123,8 @@ export default function BidsPage() {
   useEffect(() => {
     const fetchTenders = async () => {
       try {
-        const response = await fetch("/api/procurement/tenders?limit=100");
-        const data = await response.json();
+        const response = await TenderList({ limit: 100 });
+        const data = response.data;
         if (data.success) {
           setTenders(data.data);
         }
@@ -141,10 +142,8 @@ export default function BidsPage() {
   const handleDelete = async (id) => {
     setDeleting(true);
     try {
-      const response = await fetch(`/api/procurement/bids/${id}`, {
-        method: "DELETE",
-      });
-      const data = await response.json();
+      const response = await BidDelete(id);
+      const data = response.data;
 
       if (data.success) {
         fetchBids();

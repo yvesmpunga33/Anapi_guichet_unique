@@ -36,14 +36,14 @@ export const authConfig = {
       const isOnAdmin = nextUrl.pathname.startsWith('/admin');
       const isOnInvestments = nextUrl.pathname.startsWith('/investments');
       const isOnJuridique = nextUrl.pathname.startsWith('/juridique');
-      const isProtectedRoute = isOnDashboard || isOnHR || isOnGuichet || isOnMinistry || isOnAdmin || isOnInvestments || isOnJuridique;
+      const isOnPartage = nextUrl.pathname.startsWith('/partage');
+      const isProtectedRoute = isOnDashboard || isOnHR || isOnGuichet || isOnMinistry || isOnAdmin || isOnInvestments || isOnJuridique || isOnPartage;
 
       const isAuthRoute = nextUrl.pathname === '/login' || nextUrl.pathname === '/register';
 
-      // Rediriger vers dashboard si déjà connecté et sur page auth
-      if (isLoggedIn && isAuthRoute) {
-        return Response.redirect(new URL('/dashboard', nextUrl));
-      }
+      // NE PAS rediriger automatiquement vers dashboard si déjà connecté sur page auth
+      // Cela permet à l'utilisateur de se déconnecter et se reconnecter avec un autre compte
+      // La page de login gère elle-même ce cas si nécessaire
 
       // Protéger les routes
       if (isProtectedRoute) {

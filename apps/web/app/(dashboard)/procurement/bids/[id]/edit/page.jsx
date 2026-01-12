@@ -21,6 +21,7 @@ import {
   Target,
   Award,
 } from "lucide-react";
+import { BidGetById, BidUpdate, TenderList, BidderList } from "@/app/services/admin/Procurement.service";
 
 const deliveryUnits = [
   { value: "DAYS", label: "Jours" },
@@ -115,8 +116,8 @@ export default function EditBidPage() {
   useEffect(() => {
     const fetchBid = async () => {
       try {
-        const response = await fetch(`/api/procurement/bids/${params.id}`);
-        const data = await response.json();
+        const response = await BidGetById(params.id);
+        const data = response.data;
 
         if (data.success && data.data) {
           const bid = data.data;
@@ -169,14 +170,12 @@ export default function EditBidPage() {
     const fetchData = async () => {
       try {
         const [tendersRes, biddersRes] = await Promise.all([
-          fetch("/api/procurement/tenders?limit=100"),
-          fetch("/api/procurement/bidders?limit=100"),
+          TenderList({ limit: 100 }),
+          BidderList({ limit: 100 }),
         ]);
 
-        const [tendersData, biddersData] = await Promise.all([
-          tendersRes.json(),
-          biddersRes.json(),
-        ]);
+        const tendersData = tendersRes.data;
+        const biddersData = biddersRes.data;
 
         if (tendersData.success) setTenders(tendersData.data || []);
         if (biddersData.success) setBidders(biddersData.data || []);
@@ -273,13 +272,8 @@ export default function EditBidPage() {
         lotId: formData.lotId || null,
       };
 
-      const response = await fetch(`/api/procurement/bids/${params.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submitData),
-      });
-
-      const data = await response.json();
+      const response = await BidUpdate(params.id, submitData);
+      const data = response.data;
 
       if (data.success) {
         router.push(`/procurement/bids/${params.id}`);

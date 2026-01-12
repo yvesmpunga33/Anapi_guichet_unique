@@ -18,6 +18,15 @@ import {
   Filter,
 } from "lucide-react";
 import Swal from "sweetalert2";
+import {
+  CommuneList,
+  CommuneCreate,
+  CommuneUpdate,
+  CommuneDelete,
+  VilleList,
+  VilleListByProvince,
+  ReferentielProvinceList,
+} from "@/app/services/admin/Referentiel.service";
 
 export default function CommunesPage() {
   const [communes, setCommunes] = useState([]);
@@ -50,11 +59,9 @@ export default function CommunesPage() {
   // Charger les provinces
   const fetchProvinces = async () => {
     try {
-      const response = await fetch('/api/referentiels/provinces?activeOnly=true');
-      if (response.ok) {
-        const data = await response.json();
-        setProvinces(data.provinces || []);
-      }
+      const response = await ReferentielProvinceList({ activeOnly: true });
+      const data = response.data;
+      setProvinces(data.provinces || []);
     } catch (error) {
       console.error('Error fetching provinces:', error);
     }
@@ -63,11 +70,9 @@ export default function CommunesPage() {
   // Charger toutes les villes
   const fetchAllCities = async () => {
     try {
-      const response = await fetch('/api/referentiels/cities?activeOnly=true');
-      if (response.ok) {
-        const data = await response.json();
-        setCities(data.cities || []);
-      }
+      const response = await VilleList({ activeOnly: true });
+      const data = response.data;
+      setCities(data.cities || []);
     } catch (error) {
       console.error('Error fetching cities:', error);
     }
@@ -81,11 +86,9 @@ export default function CommunesPage() {
       return;
     }
     try {
-      const response = await fetch(`/api/referentiels/provinces/${provinceId}/cities`);
-      if (response.ok) {
-        const data = await response.json();
-        setFilteredCities(data.cities || []);
-      }
+      const response = await VilleListByProvince(provinceId);
+      const data = response.data;
+      setFilteredCities(data.cities || []);
     } catch (error) {
       console.error('Error fetching cities:', error);
     }
@@ -99,11 +102,9 @@ export default function CommunesPage() {
       return;
     }
     try {
-      const response = await fetch(`/api/referentiels/provinces/${provinceId}/cities`);
-      if (response.ok) {
-        const data = await response.json();
-        setFormCities(data.cities || []);
-      }
+      const response = await VilleListByProvince(provinceId);
+      const data = response.data;
+      setFormCities(data.cities || []);
     } catch (error) {
       console.error('Error fetching cities:', error);
     }
@@ -113,24 +114,18 @@ export default function CommunesPage() {
   const fetchCommunes = async () => {
     setLoading(true);
     try {
-      let url = '/api/referentiels/communes';
-      const params = new URLSearchParams();
+      const params = {};
       if (selectedProvinceFilter) {
-        params.append('provinceId', selectedProvinceFilter);
+        params.provinceId = selectedProvinceFilter;
       }
       if (selectedCityFilter) {
-        params.append('cityId', selectedCityFilter);
-      }
-      if (params.toString()) {
-        url += '?' + params.toString();
+        params.cityId = selectedCityFilter;
       }
 
-      const response = await fetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        setCommunes(data.communes || []);
-        setStats(data.stats || stats);
-      }
+      const response = await CommuneList(params);
+      const data = response.data;
+      setCommunes(data.communes || []);
+      setStats(data.stats || stats);
     } catch (error) {
       console.error('Error fetching communes:', error);
       Swal.fire({
@@ -235,26 +230,24 @@ export default function CommunesPage() {
     setSaving(true);
 
     try {
-      const url = selectedCommune
-        ? `/api/referentiels/communes/${selectedCommune.id}`
-        : '/api/referentiels/communes';
-      const method = selectedCommune ? 'PATCH' : 'POST';
+      const saveData = {
+        code: formData.code,
+        name: formData.name,
+        cityId: formData.cityId,
+        population: formData.population,
+        isActive: formData.isActive,
+      };
 
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code: formData.code,
-          name: formData.name,
-          cityId: formData.cityId,
-          population: formData.population,
-          isActive: formData.isActive,
-        }),
-      });
+      let response;
+      if (selectedCommune) {
+        response = await CommuneUpdate(selectedCommune.id, saveData);
+      } else {
+        response = await CommuneCreate(saveData);
+      }
 
-      const data = await response.json();
+      const data = response.data;
 
-      if (response.ok) {
+      if (data) {
         closeModals();
         fetchCommunes();
 
@@ -305,11 +298,9 @@ export default function CommunesPage() {
 
     if (result.isConfirmed) {
       try {
-        const response = await fetch(`/api/referentiels/communes/${commune.id}`, {
-          method: 'DELETE',
-        });
+        const response = await CommuneDelete(commune.id);
 
-        if (response.ok) {
+        if (response.data) {
           fetchCommunes();
           Swal.fire({
             icon: 'success',
@@ -321,7 +312,7 @@ export default function CommunesPage() {
             position: 'top-end',
           });
         } else {
-          const data = await response.json();
+          const data = response.data;
           Swal.fire({
             icon: 'error',
             title: 'Erreur',

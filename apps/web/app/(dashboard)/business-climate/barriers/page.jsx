@@ -24,6 +24,9 @@ import {
   Download,
 } from "lucide-react";
 
+// Services
+import { BarrierList } from "@/app/services/admin/BusinessClimate.service";
+
 const categoryOptions = [
   { value: "", label: "Toutes catégories" },
   { value: "ADMINISTRATIVE", label: "Administratif" },
@@ -108,22 +111,20 @@ export default function BarriersPage() {
   const fetchBarriers = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page,
         limit: 20,
-      });
+      };
 
-      if (search) params.append("search", search);
-      if (filters.status) params.append("status", filters.status);
-      if (filters.category) params.append("category", filters.category);
-      if (filters.priority) params.append("priority", filters.priority);
+      if (search) params.search = search;
+      if (filters.status) params.status = filters.status;
+      if (filters.category) params.category = filters.category;
+      if (filters.priority) params.priority = filters.priority;
 
-      const response = await fetch(`/api/business-climate/barriers?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setBarriers(data.data || []);
-        setPagination(data.pagination);
-      }
+      const response = await BarrierList(params);
+      const data = response.data;
+      setBarriers(data.data || []);
+      setPagination(data.pagination);
     } catch (error) {
       console.error("Error fetching barriers:", error);
     } finally {

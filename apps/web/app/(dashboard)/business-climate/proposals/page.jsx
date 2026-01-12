@@ -23,6 +23,9 @@ import {
   AlertCircle,
 } from "lucide-react";
 
+// Services
+import { ProposalList } from "@/app/services/admin/BusinessClimate.service";
+
 const proposalTypeOptions = [
   { value: "", label: "Tous types" },
   { value: "LAW", label: "Projet de loi" },
@@ -145,23 +148,21 @@ export default function ProposalsPage() {
   const fetchProposals = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page,
         limit: 20,
-      });
+      };
 
-      if (search) params.append("search", search);
-      if (filters.status) params.append("status", filters.status);
-      if (filters.proposalType) params.append("proposalType", filters.proposalType);
-      if (filters.domain) params.append("domain", filters.domain);
-      if (filters.priority) params.append("priority", filters.priority);
+      if (search) params.search = search;
+      if (filters.status) params.status = filters.status;
+      if (filters.proposalType) params.proposalType = filters.proposalType;
+      if (filters.domain) params.domain = filters.domain;
+      if (filters.priority) params.priority = filters.priority;
 
-      const response = await fetch(`/api/business-climate/proposals?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setProposals(data.data || []);
-        setPagination(data.pagination);
-      }
+      const response = await ProposalList(params);
+      const data = response.data;
+      setProposals(data.data || []);
+      setPagination(data.pagination);
     } catch (error) {
       console.error("Error fetching proposals:", error);
     } finally {

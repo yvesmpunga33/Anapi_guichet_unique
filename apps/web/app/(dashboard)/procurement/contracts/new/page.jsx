@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, FileText, DollarSign, Calendar, User, StickyNote, Loader2 } from 'lucide-react';
+import { ProcurementContractCreate, TenderList, BidList, BidderList } from '@/app/services/admin/Procurement.service';
 
 const statusOptions = [
   { value: 'DRAFT', label: 'Brouillon' },
@@ -66,8 +67,8 @@ export default function NewContractPage() {
 
   const fetchBidders = async () => {
     try {
-      const response = await fetch('/api/procurement/bidders?limit=200&status=ACTIVE');
-      const result = await response.json();
+      const response = await BidderList({ limit: 200, status: 'ACTIVE' });
+      const result = response.data;
       if (result.success) {
         setBidders(result.data || []);
       }
@@ -78,8 +79,8 @@ export default function NewContractPage() {
 
   const fetchTenders = async () => {
     try {
-      const response = await fetch('/api/procurement/tenders?limit=200');
-      const result = await response.json();
+      const response = await TenderList({ limit: 200 });
+      const result = response.data;
       if (result.success) {
         setTenders(result.data || []);
       }
@@ -90,8 +91,8 @@ export default function NewContractPage() {
 
   const fetchBidsForTender = async (tenderId) => {
     try {
-      const response = await fetch(`/api/procurement/bids?tenderId=${tenderId}&status=AWARDED`);
-      const result = await response.json();
+      const response = await BidList({ tenderId, status: 'AWARDED' });
+      const result = response.data;
       if (result.success) {
         setBids(result.data || []);
       }
@@ -142,13 +143,8 @@ export default function NewContractPage() {
         bidId: formData.bidId || null,
       };
 
-      const response = await fetch('/api/procurement/contracts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dataToSend),
-      });
-
-      const result = await response.json();
+      const response = await ProcurementContractCreate(dataToSend);
+      const result = response.data;
 
       if (result.success) {
         router.push(`/procurement/contracts/${result.data.id}`);

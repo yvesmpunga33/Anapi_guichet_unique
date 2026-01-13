@@ -1,8 +1,12 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useIntl } from 'react-intl';
+import { useLanguage } from '@/contexts/LanguageContext';
+import Swal from 'sweetalert2';
+
 import {
   ArrowLeft,
   User,
@@ -23,26 +27,298 @@ import {
   Heart,
   Baby,
   Shield,
-} from "lucide-react";
+  AlertCircle,
+  Camera,
+  Printer,
+  Download,
+  Upload,
+  X,
+  Eye,
+  ExternalLink,
+  Clock,
+  CheckCircle,
+  XCircle,
+} from 'lucide-react';
 
-// Services
-import { EmployeeGetById } from "@/app/services/admin/HR.service";
+import {
+  getEmployeeById,
+  deleteEmployee,
+  uploadEmployeePhoto,
+  deleteEmployeePhoto,
+  getPhotoUrl,
+} from '@/app/services/hr';
 
-const tabs = [
-  { id: "personal", name: "Informations Personnelles", icon: User },
-  { id: "family", name: "Agregat Familial", icon: Users },
-  { id: "bank", name: "Comptes Bancaires", icon: CreditCard },
-  { id: "documents", name: "Documents", icon: FileText },
-  { id: "professional", name: "Infos Professionnelles", icon: Briefcase },
-  { id: "emergency", name: "Contacts d'Urgence", icon: Phone },
+import {
+  getEmployeeDocuments,
+  uploadDocument,
+  deleteDocument,
+  getDocumentUrl,
+  getDownloadUrl,
+  DOCUMENT_TYPES,
+  formatFileSize,
+  canPreview,
+} from '@/app/services/hr/employeeDocumentService';
+
+// Tab configuration
+const getTabs = (intl) => [
+  { id: 'personal', name: intl.formatMessage({ id: 'hr.employees.tabs.personal', defaultMessage: 'Informations Personnelles' }), icon: User },
+  { id: 'professional', name: intl.formatMessage({ id: 'hr.employees.tabs.professional', defaultMessage: 'Infos Professionnelles' }), icon: Briefcase },
+  { id: 'family', name: intl.formatMessage({ id: 'hr.employees.tabs.family', defaultMessage: 'Agregat Familial' }), icon: Users },
+  { id: 'bank', name: intl.formatMessage({ id: 'hr.employees.tabs.bank', defaultMessage: 'Comptes Bancaires' }), icon: CreditCard },
+  { id: 'documents', name: intl.formatMessage({ id: 'hr.employees.tabs.documents', defaultMessage: 'Documents' }), icon: FileText },
+  { id: 'emergency', name: intl.formatMessage({ id: 'hr.employees.tabs.emergency', defaultMessage: "Contacts d'Urgence" }), icon: Phone },
 ];
+
+// Status badge styles
+const getStatusStyles = (status) => {
+  if (!status) return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+  switch (status.toLowerCase()) {
+    case 'actif':
+      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+    case 'en conge':
+    case 'en congé':
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+    case 'inactif':
+    case 'suspendu':
+      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+    default:
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+  }
+};
+
+// Info Item Component
+function InfoItem({ label, value, icon }) {
+  return (
+    <div>
+      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</dt>
+      <dd className="mt-1 flex items-center gap-2 text-sm text-gray-900 dark:text-white">
+        {icon}
+        {value || '-'}
+      </dd>
+    </div>
+  );
+}
+
+// Section Header Component
+function SectionHeader({ icon: Icon, title, color = 'text-[#0A1628]', action }) {
+  return (
+    <div className="mb-4 flex items-center justify-between">
+      <h3 className={`flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white`}>
+        <Icon className={`h-5 w-5 ${color}`} />
+        {title}
+      </h3>
+      {action}
+    </div>
+  );
+}
+
+// Add Button Component
+function AddButton({ onClick, label, intl }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-2 rounded-lg bg-[#0A1628]/10 px-3 py-1.5 text-sm font-medium text-[#0A1628] transition-colors hover:bg-[#0A1628]/20 dark:bg-[#D4A853]/20 dark:text-[#D4A853] dark:hover:bg-[#D4A853]/30"
+    >
+      <Plus className="h-4 w-4" />
+      {label || intl.formatMessage({ id: 'common.add', defaultMessage: 'Ajouter' })}
+    </button>
+  );
+}
+
+// Document Upload Modal Component
+function DocumentUploadModal({ isOpen, onClose, onUpload, intl }) {
+  const [file, setFile] = useState(null);
+  const [metadata, setMetadata] = useState({
+    title: '',
+    type: 'autre',
+    description: '',
+    documentDate: '',
+    expiryDate: '',
+  });
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!file || !metadata.title) return;
+
+    setUploading(true);
+    try {
+      await onUpload(file, metadata);
+      setFile(null);
+      setMetadata({
+        title: '',
+        type: 'autre',
+        description: '',
+        documentDate: '',
+        expiryDate: '',
+      });
+      onClose();
+    } catch (error) {
+      console.error('Upload error:', error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-800">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {intl.formatMessage({ id: 'hr.employees.uploadDocument', defaultMessage: 'Telecharger un document' })}
+          </h3>
+          <button onClick={onClose} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* File Input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              {intl.formatMessage({ id: 'hr.employees.file', defaultMessage: 'Fichier' })} *
+            </label>
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="mt-1 flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-6 transition-colors hover:border-[#D4A853] dark:border-gray-600"
+            >
+              {file ? (
+                <div className="text-center">
+                  <FileText className="mx-auto h-8 w-8 text-[#D4A853]" />
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{file.name}</p>
+                  <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    {intl.formatMessage({ id: 'hr.employees.clickToUpload', defaultMessage: 'Cliquez pour selectionner un fichier' })}
+                  </p>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              />
+            </div>
+          </div>
+
+          {/* Title */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              {intl.formatMessage({ id: 'hr.employees.documentTitle', defaultMessage: 'Titre' })} *
+            </label>
+            <input
+              type="text"
+              value={metadata.title}
+              onChange={(e) => setMetadata({ ...metadata, title: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-[#D4A853] focus:outline-none focus:ring-2 focus:ring-[#D4A853]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              required
+            />
+          </div>
+
+          {/* Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              {intl.formatMessage({ id: 'hr.employees.documentType', defaultMessage: 'Type' })}
+            </label>
+            <select
+              value={metadata.type}
+              onChange={(e) => setMetadata({ ...metadata, type: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-[#D4A853] focus:outline-none focus:ring-2 focus:ring-[#D4A853]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            >
+              {Object.entries(DOCUMENT_TYPES).map(([key, doc]) => (
+                <option key={key} value={doc.value}>
+                  {doc.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              {intl.formatMessage({ id: 'hr.employees.description', defaultMessage: 'Description' })}
+            </label>
+            <textarea
+              value={metadata.description}
+              onChange={(e) => setMetadata({ ...metadata, description: e.target.value })}
+              rows={2}
+              className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-[#D4A853] focus:outline-none focus:ring-2 focus:ring-[#D4A853]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            />
+          </div>
+
+          {/* Dates */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {intl.formatMessage({ id: 'hr.employees.documentDate', defaultMessage: 'Date document' })}
+              </label>
+              <input
+                type="date"
+                value={metadata.documentDate}
+                onChange={(e) => setMetadata({ ...metadata, documentDate: e.target.value })}
+                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-[#D4A853] focus:outline-none focus:ring-2 focus:ring-[#D4A853]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {intl.formatMessage({ id: 'hr.employees.expiryDate', defaultMessage: "Date d'expiration" })}
+              </label>
+              <input
+                type="date"
+                value={metadata.expiryDate}
+                onChange={(e) => setMetadata({ ...metadata, expiryDate: e.target.value })}
+                className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-[#D4A853] focus:outline-none focus:ring-2 focus:ring-[#D4A853]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              {intl.formatMessage({ id: 'common.cancel', defaultMessage: 'Annuler' })}
+            </button>
+            <button
+              type="submit"
+              disabled={!file || !metadata.title || uploading}
+              className="flex items-center gap-2 rounded-lg bg-[#0A1628] px-4 py-2 text-white transition-colors hover:bg-[#0A1628]/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {uploading && <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
+              {intl.formatMessage({ id: 'common.upload', defaultMessage: 'Telecharger' })}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export default function EmployeeDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("personal");
+  const intl = useIntl();
+  const { locale } = useLanguage();
+  const [activeTab, setActiveTab] = useState('personal');
   const [employee, setEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [documents, setDocuments] = useState([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const photoInputRef = useRef(null);
+
+  const tabs = getTabs(intl);
 
   useEffect(() => {
     if (params.id) {
@@ -50,37 +326,245 @@ export default function EmployeeDetailPage() {
     }
   }, [params.id]);
 
+  useEffect(() => {
+    if (params.id && activeTab === 'documents') {
+      loadDocuments();
+    }
+  }, [params.id, activeTab]);
+
   const fetchEmployee = async (id) => {
     try {
       setLoading(true);
-      const response = await EmployeeGetById(id);
-      setEmployee(response.data?.employee || response.data);
+      const response = await getEmployeeById(id);
+      if (response.success) {
+        setEmployee(response.data);
+      } else {
+        throw new Error(response.message);
+      }
     } catch (error) {
-      console.error("Error fetching employee:", error);
+      console.error('Error fetching employee:', error);
+      Swal.fire({
+        title: intl.formatMessage({ id: 'common.error', defaultMessage: 'Erreur' }),
+        text: intl.formatMessage({ id: 'hr.employees.loadError', defaultMessage: 'Impossible de charger les donnees' }),
+        icon: 'error',
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const loadDocuments = async () => {
+    try {
+      setDocumentsLoading(true);
+      const response = await getEmployeeDocuments(params.id);
+      if (response.success) {
+        setDocuments(response.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading documents:', error);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
+  const handlePhotoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      Swal.fire({
+        title: intl.formatMessage({ id: 'common.error', defaultMessage: 'Erreur' }),
+        text: intl.formatMessage({ id: 'hr.employees.invalidImageType', defaultMessage: 'Veuillez selectionner une image valide' }),
+        icon: 'error',
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      Swal.fire({
+        title: intl.formatMessage({ id: 'common.error', defaultMessage: 'Erreur' }),
+        text: intl.formatMessage({ id: 'hr.employees.imageTooLarge', defaultMessage: "L'image ne doit pas depasser 5MB" }),
+        icon: 'error',
+      });
+      return;
+    }
+
+    setPhotoUploading(true);
+    try {
+      const response = await uploadEmployeePhoto(params.id, file);
+      if (response.success) {
+        setEmployee((prev) => ({ ...prev, photo: response.data?.photo || response.data?.filePath }));
+        Swal.fire({
+          title: intl.formatMessage({ id: 'common.success', defaultMessage: 'Succes' }),
+          text: intl.formatMessage({ id: 'hr.employees.photoUploaded', defaultMessage: 'Photo mise a jour avec succes' }),
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      } else {
+        throw new Error(response.message);
+      }
+    } catch (error) {
+      Swal.fire({
+        title: intl.formatMessage({ id: 'common.error', defaultMessage: 'Erreur' }),
+        text: error.message || intl.formatMessage({ id: 'hr.employees.photoUploadError', defaultMessage: 'Impossible de telecharger la photo' }),
+        icon: 'error',
+      });
+    } finally {
+      setPhotoUploading(false);
+      if (photoInputRef.current) {
+        photoInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleDeletePhoto = async () => {
+    const result = await Swal.fire({
+      title: intl.formatMessage({ id: 'hr.employees.deletePhotoTitle', defaultMessage: 'Supprimer la photo' }),
+      text: intl.formatMessage({ id: 'hr.employees.deletePhotoConfirm', defaultMessage: 'Voulez-vous vraiment supprimer la photo?' }),
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#0A1628',
+      confirmButtonText: intl.formatMessage({ id: 'common.confirmDelete', defaultMessage: 'Oui, supprimer' }),
+      cancelButtonText: intl.formatMessage({ id: 'common.cancel', defaultMessage: 'Annuler' }),
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const response = await deleteEmployeePhoto(params.id);
+        if (response.success) {
+          setEmployee((prev) => ({ ...prev, photo: null }));
+          Swal.fire({
+            title: intl.formatMessage({ id: 'common.deleted', defaultMessage: 'Supprime!' }),
+            text: intl.formatMessage({ id: 'hr.employees.photoDeleted', defaultMessage: 'Photo supprimee avec succes' }),
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false,
+          });
+        }
+      } catch (error) {
+        Swal.fire({
+          title: intl.formatMessage({ id: 'common.error', defaultMessage: 'Erreur' }),
+          text: intl.formatMessage({ id: 'hr.employees.photoDeleteError', defaultMessage: 'Impossible de supprimer la photo' }),
+          icon: 'error',
+        });
+      }
+    }
+  };
+
+  const handleDocumentUpload = async (file, metadata) => {
+    try {
+      const response = await uploadDocument(params.id, file, metadata);
+      if (response.success) {
+        loadDocuments();
+        Swal.fire({
+          title: intl.formatMessage({ id: 'common.success', defaultMessage: 'Succes' }),
+          text: intl.formatMessage({ id: 'hr.employees.documentUploaded', defaultMessage: 'Document telecharge avec succes' }),
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      }
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const handleDeleteDocument = async (documentId) => {
+    const result = await Swal.fire({
+      title: intl.formatMessage({ id: 'hr.employees.deleteDocumentTitle', defaultMessage: 'Supprimer le document' }),
+      text: intl.formatMessage({ id: 'hr.employees.deleteDocumentConfirm', defaultMessage: 'Voulez-vous vraiment supprimer ce document?' }),
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#0A1628',
+      confirmButtonText: intl.formatMessage({ id: 'common.confirmDelete', defaultMessage: 'Oui, supprimer' }),
+      cancelButtonText: intl.formatMessage({ id: 'common.cancel', defaultMessage: 'Annuler' }),
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const response = await deleteDocument(params.id, documentId);
+        if (response.success) {
+          loadDocuments();
+          Swal.fire({
+            title: intl.formatMessage({ id: 'common.deleted', defaultMessage: 'Supprime!' }),
+            text: intl.formatMessage({ id: 'hr.employees.documentDeleted', defaultMessage: 'Document supprime avec succes' }),
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false,
+          });
+        }
+      } catch (error) {
+        Swal.fire({
+          title: intl.formatMessage({ id: 'common.error', defaultMessage: 'Erreur' }),
+          text: intl.formatMessage({ id: 'hr.employees.documentDeleteError', defaultMessage: 'Impossible de supprimer le document' }),
+          icon: 'error',
+        });
+      }
+    }
+  };
+
+  const handleDeleteEmployee = async () => {
+    const result = await Swal.fire({
+      title: intl.formatMessage({ id: 'hr.employees.deleteConfirmTitle', defaultMessage: 'Confirmer la suppression' }),
+      html: intl.formatMessage(
+        { id: 'hr.employees.deleteConfirmMessage', defaultMessage: 'Voulez-vous vraiment supprimer <strong>{name}</strong>?' },
+        { name: `${employee?.prenom} ${employee?.nom}` }
+      ),
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#0A1628',
+      confirmButtonText: intl.formatMessage({ id: 'common.confirmDelete', defaultMessage: 'Oui, supprimer' }),
+      cancelButtonText: intl.formatMessage({ id: 'common.cancel', defaultMessage: 'Annuler' }),
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const response = await deleteEmployee(params.id);
+        if (response.success) {
+          Swal.fire({
+            title: intl.formatMessage({ id: 'common.deleted', defaultMessage: 'Supprime!' }),
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false,
+          });
+          router.push('/hr/employees');
+        }
+      } catch (error) {
+        Swal.fire({
+          title: intl.formatMessage({ id: 'common.error', defaultMessage: 'Erreur' }),
+          text: intl.formatMessage({ id: 'hr.employees.deleteError', defaultMessage: 'Impossible de supprimer' }),
+          icon: 'error',
+        });
+      }
+    }
+  };
+
   const formatDate = (dateString) => {
-    if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString("fr-FR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString(locale, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     });
   };
 
-  const formatCurrency = (amount, currency) => {
-    return new Intl.NumberFormat("fr-CD", {
-      style: "currency",
-      currency: currency || "CDF",
-      minimumFractionDigits: 0,
+  const formatCurrency = (amount, currency = 'USD') => {
+    if (!amount) return '-';
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
     }).format(amount);
   };
 
   const calculateAge = (dateOfBirth) => {
-    if (!dateOfBirth) return "-";
+    if (!dateOfBirth) return '-';
     const today = new Date();
     const birthDate = new Date(dateOfBirth);
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -88,51 +572,37 @@ export default function EmployeeDetailPage() {
     if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
-    return `${age} ans`;
+    return `${age} ${intl.formatMessage({ id: 'hr.employees.years', defaultMessage: 'ans' })}`;
   };
 
   const getMaritalStatusLabel = (status) => {
+    if (!status) return '-';
     const labels = {
-      single: "Celibataire",
-      married: "Marie(e)",
-      divorced: "Divorce(e)",
-      widowed: "Veuf/Veuve",
-      separated: "Separe(e)",
-      civil_union: "Union libre",
+      celibataire: intl.formatMessage({ id: 'hr.employees.marital.single', defaultMessage: 'Celibataire' }),
+      marie: intl.formatMessage({ id: 'hr.employees.marital.married', defaultMessage: 'Marie(e)' }),
+      divorce: intl.formatMessage({ id: 'hr.employees.marital.divorced', defaultMessage: 'Divorce(e)' }),
+      veuf: intl.formatMessage({ id: 'hr.employees.marital.widowed', defaultMessage: 'Veuf/Veuve' }),
     };
-    return labels[status] || status;
-  };
-
-  const getStatusBadge = (status) => {
-    const styles = {
-      ACTIVE: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-      INACTIVE: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
-      ON_LEAVE: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-      TERMINATED: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-    };
-    return styles[status] || styles.INACTIVE;
+    return labels[status.toLowerCase()] || status;
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex h-96 items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#0A1628] border-t-transparent" />
       </div>
     );
   }
 
   if (!employee) {
     return (
-      <div className="flex flex-col items-center justify-center h-96">
-        <User className="w-16 h-16 text-gray-400 mb-4" />
+      <div className="flex h-96 flex-col items-center justify-center">
+        <User className="mb-4 h-16 w-16 text-gray-400" />
         <p className="text-lg font-medium text-gray-600 dark:text-gray-300">
-          Employe non trouve
+          {intl.formatMessage({ id: 'hr.employees.notFound', defaultMessage: 'Employe non trouve' })}
         </p>
-        <Link
-          href="/hr/employees"
-          className="mt-4 text-blue-600 hover:underline"
-        >
-          Retour a la liste
+        <Link href="/hr/employees" className="mt-4 text-[#D4A853] hover:underline">
+          {intl.formatMessage({ id: 'hr.employees.backToList', defaultMessage: 'Retour a la liste' })}
         </Link>
       </div>
     );
@@ -141,62 +611,107 @@ export default function EmployeeDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Link
             href="/hr/employees"
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700"
+            className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
-              {employee.firstName.charAt(0)}
-              {employee.lastName.charAt(0)}
+            {/* Avatar with Photo Upload */}
+            <div className="group relative">
+              <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#0A1628] to-[#1a2d4a] text-xl font-bold text-white shadow-lg">
+                {photoUploading ? (
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-white border-t-transparent" />
+                ) : employee.photo ? (
+                  <img
+                    src={getPhotoUrl(employee.photo)}
+                    alt={`${employee.prenom} ${employee.nom}`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <>
+                    {employee.prenom?.[0]}
+                    {employee.nom?.[0]}
+                  </>
+                )}
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                <button
+                  onClick={() => photoInputRef.current?.click()}
+                  className="rounded-full bg-white/20 p-2 text-white hover:bg-white/30"
+                  title={intl.formatMessage({ id: 'hr.employees.changePhoto', defaultMessage: 'Changer la photo' })}
+                >
+                  <Camera className="h-4 w-4" />
+                </button>
+                {employee.photo && (
+                  <button
+                    onClick={handleDeletePhoto}
+                    className="ml-1 rounded-full bg-red-500/80 p-2 text-white hover:bg-red-600"
+                    title={intl.formatMessage({ id: 'hr.employees.deletePhoto', defaultMessage: 'Supprimer la photo' })}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoUpload}
+              />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {employee.firstName} {employee.middleName || ""} {employee.lastName}
+                {employee.prenom} {employee.postnom && `${employee.postnom} `}
+                {employee.nom}
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
-                {employee.matricule} - {employee.position?.title || "Poste non defini"}
+                <span className="font-semibold text-[#D4A853]">{employee.matricule}</span>
+                {employee.poste && ` - ${employee.poste}`}
               </p>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <span className={`px-3 py-1.5 text-sm font-medium rounded-full ${getStatusBadge(employee.status)}`}>
-            {employee.status === "ACTIVE" && "Actif"}
-            {employee.status === "INACTIVE" && "Inactif"}
-            {employee.status === "ON_LEAVE" && "En conge"}
-            {employee.status === "TERMINATED" && "Termine"}
+          <span className={`rounded-full px-3 py-1.5 text-sm font-medium ${getStatusStyles(employee.statut)}`}>
+            {employee.statut || intl.formatMessage({ id: 'common.undefined', defaultMessage: 'Non defini' })}
           </span>
           <Link
             href={`/hr/employees/${employee.id}/edit`}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 rounded-lg bg-[#0A1628] px-4 py-2 text-white transition-colors hover:bg-[#0A1628]/90"
           >
-            <Edit className="w-4 h-4" />
-            <span>Modifier</span>
+            <Edit className="h-4 w-4" />
+            <span>{intl.formatMessage({ id: 'common.edit', defaultMessage: 'Modifier' })}</span>
           </Link>
+          <button
+            onClick={handleDeleteEmployee}
+            className="rounded-lg border border-red-300 p-2 text-red-600 transition-colors hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/20"
+          >
+            <Trash2 className="h-5 w-5" />
+          </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="flex overflow-x-auto" aria-label="Tabs">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-6 py-4 text-sm font-medium transition-colors ${
                   activeTab === tab.id
-                    ? "border-blue-600 text-blue-600 dark:text-blue-400"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
+                    ? 'border-[#D4A853] text-[#D4A853]'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                 }`}
               >
-                <tab.icon className="w-5 h-5" />
+                <tab.icon className="h-5 w-5" />
                 {tab.name}
               </button>
             ))}
@@ -205,259 +720,315 @@ export default function EmployeeDetailPage() {
 
         <div className="p-6">
           {/* Personal Information Tab */}
-          {activeTab === "personal" && (
-            <div className="space-y-6">
+          {activeTab === 'personal' && (
+            <div className="space-y-8">
               {/* Identity Section */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <User className="w-5 h-5 text-blue-600" />
-                  Identite
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <InfoItem label="Nom" value={employee.lastName} />
-                  <InfoItem label="Post-nom" value={employee.middleName} />
-                  <InfoItem label="Prenom" value={employee.firstName} />
-                  <InfoItem label="Sexe" value={employee.gender === "M" ? "Masculin" : employee.gender === "F" ? "Feminin" : "Autre"} />
-                  <InfoItem label="Date de naissance" value={formatDate(employee.dateOfBirth)} />
-                  <InfoItem label="Age" value={calculateAge(employee.dateOfBirth)} />
-                  <InfoItem label="Lieu de naissance" value={employee.placeOfBirth} />
-                  <InfoItem label="Province d'origine" value={employee.provinceOfOrigin} />
-                  <InfoItem label="Nationalite" value={employee.nationality} />
+                <SectionHeader icon={User} title={intl.formatMessage({ id: 'hr.employees.identity', defaultMessage: 'Identite' })} color="text-[#0A1628]" />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.lastName', defaultMessage: 'Nom' })} value={employee.nom} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.middleName', defaultMessage: 'Post-nom' })} value={employee.postnom} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.firstName', defaultMessage: 'Prenom' })} value={employee.prenom} />
+                  <InfoItem
+                    label={intl.formatMessage({ id: 'hr.employees.gender', defaultMessage: 'Sexe' })}
+                    value={
+                      employee.genre === 'M'
+                        ? intl.formatMessage({ id: 'hr.employees.male', defaultMessage: 'Masculin' })
+                        : employee.genre === 'F'
+                          ? intl.formatMessage({ id: 'hr.employees.female', defaultMessage: 'Feminin' })
+                          : '-'
+                    }
+                  />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.birthDate', defaultMessage: 'Date de naissance' })} value={formatDate(employee.dateNaissance)} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.age', defaultMessage: 'Age' })} value={calculateAge(employee.dateNaissance)} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.birthPlace', defaultMessage: 'Lieu de naissance' })} value={employee.lieuNaissance} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.province', defaultMessage: "Province d'origine" })} value={employee.province} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.nationality', defaultMessage: 'Nationalite' })} value={employee.nationalite} />
                 </div>
               </div>
 
               {/* Marital Status Section */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <Heart className="w-5 h-5 text-pink-600" />
-                  Etat Civil
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <InfoItem label="Etat civil" value={getMaritalStatusLabel(employee.maritalStatus)} />
-                  <InfoItem label="Date de mariage" value={formatDate(employee.marriageDate)} />
-                  <InfoItem label="Nombre d'enfants" value={String(employee.numberOfChildren)} />
-                  <InfoItem label="Personnes a charge" value={String(employee.dependentsCount)} />
+                <SectionHeader icon={Heart} title={intl.formatMessage({ id: 'hr.employees.maritalStatus', defaultMessage: 'Etat Civil' })} color="text-pink-600" />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.civilStatus', defaultMessage: 'Etat civil' })} value={getMaritalStatusLabel(employee.etatCivil)} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.spouseName', defaultMessage: 'Nom du conjoint' })} value={employee.nomConjoint} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.childrenCount', defaultMessage: "Nombre d'enfants" })} value={String(employee.nombreEnfants ?? 0)} />
                 </div>
               </div>
 
               {/* Contact Section */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-green-600" />
-                  Coordonnees
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <InfoItem label="Adresse" value={employee.addressLine1} />
-                  <InfoItem label="Quartier" value={employee.neighborhood} />
-                  <InfoItem label="Commune" value={employee.commune} />
-                  <InfoItem label="Ville" value={employee.city} />
-                  <InfoItem label="Province" value={employee.province} />
-                  <InfoItem label="Pays" value={employee.country} />
-                  <InfoItem label="Telephone principal" value={employee.phonePrimary} icon={<Phone className="w-4 h-4" />} />
-                  <InfoItem label="Telephone secondaire" value={employee.phoneSecondary} icon={<Phone className="w-4 h-4" />} />
-                  <InfoItem label="Email personnel" value={employee.personalEmail} icon={<Mail className="w-4 h-4" />} />
-                  <InfoItem label="Email professionnel" value={employee.workEmail} icon={<Mail className="w-4 h-4" />} />
+                <SectionHeader icon={MapPin} title={intl.formatMessage({ id: 'hr.employees.contact', defaultMessage: 'Coordonnees' })} color="text-green-600" />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.address', defaultMessage: 'Adresse' })} value={employee.adresse} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.commune', defaultMessage: 'Commune' })} value={employee.commune} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.city', defaultMessage: 'Ville' })} value={employee.ville} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.province', defaultMessage: 'Province' })} value={employee.province} />
+                  <InfoItem
+                    label={intl.formatMessage({ id: 'hr.employees.phone1', defaultMessage: 'Telephone 1' })}
+                    value={employee.telephone1}
+                    icon={<Phone className="h-4 w-4 text-gray-400" />}
+                  />
+                  <InfoItem
+                    label={intl.formatMessage({ id: 'hr.employees.phone2', defaultMessage: 'Telephone 2' })}
+                    value={employee.telephone2}
+                    icon={<Phone className="h-4 w-4 text-gray-400" />}
+                  />
+                  <InfoItem
+                    label={intl.formatMessage({ id: 'hr.employees.email', defaultMessage: 'Email' })}
+                    value={employee.email}
+                    icon={<Mail className="h-4 w-4 text-gray-400" />}
+                  />
                 </div>
               </div>
 
               {/* Identity Documents Section */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-purple-600" />
-                  Documents d'Identite
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <InfoItem label="N Carte d'identite" value={employee.nationalIdNumber} />
-                  <InfoItem label="N Passeport" value={employee.passportNumber} />
-                  <InfoItem label="N INSS (Securite sociale)" value={employee.socialSecurityNumber} />
+                <SectionHeader icon={Shield} title={intl.formatMessage({ id: 'hr.employees.identityDocuments', defaultMessage: "Documents d'Identite" })} color="text-purple-600" />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.idNumber', defaultMessage: "N Carte d'identite" })} value={employee.numeroIdentite} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.passportNumber', defaultMessage: 'N Passeport' })} value={employee.numeroPasseport} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.socialSecurityNumber', defaultMessage: 'N INSS' })} value={employee.numeroINSS} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Professional Info Tab */}
+          {activeTab === 'professional' && (
+            <div className="space-y-8">
+              <div>
+                <SectionHeader icon={Building2} title={intl.formatMessage({ id: 'hr.employees.assignment', defaultMessage: 'Affectation' })} color="text-[#0A1628]" />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.department', defaultMessage: 'Departement' })} value={employee.departement} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.position', defaultMessage: 'Poste' })} value={employee.poste} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.grade', defaultMessage: 'Grade' })} value={employee.grade} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.category', defaultMessage: 'Categorie' })} value={employee.categorie} />
+                </div>
+              </div>
+
+              <div>
+                <SectionHeader icon={Calendar} title={intl.formatMessage({ id: 'hr.employees.contract', defaultMessage: 'Contrat' })} color="text-green-600" />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.contractType', defaultMessage: 'Type de contrat' })} value={employee.typeContrat} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.hireDate', defaultMessage: "Date d'embauche" })} value={formatDate(employee.dateEmbauche)} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.contractEndDate', defaultMessage: 'Date fin contrat' })} value={formatDate(employee.dateFinContrat)} />
+                </div>
+              </div>
+
+              <div>
+                <SectionHeader icon={DollarSign} title={intl.formatMessage({ id: 'hr.employees.remuneration', defaultMessage: 'Remuneration' })} color="text-amber-600" />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.baseSalary', defaultMessage: 'Salaire de base' })} value={formatCurrency(employee.salaireBase)} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.status', defaultMessage: 'Statut' })} value={employee.statut} />
                 </div>
               </div>
             </div>
           )}
 
           {/* Family Tab */}
-          {activeTab === "family" && (
-            <div className="space-y-6">
+          {activeTab === 'family' && (
+            <div className="space-y-8">
               {/* Spouse Section */}
               <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Heart className="w-5 h-5 text-pink-600" />
-                    Conjoint(e)
-                  </h3>
-                  <button className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400">
-                    <Plus className="w-4 h-4" />
-                    Ajouter
-                  </button>
-                </div>
-                {employee.spouse ? (
-                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <InfoItem label="Nom complet" value={`${employee.spouse.firstName} ${employee.spouse.middleName || ""} ${employee.spouse.lastName}`} />
-                      <InfoItem label="Sexe" value={employee.spouse.gender === "M" ? "Masculin" : "Feminin"} />
-                      <InfoItem label="Date de naissance" value={formatDate(employee.spouse.dateOfBirth)} />
-                      <InfoItem label="Telephone" value={employee.spouse.phone} />
-                      <InfoItem label="Profession" value={employee.spouse.profession} />
-                      <InfoItem label="Employeur" value={employee.spouse.employer} />
-                      <InfoItem label="Beneficiaire assurance" value={employee.spouse.isBeneficiary ? "Oui" : "Non"} />
+                <SectionHeader
+                  icon={Heart}
+                  title={intl.formatMessage({ id: 'hr.employees.spouse', defaultMessage: 'Conjoint(e)' })}
+                  color="text-pink-600"
+                  action={<AddButton intl={intl} label={intl.formatMessage({ id: 'common.add', defaultMessage: 'Ajouter' })} />}
+                />
+                {employee.nomConjoint ? (
+                  <div className="rounded-xl bg-gray-50 p-4 dark:bg-gray-700/50">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      <InfoItem label={intl.formatMessage({ id: 'hr.employees.fullName', defaultMessage: 'Nom complet' })} value={employee.nomConjoint} />
+                      <InfoItem label={intl.formatMessage({ id: 'hr.employees.phone', defaultMessage: 'Telephone' })} value={employee.telephoneConjoint} />
+                      <InfoItem label={intl.formatMessage({ id: 'hr.employees.profession', defaultMessage: 'Profession' })} value={employee.professionConjoint} />
                     </div>
                   </div>
                 ) : (
-                  <p className="text-gray-500 dark:text-gray-400 italic">Aucun conjoint enregistre</p>
+                  <p className="italic text-gray-500 dark:text-gray-400">
+                    {intl.formatMessage({ id: 'hr.employees.noSpouse', defaultMessage: 'Aucun conjoint enregistre' })}
+                  </p>
                 )}
               </div>
 
               {/* Children Section */}
               <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Baby className="w-5 h-5 text-blue-600" />
-                    Enfants ({employee.children?.length || 0})
-                  </h3>
-                  <button className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400">
-                    <Plus className="w-4 h-4" />
-                    Ajouter
-                  </button>
-                </div>
-                {employee.children && employee.children.length > 0 ? (
+                <SectionHeader
+                  icon={Baby}
+                  title={`${intl.formatMessage({ id: 'hr.employees.children', defaultMessage: 'Enfants' })} (${employee.nombreEnfants || 0})`}
+                  color="text-blue-600"
+                  action={<AddButton intl={intl} label={intl.formatMessage({ id: 'common.add', defaultMessage: 'Ajouter' })} />}
+                />
+                {employee.enfants && employee.enfants.length > 0 ? (
                   <div className="space-y-4">
-                    {employee.children.map((child, index) => (
-                      <div key={child.id} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
+                    {employee.enfants.map((child, index) => (
+                      <div key={child.id || index} className="rounded-xl bg-gray-50 p-4 dark:bg-gray-700/50">
+                        <div className="mb-3 flex items-center justify-between">
                           <h4 className="font-medium text-gray-900 dark:text-white">
-                            Enfant {index + 1}: {child.firstName} {child.lastName}
+                            {intl.formatMessage({ id: 'hr.employees.child', defaultMessage: 'Enfant' })} {index + 1}: {child.prenom} {child.nom}
                           </h4>
                           <div className="flex items-center gap-2">
-                            <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
-                              <Edit className="w-4 h-4" />
+                            <button className="rounded-lg p-1.5 text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30">
+                              <Edit className="h-4 w-4" />
                             </button>
-                            <button className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg">
-                              <Trash2 className="w-4 h-4" />
+                            <button className="rounded-lg p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30">
+                              <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          <InfoItem label="Sexe" value={child.gender === "M" ? "Masculin" : "Feminin"} />
-                          <InfoItem label="Date de naissance" value={formatDate(child.dateOfBirth)} />
-                          <InfoItem label="Age" value={calculateAge(child.dateOfBirth)} />
-                          <InfoItem label="Lien" value={child.relationshipType} />
-                          <InfoItem label="Scolarise" value={child.isStudent ? "Oui" : "Non"} />
-                          <InfoItem label="Ecole" value={child.schoolName} />
-                          <InfoItem label="Beneficiaire assurance" value={child.isBeneficiary ? "Oui" : "Non"} />
-                          <InfoItem label="Allocation" value={child.receivesAllowance ? formatCurrency(child.allowanceAmount || 0, "CDF") : "Non"} />
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                          <InfoItem
+                            label={intl.formatMessage({ id: 'hr.employees.gender', defaultMessage: 'Sexe' })}
+                            value={
+                              child.genre === 'M'
+                                ? intl.formatMessage({ id: 'hr.employees.male', defaultMessage: 'Masculin' })
+                                : intl.formatMessage({ id: 'hr.employees.female', defaultMessage: 'Feminin' })
+                            }
+                          />
+                          <InfoItem label={intl.formatMessage({ id: 'hr.employees.birthDate', defaultMessage: 'Date de naissance' })} value={formatDate(child.dateNaissance)} />
+                          <InfoItem label={intl.formatMessage({ id: 'hr.employees.age', defaultMessage: 'Age' })} value={calculateAge(child.dateNaissance)} />
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 dark:text-gray-400 italic">Aucun enfant enregistre</p>
+                  <p className="italic text-gray-500 dark:text-gray-400">
+                    {intl.formatMessage({ id: 'hr.employees.noChildren', defaultMessage: 'Aucun enfant enregistre' })}
+                  </p>
                 )}
               </div>
             </div>
           )}
 
           {/* Bank Accounts Tab */}
-          {activeTab === "bank" && (
+          {activeTab === 'bank' && (
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-green-600" />
-                  Comptes Bancaires
-                </h3>
-                <button className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400">
-                  <Plus className="w-4 h-4" />
-                  Ajouter
-                </button>
-              </div>
-              {employee.bankAccounts && employee.bankAccounts.length > 0 ? (
-                <div className="space-y-4">
-                  {employee.bankAccounts.map((account) => (
-                    <div key={account.id} className={`bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border-2 ${account.isDefault ? "border-green-500" : "border-transparent"}`}>
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <h4 className="font-medium text-gray-900 dark:text-white">{account.bankName}</h4>
-                          {account.isDefault && (
-                            <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full dark:bg-green-900/30 dark:text-green-400">
-                              Par defaut
-                            </span>
-                          )}
-                          {!account.isActive && (
-                            <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 rounded-full dark:bg-gray-700 dark:text-gray-300">
-                              Inactif
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <InfoItem label="Type" value={account.accountType === "bank" ? "Compte bancaire" : "Mobile Money"} />
-                        <InfoItem label="N Compte" value={account.accountNumber} />
-                        <InfoItem label="IBAN" value={account.iban} />
-                        <InfoItem label="SWIFT/BIC" value={account.swiftCode} />
-                        <InfoItem label="Titulaire" value={account.accountHolderName} />
-                        <InfoItem label="Devise" value={account.currency} />
-                      </div>
+              <SectionHeader
+                icon={CreditCard}
+                title={intl.formatMessage({ id: 'hr.employees.bankAccounts', defaultMessage: 'Comptes Bancaires' })}
+                color="text-green-600"
+                action={<AddButton intl={intl} label={intl.formatMessage({ id: 'common.add', defaultMessage: 'Ajouter' })} />}
+              />
+              {employee.banque ? (
+                <div className="rounded-xl border-2 border-green-500 bg-gray-50 p-4 dark:bg-gray-700/50">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <h4 className="font-medium text-gray-900 dark:text-white">{employee.banque}</h4>
+                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                        {intl.formatMessage({ id: 'hr.employees.default', defaultMessage: 'Par defaut' })}
+                      </span>
                     </div>
-                  ))}
+                    <div className="flex items-center gap-2">
+                      <button className="rounded-lg p-1.5 text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30">
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button className="rounded-lg p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <InfoItem label={intl.formatMessage({ id: 'hr.employees.bank', defaultMessage: 'Banque' })} value={employee.banque} />
+                    <InfoItem label={intl.formatMessage({ id: 'hr.employees.bankCode', defaultMessage: 'Code banque' })} value={employee.numeroBanque} />
+                    <InfoItem label={intl.formatMessage({ id: 'hr.employees.accountNumber', defaultMessage: 'Numero compte' })} value={employee.numeroCompte} />
+                  </div>
                 </div>
               ) : (
-                <p className="text-gray-500 dark:text-gray-400 italic">Aucun compte bancaire enregistre</p>
+                <p className="italic text-gray-500 dark:text-gray-400">
+                  {intl.formatMessage({ id: 'hr.employees.noBankAccount', defaultMessage: 'Aucun compte bancaire enregistre' })}
+                </p>
               )}
             </div>
           )}
 
           {/* Documents Tab */}
-          {activeTab === "documents" && (
+          {activeTab === 'documents' && (
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-purple-600" />
-                  Documents d'Identite
-                </h3>
-                <button className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400">
-                  <Plus className="w-4 h-4" />
-                  Ajouter
-                </button>
-              </div>
-              {employee.identityDocuments && employee.identityDocuments.length > 0 ? (
+              <SectionHeader
+                icon={FileText}
+                title={intl.formatMessage({ id: 'hr.employees.documents', defaultMessage: 'Documents' })}
+                color="text-purple-600"
+                action={
+                  <AddButton
+                    intl={intl}
+                    label={intl.formatMessage({ id: 'hr.employees.uploadDocument', defaultMessage: 'Telecharger' })}
+                    onClick={() => setUploadModalOpen(true)}
+                  />
+                }
+              />
+              {documentsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#0A1628] border-t-transparent" />
+                </div>
+              ) : documents.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gray-50 dark:bg-gray-700/50">
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Type</th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Numero</th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Delivre le</th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Expire le</th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Statut</th>
-                        <th className="text-right px-4 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Actions</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">
+                          {intl.formatMessage({ id: 'hr.employees.documentTitle', defaultMessage: 'Titre' })}
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">
+                          {intl.formatMessage({ id: 'hr.employees.documentType', defaultMessage: 'Type' })}
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">
+                          {intl.formatMessage({ id: 'hr.employees.size', defaultMessage: 'Taille' })}
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">
+                          {intl.formatMessage({ id: 'hr.employees.uploadDate', defaultMessage: 'Date ajout' })}
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">
+                          {intl.formatMessage({ id: 'common.actions', defaultMessage: 'Actions' })}
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {employee.identityDocuments.map((doc) => (
-                        <tr key={doc.id}>
-                          <td className="px-4 py-3 text-gray-900 dark:text-white">{doc.documentType}</td>
-                          <td className="px-4 py-3 font-mono text-gray-600 dark:text-gray-300">{doc.documentNumber}</td>
-                          <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{formatDate(doc.issueDate)}</td>
-                          <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{formatDate(doc.expiryDate)}</td>
+                      {documents.map((doc) => (
+                        <tr key={doc.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                           <td className="px-4 py-3">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${doc.isVerified ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"}`}>
-                              {doc.isVerified ? "Verifie" : "Non verifie"}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-5 w-5 text-gray-400" />
+                              <span className="font-medium text-gray-900 dark:text-white">{doc.title}</span>
+                            </div>
                           </td>
                           <td className="px-4 py-3">
+                            <span
+                              className="inline-flex rounded-full px-2 py-1 text-xs font-medium"
+                              style={{
+                                backgroundColor: `${DOCUMENT_TYPES[doc.type]?.color}20`,
+                                color: DOCUMENT_TYPES[doc.type]?.color,
+                              }}
+                            >
+                              {DOCUMENT_TYPES[doc.type]?.label || doc.type}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{formatFileSize(doc.size)}</td>
+                          <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{formatDate(doc.createdAt)}</td>
+                          <td className="px-4 py-3">
                             <div className="flex items-center justify-end gap-2">
-                              <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
-                                <FileText className="w-4 h-4" />
-                              </button>
-                              <button className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg">
-                                <Trash2 className="w-4 h-4" />
+                              {canPreview(doc.mimeType) && (
+                                <a
+                                  href={getDocumentUrl(doc.filePath)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="rounded-lg p-1.5 text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </a>
+                              )}
+                              <a
+                                href={getDownloadUrl(params.id, doc.id)}
+                                className="rounded-lg p-1.5 text-gray-500 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/30"
+                              >
+                                <Download className="h-4 w-4" />
+                              </a>
+                              <button
+                                onClick={() => handleDeleteDocument(doc.id)}
+                                className="rounded-lg p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30"
+                              >
+                                <Trash2 className="h-4 w-4" />
                               </button>
                             </div>
                           </td>
@@ -467,114 +1038,66 @@ export default function EmployeeDetailPage() {
                   </table>
                 </div>
               ) : (
-                <p className="text-gray-500 dark:text-gray-400 italic">Aucun document enregistre</p>
+                <p className="italic text-gray-500 dark:text-gray-400">
+                  {intl.formatMessage({ id: 'hr.employees.noDocuments', defaultMessage: 'Aucun document enregistre' })}
+                </p>
               )}
             </div>
           )}
 
-          {/* Professional Info Tab */}
-          {activeTab === "professional" && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-blue-600" />
-                  Affectation
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <InfoItem label="Departement" value={employee.department?.name} />
-                  <InfoItem label="Poste" value={employee.position?.title} />
-                  <InfoItem label="Grade" value={employee.grade?.name} />
-                  <InfoItem label="Categorie" value={employee.category?.name} />
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-green-600" />
-                  Contrat
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <InfoItem label="Type de contrat" value={employee.contractType} />
-                  <InfoItem label="Date d'embauche" value={formatDate(employee.hireDate)} />
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-amber-600" />
-                  Remuneration
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <InfoItem label="Salaire de base" value={formatCurrency(employee.baseSalary, employee.currency)} />
-                  <InfoItem label="Devise" value={employee.currency} />
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Emergency Contacts Tab */}
-          {activeTab === "emergency" && (
+          {activeTab === 'emergency' && (
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Phone className="w-5 h-5 text-red-600" />
-                  Contacts d'Urgence
-                </h3>
-                <button className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400">
-                  <Plus className="w-4 h-4" />
-                  Ajouter
-                </button>
-              </div>
-              {employee.emergencyContacts && employee.emergencyContacts.length > 0 ? (
-                <div className="space-y-4">
-                  {employee.emergencyContacts.map((contact) => (
-                    <div key={contact.id} className={`bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border-2 ${contact.isPrimary ? "border-red-500" : "border-transparent"}`}>
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <h4 className="font-medium text-gray-900 dark:text-white">{contact.fullName}</h4>
-                          {contact.isPrimary && (
-                            <span className="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 rounded-full dark:bg-red-900/30 dark:text-red-400">
-                              Principal
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <InfoItem label="Relation" value={contact.relationship} />
-                        <InfoItem label="Telephone" value={contact.phone} icon={<Phone className="w-4 h-4" />} />
-                        <InfoItem label="Email" value={contact.email} icon={<Mail className="w-4 h-4" />} />
-                      </div>
+              <SectionHeader
+                icon={Phone}
+                title={intl.formatMessage({ id: 'hr.employees.emergencyContacts', defaultMessage: "Contacts d'Urgence" })}
+                color="text-red-600"
+                action={<AddButton intl={intl} label={intl.formatMessage({ id: 'common.add', defaultMessage: 'Ajouter' })} />}
+              />
+              {employee.nomUrgence ? (
+                <div className="rounded-xl border-2 border-red-500 bg-gray-50 p-4 dark:bg-gray-700/50">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <h4 className="font-medium text-gray-900 dark:text-white">{employee.nomUrgence}</h4>
+                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                        {intl.formatMessage({ id: 'hr.employees.primary', defaultMessage: 'Principal' })}
+                      </span>
                     </div>
-                  ))}
+                    <div className="flex items-center gap-2">
+                      <button className="rounded-lg p-1.5 text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30">
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button className="rounded-lg p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <InfoItem label={intl.formatMessage({ id: 'hr.employees.relationship', defaultMessage: 'Lien' })} value={employee.lienUrgence} />
+                    <InfoItem
+                      label={intl.formatMessage({ id: 'hr.employees.phone', defaultMessage: 'Telephone' })}
+                      value={employee.telephoneUrgence}
+                      icon={<Phone className="h-4 w-4 text-gray-400" />}
+                    />
+                    <InfoItem
+                      label={intl.formatMessage({ id: 'hr.employees.email', defaultMessage: 'Email' })}
+                      value={employee.emailUrgence}
+                      icon={<Mail className="h-4 w-4 text-gray-400" />}
+                    />
+                  </div>
                 </div>
               ) : (
-                <p className="text-gray-500 dark:text-gray-400 italic">Aucun contact d'urgence enregistre</p>
+                <p className="italic text-gray-500 dark:text-gray-400">
+                  {intl.formatMessage({ id: 'hr.employees.noEmergencyContact', defaultMessage: "Aucun contact d'urgence enregistre" })}
+                </p>
               )}
             </div>
           )}
         </div>
       </div>
-    </div>
-  );
-}
 
-// Info Item Component
-function InfoItem({ label, value, icon }) {
-  return (
-    <div>
-      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</dt>
-      <dd className="mt-1 text-sm text-gray-900 dark:text-white flex items-center gap-2">
-        {icon}
-        {value || "-"}
-      </dd>
+      {/* Document Upload Modal */}
+      <DocumentUploadModal isOpen={uploadModalOpen} onClose={() => setUploadModalOpen(false)} onUpload={handleDocumentUpload} intl={intl} />
     </div>
   );
 }

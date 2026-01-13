@@ -63,6 +63,7 @@ import {
   Upload,
   Star,
   Activity,
+  Clock,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import MessageNotifications from "../../components/notifications/MessageNotifications";
@@ -268,14 +269,65 @@ const getNavigation = (intl) => [
     titleKey: "nav.hr",
     title: intl.formatMessage({ id: "nav.hr", defaultMessage: "RESSOURCES HUMAINES" }),
     items: [
-      { name: intl.formatMessage({ id: "nav.employees", defaultMessage: "Employés" }), href: "/hr/employees", icon: Users },
-      { name: intl.formatMessage({ id: "nav.departments", defaultMessage: "Départements" }), href: "/hr/departments", icon: Building2 },
-      { name: intl.formatMessage({ id: "nav.positions", defaultMessage: "Postes" }), href: "/hr/positions", icon: Briefcase },
-      { name: intl.formatMessage({ id: "nav.salaryGrades", defaultMessage: "Grades salariaux" }), href: "/hr/grades", icon: GraduationCap },
-      { name: intl.formatMessage({ id: "nav.categories", defaultMessage: "Catégories" }), href: "/hr/categories", icon: Layers },
-      { name: intl.formatMessage({ id: "nav.leaveTypes", defaultMessage: "Types de congés" }), href: "/hr/leave-types", icon: Calendar },
-      { name: intl.formatMessage({ id: "nav.leaveManagement", defaultMessage: "Gestion des congés" }), href: "/hr/leaves", icon: Calendar },
-      { name: intl.formatMessage({ id: "nav.payroll", defaultMessage: "Paie" }), href: "/hr/payroll", icon: DollarSign },
+      { name: intl.formatMessage({ id: "nav.hrDashboard", defaultMessage: "RH Dashboard" }), href: "/hr", icon: LayoutDashboard },
+      {
+        name: intl.formatMessage({ id: "nav.employees", defaultMessage: "Employés" }),
+        icon: Users,
+        subItems: [
+          { name: intl.formatMessage({ id: "nav.employeesList", defaultMessage: "Liste des employés" }), href: "/hr/employees" },
+          { name: intl.formatMessage({ id: "nav.newEmployee", defaultMessage: "Nouvel employé" }), href: "/hr/employees/new" },
+        ]
+      },
+      {
+        name: intl.formatMessage({ id: "nav.hrConfig", defaultMessage: "Configuration RH" }),
+        icon: Settings,
+        subItems: [
+          { name: intl.formatMessage({ id: "nav.departments", defaultMessage: "Départements" }), href: "/hr/departments" },
+          { name: intl.formatMessage({ id: "nav.positions", defaultMessage: "Postes" }), href: "/hr/positions" },
+          { name: intl.formatMessage({ id: "nav.salaryGrades", defaultMessage: "Grades" }), href: "/hr/grades" },
+          { name: intl.formatMessage({ id: "nav.categories", defaultMessage: "Catégories" }), href: "/hr/categories" },
+          { name: intl.formatMessage({ id: "nav.hrConfigMain", defaultMessage: "Configuration" }), href: "/hr/config" },
+        ]
+      },
+      {
+        name: intl.formatMessage({ id: "nav.attendance", defaultMessage: "Présences" }),
+        icon: Clock,
+        subItems: [
+          { name: intl.formatMessage({ id: "nav.dailyAttendance", defaultMessage: "Pointage journalier" }), href: "/hr/attendance" },
+          { name: intl.formatMessage({ id: "nav.monthlyAttendance", defaultMessage: "Vue mensuelle" }), href: "/hr/attendance/monthly" },
+          { name: intl.formatMessage({ id: "nav.attendanceJustifications", defaultMessage: "Justifications" }), href: "/hr/attendance/justifications" },
+          { name: intl.formatMessage({ id: "nav.attendanceReports", defaultMessage: "Rapports" }), href: "/hr/attendance/report" },
+        ]
+      },
+      {
+        name: intl.formatMessage({ id: "nav.leaves", defaultMessage: "Congés" }),
+        icon: Calendar,
+        subItems: [
+          { name: intl.formatMessage({ id: "nav.leaveRequests", defaultMessage: "Demandes de congés" }), href: "/hr/leaves" },
+          { name: intl.formatMessage({ id: "nav.leaveCalendar", defaultMessage: "Calendrier" }), href: "/hr/leaves/calendar" },
+          { name: intl.formatMessage({ id: "nav.leaveTypes", defaultMessage: "Types de congés" }), href: "/hr/leave-types" },
+        ]
+      },
+      {
+        name: intl.formatMessage({ id: "nav.payroll", defaultMessage: "Paie" }),
+        icon: DollarSign,
+        subItems: [
+          { name: intl.formatMessage({ id: "nav.payrollList", defaultMessage: "Liste de paie" }), href: "/hr/payroll" },
+          { name: intl.formatMessage({ id: "nav.payrollReports", defaultMessage: "Rapports" }), href: "/hr/payroll/reports" },
+          { name: intl.formatMessage({ id: "nav.payrollArchives", defaultMessage: "Archives" }), href: "/hr/payroll/archives" },
+        ]
+      },
+      {
+        name: intl.formatMessage({ id: "nav.bonusesDeductions", defaultMessage: "Primes & Réductions" }),
+        icon: TrendingUp,
+        subItems: [
+          { name: intl.formatMessage({ id: "nav.bonusesOverview", defaultMessage: "Vue d'ensemble" }), href: "/hr/bonuses" },
+          { name: intl.formatMessage({ id: "nav.generalBonuses", defaultMessage: "Primes générales" }), href: "/hr/bonuses/general" },
+          { name: intl.formatMessage({ id: "nav.individualBonuses", defaultMessage: "Primes individuelles" }), href: "/hr/bonuses/individual" },
+          { name: intl.formatMessage({ id: "nav.generalDeductions", defaultMessage: "Retenues générales" }), href: "/hr/deductions/general" },
+          { name: intl.formatMessage({ id: "nav.individualDeductions", defaultMessage: "Retenues individuelles" }), href: "/hr/deductions/individual" },
+        ]
+      },
     ],
   },
   {
@@ -448,6 +500,56 @@ function DashboardLayoutContent({ children }) {
               {expandedSections.includes(section.title) && (
                 <ul className="mt-1 space-y-1">
                   {section.items.map((item) => {
+                    // Item with subItems (accordion)
+                    if (item.subItems) {
+                      const isSubMenuOpen = expandedSections.includes(item.name);
+                      const hasActiveSubItem = item.subItems.some(sub => sub.href && isActiveLink(sub.href));
+                      return (
+                        <li key={item.name}>
+                          <button
+                            onClick={() => toggleSection(item.name)}
+                            className={`flex items-center justify-between w-full px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                              hasActiveSubItem
+                                ? "bg-slate-800 text-white"
+                                : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <item.icon className={`w-5 h-5 ${hasActiveSubItem ? "text-blue-400" : "text-slate-400"}`} />
+                              <span className="text-sm font-medium">{item.name}</span>
+                            </div>
+                            {isSubMenuOpen ? (
+                              <ChevronDown className="w-4 h-4 text-slate-400" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4 text-slate-400" />
+                            )}
+                          </button>
+                          {isSubMenuOpen && (
+                            <ul className="mt-1 ml-6 space-y-1 border-l border-slate-700 pl-3">
+                              {item.subItems.map((subItem) => {
+                                const isSubActive = subItem.href && isActiveLink(subItem.href);
+                                return (
+                                  <li key={subItem.name}>
+                                    <Link
+                                      href={subItem.href || "#"}
+                                      className={`flex items-center px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+                                        isSubActive
+                                          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
+                                          : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                                      }`}
+                                      onClick={() => setSidebarOpen(false)}
+                                    >
+                                      {subItem.name}
+                                    </Link>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </li>
+                      );
+                    }
+                    // Regular item (no subItems)
                     const isActive = item.href && isActiveLink(item.href);
                     return (
                       <li key={item.name}>

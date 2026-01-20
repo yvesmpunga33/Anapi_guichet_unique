@@ -2,7 +2,7 @@
 
 import http from '../../http-common';
 
-const getEndpoint = (employeeId) => `/employees/${employeeId}/documents`;
+const getEndpoint = (employeeId) => `/hr-payroll/employees/${employeeId}/documents`;
 
 // Types de documents avec leurs couleurs
 export const DOCUMENT_TYPES = {
@@ -16,15 +16,20 @@ export const DOCUMENT_TYPES = {
 
 // Recuperer la liste des documents d'un employe
 export const getEmployeeDocuments = async (employeeId, params = {}) => {
-  const { page = 1, limit = 50, type } = params;
+  try {
+    const { page = 1, limit = 50, type } = params;
 
-  const queryParams = new URLSearchParams();
-  queryParams.append('page', page);
-  queryParams.append('limit', limit);
-  if (type) queryParams.append('type', type);
+    const queryParams = new URLSearchParams();
+    queryParams.append('page', page);
+    queryParams.append('limit', limit);
+    if (type) queryParams.append('type', type);
 
-  const response = await http.get(`${getEndpoint(employeeId)}?${queryParams.toString()}`);
-  return response.data;
+    const response = await http.get(`${getEndpoint(employeeId)}?${queryParams.toString()}`);
+    return response.data;
+  } catch (error) {
+    console.warn('Employee documents fetch failed:', error.message);
+    return { success: false, data: { documents: [] } };
+  }
 };
 
 // Recuperer les statistiques par type
@@ -103,7 +108,7 @@ export const getDownloadUrl = (employeeId, documentId) => {
 };
 
 // Helper: Obtenir le label francais du type
-export const getTypeLabel = (type) => {
+export const getDocumentTypeLabel = (type) => {
   return DOCUMENT_TYPES[type]?.label || 'Document';
 };
 
@@ -152,7 +157,7 @@ export default {
   archiveDocument,
   getDocumentUrl,
   getDownloadUrl,
-  getTypeLabel,
+  getDocumentTypeLabel,
   getTypeColor,
   getTypeIcon,
   formatFileSize,

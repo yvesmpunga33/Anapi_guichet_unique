@@ -2,7 +2,7 @@
 
 import http from '../../http-common';
 
-const ENDPOINT = '/hr/deductions';
+const ENDPOINT = '/hr-payroll/deductions';
 
 // Recuperer toutes les reductions
 export const getDeductions = async (params = {}) => {
@@ -55,11 +55,14 @@ export const getDeductionById = async (id) => {
 };
 
 // Generer une reference unique
-export const generateReference = async (annee) => {
+export const generateDeductionReference = async (annee) => {
   const queryParams = annee ? `?annee=${annee}` : '';
   const response = await http.get(`${ENDPOINT}/generate-reference${queryParams}`);
   return response.data;
 };
+
+// Note: generateReference est deja exporte par bonusService
+// Utilisez generateDeductionReference pour les deductions
 
 // Creer une reduction
 export const createDeduction = async (data) => {
@@ -103,9 +106,12 @@ export const getTypeLabel = (type) => {
 };
 
 // Obtenir le label de la frequence
-export const getFrequenceLabel = (frequence) => {
+export const getDeductionFrequenceLabel = (frequence) => {
   return DEDUCTION_FREQUENCIES[frequence] || frequence;
 };
+
+// Note: getFrequenceLabel est deja exporte par bonusService
+// Utilisez getDeductionFrequenceLabel pour les deductions
 
 // Formater le montant
 export const formatDeductionAmount = (deduction) => {
@@ -141,7 +147,7 @@ export default {
   getDeductions,
   getDeductionStats,
   getDeductionById,
-  generateReference,
+  generateDeductionReference,
   createDeduction,
   updateDeduction,
   deleteDeduction,
@@ -149,7 +155,7 @@ export default {
   DEDUCTION_TYPES,
   DEDUCTION_FREQUENCIES,
   getTypeLabel,
-  getFrequenceLabel,
+  getDeductionFrequenceLabel,
   formatDeductionAmount,
   formatDeductionPeriod
 };

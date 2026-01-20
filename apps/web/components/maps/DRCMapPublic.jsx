@@ -137,7 +137,7 @@ const DRCMapPublicComponent = ({ className = "" }) => {
   useEffect(() => {
     Promise.all([
       fetch("/data/drc-provinces-simple.json").then(res => res.json()),
-      fetch("/api/public/provinces").then(res => res.json())
+      fetch("/api/v1/geography/public/provinces").then(res => res.json())
     ])
       .then(([geoJson, provincesData]) => {
         setGeoData(geoJson);

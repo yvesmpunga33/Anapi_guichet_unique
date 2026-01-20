@@ -188,7 +188,8 @@ export default function EditEmployeePage() {
       setFetchLoading(true);
       const response = await getEmployeeById(id);
       if (response.success) {
-        const employee = response.data;
+        // Handle nested response structure: response.data.employee or response.data directly
+        const employee = response.data?.employee || response.data;
         // Format dates for input fields
         const formattedData = {
           ...employee,

@@ -301,8 +301,9 @@ export default function CategoriesPage() {
       };
       const response = await getCategories(params);
       if (response.success) {
-        setCategories(response.data || []);
-        setTotal(response.pagination?.total || response.data?.length || 0);
+        const categoriesData = response.data?.categories || response.data || [];
+        setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+        setTotal(response.pagination?.total || categoriesData.length || 0);
       }
     } catch (error) {
       console.error('Erreur chargement categories:', error);

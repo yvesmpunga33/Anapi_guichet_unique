@@ -25,6 +25,9 @@ import {
   Building2,
   Circle,
   Landmark,
+  ShieldCheck,
+  ClipboardList,
+  Sparkles,
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import Link from "next/link";
@@ -39,30 +42,31 @@ const getIcon = (iconName) => {
   return icon || Circle;
 };
 
+// AUTORISATIONS - Theme VIOLET/PURPLE avec layout en timeline verticale
 const statusConfig = {
   DRAFT: {
     label: "Brouillon",
-    color: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
+    color: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300",
     icon: FileText,
   },
   SUBMITTED: {
     label: "Soumis",
-    color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    color: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
     icon: Clock,
   },
   IN_REVIEW: {
     label: "En examen",
-    color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+    color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
     icon: AlertCircle,
   },
   UNDER_REVIEW: {
     label: "En examen",
-    color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+    color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
     icon: AlertCircle,
   },
   PENDING_DOCUMENTS: {
     label: "Documents requis",
-    color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+    color: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-400",
     icon: FileText,
   },
   MINISTRY_REVIEW: {
@@ -72,17 +76,17 @@ const statusConfig = {
   },
   APPROVED: {
     label: "Approuve",
-    color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+    color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
     icon: CheckCircle2,
   },
   REJECTED: {
     label: "Rejete",
-    color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
     icon: XCircle,
   },
   COMPLETED: {
     label: "Termine",
-    color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+    color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
     icon: CheckCircle2,
   },
 };
@@ -213,15 +217,24 @@ export default function AutorisationsPage() {
       const response = await DossierList(params);
       const result = response.data;
 
-      setDossiers(result.data || []);
-      setStats(result.stats || stats);
+      // API returns: { success: true, data: { dossiers: [...], pagination: {...} } }
+      const dossiersData = Array.isArray(result?.data?.dossiers)
+        ? result.data.dossiers
+        : Array.isArray(result?.dossiers)
+          ? result.dossiers
+          : [];
+
+      setDossiers(dossiersData);
+      setStats(result.data?.stats || result.stats || stats);
       setPagination(prev => ({
         ...prev,
-        total: result.pagination?.total || 0,
-        totalPages: result.pagination?.totalPages || 0,
+        total: result.data?.pagination?.total || result.pagination?.total || 0,
+        totalPages: result.data?.pagination?.totalPages || result.pagination?.totalPages || 0,
       }));
     } catch (error) {
       console.error('Error fetching autorisations:', error);
+      // Set empty array on error to prevent map error
+      setDossiers([]);
     } finally {
       setLoading(false);
     }
@@ -273,99 +286,83 @@ export default function AutorisationsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
-              <FileBadge className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+      {/* Header avec design elegant - THEME VIOLET ATTENUE */}
+      <div className="relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-600 via-slate-700 to-slate-800 rounded-2xl"></div>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOCAxOC04LjA1OSAxOC0xOC04LjA1OS0xOC0xOC0xOHptMCAzMmMtNy43MzIgMC0xNC02LjI2OC0xNC0xNHM2LjI2OC0xNCAxNC0xNCAxNCA2LjI2OCAxNCAxNC02LjI2OCAxNC0xNCAxNHoiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjA1Ii8+PC9nPjwvc3ZnPg==')] opacity-20 rounded-2xl"></div>
+        <div className="relative z-10 p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-purple-500/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-purple-400/30">
+                <ShieldCheck className="w-8 h-8 text-purple-300" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white">Autorisations d'Activite</h1>
+                <p className="text-slate-300 mt-1">Permis et autorisations d'exercice d'activites</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Autorisations
-              </h1>
-              <p className="text-gray-500 dark:text-gray-400">
-                Gestion des demandes d'autorisations
-              </p>
-            </div>
-          </div>
-        </div>
-        <Link
-          href="/guichet-unique/dossiers/new?type=AUTORISATION_ACTIVITE"
-          className="inline-flex items-center px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Nouvelle Autorisation
-        </Link>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-              <FileBadge className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
-              <p className="text-xs text-gray-500">Total</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-              <Clock className="w-5 h-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-yellow-600">{stats.inReview + stats.submitted}</p>
-              <p className="text-xs text-gray-500">En cours</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
-              <p className="text-xs text-gray-500">Approuvees</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <XCircle className="w-5 h-5 text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-red-600">{stats.rejected}</p>
-              <p className="text-xs text-gray-500">Rejetees</p>
-            </div>
+            <Link
+              href="/guichet-unique/dossiers/new?type=AUTORISATION_ACTIVITE"
+              className="inline-flex items-center px-5 py-3 bg-purple-500/90 text-white rounded-xl hover:bg-purple-600 transition-all shadow-md font-semibold group"
+            >
+              <Sparkles className="w-5 h-5 mr-2 group-hover:animate-pulse" />
+              Nouvelle Demande
+            </Link>
           </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+      {/* Stats avec design simple */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-gray-700">
+          <div className="relative">
+            <ClipboardList className="w-8 h-8 text-slate-500 dark:text-slate-400 mb-2" />
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Total Demandes</p>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-gray-700">
+          <div className="relative">
+            <Clock className="w-8 h-8 text-purple-500 dark:text-purple-400 mb-2" />
+            <p className="text-3xl font-bold text-purple-700 dark:text-purple-400">{stats.inReview + stats.submitted}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">En traitement</p>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-gray-700">
+          <div className="relative">
+            <CheckCircle2 className="w-8 h-8 text-emerald-500 dark:text-emerald-400 mb-2" />
+            <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">{stats.approved}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Accordees</p>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-gray-700">
+          <div className="relative">
+            <XCircle className="w-8 h-8 text-rose-500 dark:text-rose-400 mb-2" />
+            <p className="text-3xl font-bold text-rose-700 dark:text-rose-400">{stats.rejected}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Refusees</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Filtres avec style neutre */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
               type="text"
-              placeholder="Rechercher par reference, investisseur ou projet..."
+              placeholder="Rechercher une autorisation..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full pl-10 pr-4 py-2.5 border border-slate-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-400 focus:border-purple-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
           </div>
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-400" />
+            <Filter className="w-4 h-4 text-slate-400" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="px-3 py-2.5 border border-slate-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-400"
             >
               <option value="all">Tous les statuts</option>
               <option value="DRAFT">Brouillon</option>
@@ -375,31 +372,33 @@ export default function AutorisationsPage() {
               <option value="REJECTED">Rejete</option>
             </select>
           </div>
-          <button className="p-2.5 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-            <Download className="w-5 h-5 text-gray-500" />
+          <button className="p-2.5 border border-slate-200 dark:border-gray-600 rounded-xl hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors">
+            <Download className="w-5 h-5 text-slate-500" />
           </button>
         </div>
       </div>
 
-      {/* Cards */}
+      {/* Liste en TIMELINE verticale - Layout specifique AUTORISATIONS */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
-          <span className="ml-3 text-gray-500">Chargement...</span>
+          <Loader2 className="w-8 h-8 text-violet-600 animate-spin" />
+          <span className="ml-3 text-gray-500">Chargement des autorisations...</span>
         </div>
       ) : dossiers.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
-          <FileBadge className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <p className="text-xl font-medium text-gray-500 dark:text-gray-400">Aucune autorisation trouvee</p>
-          <p className="text-sm text-gray-400 mt-2">
+        <div className="bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-sm border border-violet-100 dark:border-gray-700 p-12 text-center">
+          <div className="w-20 h-20 bg-violet-100 dark:bg-violet-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <ShieldCheck className="w-10 h-10 text-violet-500" />
+          </div>
+          <p className="text-xl font-medium text-gray-700 dark:text-gray-300">Aucune autorisation trouvee</p>
+          <p className="text-sm text-gray-500 mt-2">
             {searchTerm || statusFilter !== 'all'
-              ? "Essayez de modifier vos filtres"
-              : "Commencez par creer une nouvelle demande d'autorisation"}
+              ? "Modifiez vos criteres de recherche"
+              : "Deposez votre premiere demande d'autorisation d'activite"}
           </p>
           {!searchTerm && statusFilter === 'all' && (
             <Link
               href="/guichet-unique/dossiers/new?type=AUTORISATION_ACTIVITE"
-              className="inline-flex items-center px-4 py-2 mt-4 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+              className="inline-flex items-center px-5 py-2.5 mt-6 bg-violet-600 text-white rounded-xl hover:bg-violet-700 font-medium"
             >
               <Plus className="w-5 h-5 mr-2" />
               Nouvelle Autorisation
@@ -408,177 +407,147 @@ export default function AutorisationsPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {dossiers.map((dossier) => {
-              const status = statusConfig[dossier.status] || statusConfig.DRAFT;
-              const StatusIcon = status.icon;
-              const totalSteps = workflowSteps.length || defaultWorkflowSteps.length;
-              const progress = dossier.currentStep
-                ? getProgressFromStep(dossier.currentStep, totalSteps)
-                : getProgressFromStatus(dossier.status, totalSteps);
-              const daysSinceSubmission = getDaysSinceSubmission(dossier.submittedAt);
-              const isUrgent = daysSinceSubmission > 30 && !['APPROVED', 'REJECTED', 'COMPLETED', 'DRAFT'].includes(dossier.status);
-              const currentSteps = workflowSteps.length > 0 ? workflowSteps : defaultWorkflowSteps;
+          {/* Layout en TIMELINE VERTICALE avec ligne de connexion */}
+          <div className="relative">
+            {/* Ligne de timeline */}
+            <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-purple-400/60 via-purple-300/40 to-slate-300"></div>
 
-              return (
-                <div
-                  key={dossier.id}
-                  className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-l-4 border-emerald-500 border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-all"
-                >
-                  <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30">
-                          <FileBadge className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            <div className="space-y-4">
+              {Array.isArray(dossiers) && dossiers.map((dossier, index) => {
+                const status = statusConfig[dossier.status] || statusConfig.DRAFT;
+                const StatusIcon = status.icon;
+                const totalSteps = workflowSteps.length || defaultWorkflowSteps.length;
+                const progress = dossier.currentStep
+                  ? getProgressFromStep(dossier.currentStep, totalSteps)
+                  : getProgressFromStatus(dossier.status, totalSteps);
+                const daysSinceSubmission = getDaysSinceSubmission(dossier.submittedAt);
+                const isUrgent = daysSinceSubmission > 30 && !['APPROVED', 'REJECTED', 'COMPLETED', 'DRAFT'].includes(dossier.status);
+                const currentSteps = workflowSteps.length > 0 ? workflowSteps : defaultWorkflowSteps;
+
+                return (
+                  <div key={dossier.id} className="relative flex gap-4">
+                    {/* Point de timeline */}
+                    <div className="relative z-10 flex-shrink-0">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-sm ${
+                        dossier.status === 'APPROVED' || dossier.status === 'COMPLETED'
+                          ? 'bg-emerald-500/90'
+                          : dossier.status === 'REJECTED'
+                            ? 'bg-rose-500/90'
+                            : 'bg-purple-500/80'
+                      }`}>
+                        <ShieldCheck className="w-6 h-6 text-white" />
+                      </div>
+                    </div>
+
+                    {/* Carte principale */}
+                    <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 overflow-hidden hover:shadow-md hover:border-purple-300 transition-all">
+                      <div className="flex flex-col lg:flex-row">
+                        {/* Section principale */}
+                        <div className="flex-1 p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-bold text-purple-700 dark:text-purple-400">{dossier.dossierNumber}</span>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${status.color}`}>
+                                  {status.label}
+                                </span>
+                              </div>
+                              <h4 className="font-semibold text-gray-900 dark:text-white text-lg">
+                                {dossier.projectName || "Projet non defini"}
+                              </h4>
+                            </div>
+                            {isUrgent && (
+                              <span className="flex items-center text-xs text-rose-500 font-medium bg-rose-50 px-2 py-1 rounded-lg">
+                                <AlertCircle className="w-3.5 h-3.5 mr-1" />
+                                {daysSinceSubmission}j
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                            <div className="flex items-center text-gray-700 dark:text-gray-300">
+                              <User className="w-4 h-4 mr-2 text-slate-400" />
+                              <span className="truncate">{dossier.investorName || "Non specifie"}</span>
+                            </div>
+                            <div className="flex items-center text-gray-700 dark:text-gray-300">
+                              <MapPin className="w-4 h-4 mr-2 text-slate-400" />
+                              <span>{dossier.projectProvince || "-"}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <DollarSign className="w-4 h-4 mr-2 text-emerald-600" />
+                              <span className="font-bold text-gray-900 dark:text-white">
+                                {formatAmount(dossier.investmentAmount, dossier.currency)}
+                              </span>
+                            </div>
+                            <div className="flex items-center text-gray-700 dark:text-gray-300">
+                              <Calendar className="w-4 h-4 mr-2 text-slate-500 dark:text-slate-400" />
+                              <span>{formatDate(dossier.createdAt)}</span>
+                            </div>
+                          </div>
+
+                          {/* Progression en etapes visuelles */}
+                          <div className="mt-4 flex items-center gap-2">
+                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Etape:</span>
+                            <div className="flex-1 flex items-center gap-1">
+                              {currentSteps.slice(0, 6).map((step, idx) => {
+                                const stepProgress = ((idx + 1) / totalSteps) * 100;
+                                const isCompleted = progress >= stepProgress;
+                                const isCurrent = progress >= stepProgress && progress < ((idx + 2) / totalSteps) * 100;
+                                return (
+                                  <div
+                                    key={step.id}
+                                    className={`h-1.5 flex-1 rounded-full transition-all ${
+                                      isCompleted
+                                        ? dossier.status === 'REJECTED' ? 'bg-rose-500' : 'bg-violet-500'
+                                        : 'bg-gray-200 dark:bg-gray-700'
+                                    } ${isCurrent ? 'ring-2 ring-violet-300' : ''}`}
+                                    title={step.name}
+                                  />
+                                );
+                              })}
+                            </div>
+                            <span className="text-xs font-bold text-purple-700 dark:text-purple-400">{progress}%</span>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900 dark:text-white">
-                            {dossier.dossierNumber}
-                          </h3>
-                          <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                            Autorisation
-                          </span>
+
+                        {/* Section actions */}
+                        <div className="lg:w-40 p-4 bg-slate-50 dark:bg-gray-700/50 flex flex-row lg:flex-col items-center justify-center gap-2">
+                          <Link
+                            href={`/guichet-unique/dossiers/${dossier.id}`}
+                            className="flex-1 lg:w-full inline-flex items-center justify-center px-4 py-2 bg-purple-500/90 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm font-medium"
+                          >
+                            <Eye className="w-4 h-4 mr-1.5" />
+                            Details
+                          </Link>
+                          <Link
+                            href={`/guichet-unique/dossiers/${dossier.id}/edit`}
+                            className="p-2 text-gray-700 dark:text-gray-200 hover:text-purple-600 hover:bg-slate-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
+                            title="Modifier"
+                          >
+                            <Edit className="w-5 h-5" />
+                          </Link>
                         </div>
                       </div>
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${status.color}`}>
-                        <StatusIcon className="w-3.5 h-3.5 mr-1" />
-                        {status.label}
-                      </span>
                     </div>
                   </div>
-
-                  <div className="p-4 space-y-3">
-                    <h4 className="font-medium text-gray-900 dark:text-white line-clamp-1">
-                      {dossier.projectName || "Projet non defini"}
-                    </h4>
-
-                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                      <User className="w-4 h-4 mr-2 text-gray-400" />
-                      <span className="truncate">{dossier.investorName || "Non specifie"}</span>
-                    </div>
-
-                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                      <MapPin className="w-4 h-4 mr-2 text-gray-400" />
-                      <span>{dossier.projectProvince || "Province non specifiee"}</span>
-                    </div>
-
-                    {/* Sector */}
-                    {dossier.sector && (
-                      <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                        <Building2 className="w-4 h-4 mr-2 text-gray-400" />
-                        <span className="truncate">{dossier.sector}</span>
-                      </div>
-                    )}
-
-                    {/* Ministry */}
-                    {dossier.ministry && (
-                      <div className="flex items-center text-sm">
-                        <Landmark className="w-4 h-4 mr-2 text-indigo-500" />
-                        <span className="truncate font-medium text-indigo-600 dark:text-indigo-400">
-                          {dossier.ministry.shortName || dossier.ministry.name}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center text-sm">
-                      <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
-                      <span className="font-semibold text-gray-900 dark:text-white">
-                        {formatAmount(dossier.investmentAmount, dossier.currency)}
-                      </span>
-                    </div>
-
-                    {/* Progress */}
-                    <div className="pt-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium text-gray-500">Progression</span>
-                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                          {getCurrentStepName(dossier.status, currentSteps, dossier.currentStep)}
-                        </span>
-                      </div>
-                      <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            dossier.status === 'REJECTED' ? 'bg-red-500' :
-                            dossier.status === 'APPROVED' || dossier.status === 'COMPLETED' ? 'bg-green-500' : 'bg-emerald-500'
-                          }`}
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                      <div className="flex justify-between mt-1">
-                        {currentSteps.map((step, idx) => {
-                          const stepProgress = ((idx + 1) / totalSteps) * 100;
-                          const isCompleted = progress >= stepProgress;
-                          return (
-                            <div
-                              key={step.id}
-                              className={`w-2 h-2 rounded-full ${
-                                isCompleted
-                                  ? dossier.status === 'REJECTED' ? 'bg-red-500' : 'bg-emerald-500'
-                                  : 'bg-gray-200 dark:bg-gray-600'
-                              }`}
-                              title={step.name}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
-                      <div className="flex items-center text-xs text-gray-500">
-                        <Calendar className="w-3.5 h-3.5 mr-1" />
-                        {formatDate(dossier.submittedAt || dossier.createdAt)}
-                      </div>
-                      {dossier.status !== 'DRAFT' && dossier.status !== 'APPROVED' && dossier.status !== 'REJECTED' && (
-                        <span className={`text-xs font-medium ${isUrgent ? 'text-red-500' : 'text-gray-500'}`}>
-                          {daysSinceSubmission} jour{daysSinceSubmission > 1 ? 's' : ''}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      <Link
-                        href={`/guichet-unique/dossiers/${dossier.id}`}
-                        className="p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg"
-                        title="Voir details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Link>
-                      <Link
-                        href={`/guichet-unique/dossiers/${dossier.id}/edit`}
-                        className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg"
-                        title="Modifier"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Link>
-                    </div>
-                    <Link
-                      href={`/guichet-unique/dossiers/${dossier.id}`}
-                      className="inline-flex items-center text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-medium"
-                    >
-                      Voir plus
-                      <ArrowRight className="w-4 h-4 ml-1" />
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
-          {/* Pagination */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-            <p className="text-sm text-gray-500">
-              Affichage de <span className="font-medium">{dossiers.length}</span> sur{" "}
-              <span className="font-medium">{pagination.total}</span> autorisations
+          {/* Pagination - Style attenue */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between mt-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="font-bold text-gray-900 dark:text-white">{dossiers.length}</span> sur{" "}
+              <span className="font-bold text-gray-900 dark:text-white">{pagination.total}</span> autorisations
             </p>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
                 disabled={pagination.page <= 1}
-                className="p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+                className="p-2 border border-slate-200 dark:border-gray-600 rounded-lg hover:bg-slate-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-400" />
               </button>
               {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
                 const startPage = Math.max(1, Math.min(pagination.page - 2, pagination.totalPages - 4));
@@ -588,10 +557,10 @@ export default function AutorisationsPage() {
                   <button
                     key={page}
                     onClick={() => setPagination(prev => ({ ...prev, page }))}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                       pagination.page === page
-                        ? "bg-emerald-600 text-white"
-                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        ? "bg-purple-500 text-white shadow-md"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700"
                     }`}
                   >
                     {page}
@@ -601,9 +570,9 @@ export default function AutorisationsPage() {
               <button
                 onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
                 disabled={pagination.page >= pagination.totalPages}
-                className="p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+                className="p-2 border border-slate-200 dark:border-gray-600 rounded-lg hover:bg-slate-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
               </button>
             </div>
           </div>

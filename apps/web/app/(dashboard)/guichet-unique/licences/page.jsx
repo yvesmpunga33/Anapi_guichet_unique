@@ -24,46 +24,50 @@ import {
   ArrowRight,
   Building2,
   Landmark,
+  Factory,
+  Briefcase,
+  TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 
 // Services
 import { DossierList } from "@/app/services/admin/GuichetUnique.service";
 
+// LICENCES - Theme ORANGE/AMBER avec layout en cartes horizontales compactes
 const statusConfig = {
   DRAFT: {
     label: "Brouillon",
-    color: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
+    color: "bg-stone-100 text-stone-700 dark:bg-stone-700 dark:text-stone-300",
     icon: FileText,
   },
   SUBMITTED: {
     label: "Soumis",
-    color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
     icon: Clock,
   },
   IN_REVIEW: {
     label: "En examen",
-    color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+    color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
     icon: AlertCircle,
   },
   UNDER_REVIEW: {
     label: "En examen",
-    color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+    color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
     icon: AlertCircle,
   },
   PENDING_DOCUMENTS: {
     label: "Documents requis",
-    color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+    color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
     icon: FileText,
   },
   MINISTRY_REVIEW: {
     label: "Examen ministere",
-    color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
+    color: "bg-orange-200 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300",
     icon: Building2,
   },
   APPROVED: {
     label: "Approuve",
-    color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+    color: "bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-400",
     icon: CheckCircle2,
   },
   REJECTED: {
@@ -73,7 +77,7 @@ const statusConfig = {
   },
   COMPLETED: {
     label: "Termine",
-    color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+    color: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
     icon: CheckCircle2,
   },
 };
@@ -181,15 +185,24 @@ export default function LicencesPage() {
       const response = await DossierList(params);
       const result = response.data;
 
-      setDossiers(result.data || []);
-      setStats(result.stats || stats);
+      // API returns: { success: true, data: { dossiers: [...], pagination: {...} } }
+      const dossiersData = Array.isArray(result?.data?.dossiers)
+        ? result.data.dossiers
+        : Array.isArray(result?.dossiers)
+          ? result.dossiers
+          : [];
+
+      setDossiers(dossiersData);
+      setStats(result.data?.stats || result.stats || stats);
       setPagination(prev => ({
         ...prev,
-        total: result.pagination?.total || 0,
-        totalPages: result.pagination?.totalPages || 0,
+        total: result.data?.pagination?.total || result.pagination?.total || 0,
+        totalPages: result.data?.pagination?.totalPages || result.pagination?.totalPages || 0,
       }));
     } catch (error) {
       console.error('Error fetching licences:', error);
+      // Set empty array on error to prevent map error
+      setDossiers([]);
     } finally {
       setLoading(false);
     }
@@ -237,99 +250,76 @@ export default function LicencesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
-              <Award className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+      {/* Header avec design lateral - THEME AMBRE ATTENUE */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Panneau gauche - Info principale */}
+        <div className="lg:w-2/3 bg-gradient-to-br from-stone-600 via-stone-700 to-stone-800 rounded-2xl p-6 shadow-md relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-500/10 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-14 h-14 bg-amber-500/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-amber-400/30">
+                <Factory className="w-7 h-7 text-amber-300" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white">Licences d'Exploitation</h1>
+                <p className="text-stone-300">Autorisations d'exploitation industrielle et commerciale</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Licences
-              </h1>
-              <p className="text-gray-500 dark:text-gray-400">
-                Gestion des demandes de licences
-              </p>
-            </div>
+            <Link
+              href="/guichet-unique/dossiers/new?type=LICENCE_EXPLOITATION"
+              className="inline-flex items-center px-5 py-2.5 bg-amber-500/90 text-white rounded-xl hover:bg-amber-600 transition-all font-medium mt-2"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Nouvelle Demande
+            </Link>
           </div>
         </div>
-        <Link
-          href="/guichet-unique/dossiers/new?type=LICENCE_EXPLOITATION"
-          className="inline-flex items-center px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Nouvelle Licence
-        </Link>
-      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Award className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
-              <p className="text-xs text-gray-500">Total</p>
-            </div>
+        {/* Panneau droit - Stats rapides empilees */}
+        <div className="lg:w-1/3 grid grid-cols-2 gap-3">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-stone-200 dark:border-gray-700">
+            <Factory className="w-6 h-6 text-stone-500 dark:text-stone-400 mb-2" />
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">Total</p>
           </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-              <Clock className="w-5 h-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-yellow-600">{stats.inReview + stats.submitted}</p>
-              <p className="text-xs text-gray-500">En cours</p>
-            </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-stone-200 dark:border-gray-700">
+            <Clock className="w-6 h-6 text-amber-500 dark:text-amber-400 mb-2" />
+            <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">{stats.inReview + stats.submitted}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">En cours</p>
           </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
-              <p className="text-xs text-gray-500">Approuvees</p>
-            </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-stone-200 dark:border-gray-700">
+            <CheckCircle2 className="w-6 h-6 text-emerald-500 dark:text-emerald-400 mb-2" />
+            <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{stats.approved}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">Delivrees</p>
           </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <XCircle className="w-5 h-5 text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-red-600">{stats.rejected}</p>
-              <p className="text-xs text-gray-500">Rejetees</p>
-            </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-stone-200 dark:border-gray-700">
+            <XCircle className="w-6 h-6 text-rose-500 dark:text-rose-400 mb-2" />
+            <p className="text-2xl font-bold text-rose-700 dark:text-rose-400">{stats.rejected}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">Rejetees</p>
           </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+      {/* Filtres avec style neutre */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-stone-200 dark:border-gray-700 p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-stone-400" />
             <input
               type="text"
-              placeholder="Rechercher par reference, investisseur ou projet..."
+              placeholder="Rechercher une licence..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full pl-10 pr-4 py-2.5 border border-stone-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-amber-400 focus:border-amber-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
           </div>
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-400" />
+            <Filter className="w-4 h-4 text-stone-400" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="px-3 py-2.5 border border-stone-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-400"
             >
               <option value="all">Tous les statuts</option>
               <option value="DRAFT">Brouillon</option>
@@ -339,31 +329,33 @@ export default function LicencesPage() {
               <option value="REJECTED">Rejete</option>
             </select>
           </div>
-          <button className="p-2.5 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-            <Download className="w-5 h-5 text-gray-500" />
+          <button className="p-2.5 border border-stone-200 dark:border-gray-600 rounded-lg hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors">
+            <Download className="w-5 h-5 text-stone-500" />
           </button>
         </div>
       </div>
 
-      {/* Cards */}
+      {/* Cartes horizontales - Layout specifique LICENCES */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
-          <span className="ml-3 text-gray-500">Chargement...</span>
+          <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+          <span className="ml-3 text-gray-500">Chargement des licences...</span>
         </div>
       ) : dossiers.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
-          <Award className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <p className="text-xl font-medium text-gray-500 dark:text-gray-400">Aucune licence trouvee</p>
-          <p className="text-sm text-gray-400 mt-2">
+        <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-sm border border-orange-100 dark:border-gray-700 p-12 text-center">
+          <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Factory className="w-10 h-10 text-orange-400" />
+          </div>
+          <p className="text-xl font-medium text-gray-700 dark:text-gray-300">Aucune licence trouvee</p>
+          <p className="text-sm text-gray-500 mt-2">
             {searchTerm || statusFilter !== 'all'
-              ? "Essayez de modifier vos filtres"
-              : "Commencez par creer une nouvelle demande de licence"}
+              ? "Modifiez vos criteres de recherche"
+              : "Creez votre premiere demande de licence d'exploitation"}
           </p>
           {!searchTerm && statusFilter === 'all' && (
             <Link
               href="/guichet-unique/dossiers/new?type=LICENCE_EXPLOITATION"
-              className="inline-flex items-center px-4 py-2 mt-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              className="inline-flex items-center px-5 py-2.5 mt-6 bg-orange-500 text-white rounded-xl hover:bg-orange-600 font-medium"
             >
               <Plus className="w-5 h-5 mr-2" />
               Nouvelle Licence
@@ -372,8 +364,9 @@ export default function LicencesPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {dossiers.map((dossier) => {
+          {/* Layout en CARTES HORIZONTALES compactes - specifique aux Licences */}
+          <div className="space-y-4">
+            {Array.isArray(dossiers) && dossiers.map((dossier) => {
               const status = statusConfig[dossier.status] || statusConfig.DRAFT;
               const StatusIcon = status.icon;
               const totalSteps = workflowSteps.length;
@@ -388,166 +381,123 @@ export default function LicencesPage() {
               return (
                 <div
                   key={dossier.id}
-                  className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-l-4 border-purple-500 border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-all"
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-stone-200 dark:border-gray-700 overflow-hidden hover:shadow-md hover:border-amber-300 transition-all"
                 >
-                  <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-                    <div className="flex items-start justify-between">
+                  <div className="flex flex-col lg:flex-row">
+                    {/* Colonne gauche - Identification avec accent ambre */}
+                    <div className="lg:w-1/4 p-4 bg-stone-50 dark:from-gray-750 dark:to-gray-800 border-b lg:border-b-0 lg:border-r border-stone-200 dark:border-gray-700">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/30">
-                          <Award className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-amber-500/80 shadow-sm">
+                          <Factory className="w-6 h-6 text-white" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900 dark:text-white">
-                            {dossier.dossierNumber}
-                          </h3>
-                          <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
-                            Licence
+                          <h3 className="font-bold text-gray-900 dark:text-white">{dossier.dossierNumber}</h3>
+                          <span className="text-xs text-amber-700 dark:text-amber-400 font-semibold uppercase">Licence</span>
+                        </div>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-stone-200 dark:border-gray-700">
+                        <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold ${status.color}`}>
+                          <StatusIcon className="w-3.5 h-3.5 mr-1.5" />
+                          {status.label}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Colonne centrale - Details du projet */}
+                    <div className="lg:w-2/4 p-4 flex-1">
+                      <h4 className="font-semibold text-gray-900 dark:text-white text-lg mb-2">
+                        {dossier.projectName || "Projet non defini"}
+                      </h4>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        <div className="flex items-center text-gray-700 dark:text-gray-300">
+                          <User className="w-4 h-4 mr-2 text-stone-400" />
+                          <span className="truncate">{dossier.investorName || "Non specifie"}</span>
+                        </div>
+                        <div className="flex items-center text-gray-700 dark:text-gray-300">
+                          <MapPin className="w-4 h-4 mr-2 text-stone-400" />
+                          <span>{dossier.projectProvince || "-"}</span>
+                        </div>
+                        {dossier.sector && (
+                          <div className="flex items-center text-gray-700 dark:text-gray-300">
+                            <Briefcase className="w-4 h-4 mr-2 text-stone-400" />
+                            <span className="truncate">{dossier.sector}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center">
+                          <DollarSign className="w-4 h-4 mr-2 text-emerald-600" />
+                          <span className="font-bold text-gray-900 dark:text-white">
+                            {formatAmount(dossier.investmentAmount, dossier.currency)}
                           </span>
                         </div>
                       </div>
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${status.color}`}>
-                        <StatusIcon className="w-3.5 h-3.5 mr-1" />
-                        {status.label}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-4 space-y-3">
-                    <h4 className="font-medium text-gray-900 dark:text-white line-clamp-1">
-                      {dossier.projectName || "Projet non defini"}
-                    </h4>
-
-                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                      <User className="w-4 h-4 mr-2 text-gray-400" />
-                      <span className="truncate">{dossier.investorName || "Non specifie"}</span>
-                    </div>
-
-                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                      <MapPin className="w-4 h-4 mr-2 text-gray-400" />
-                      <span>{dossier.projectProvince || "Province non specifiee"}</span>
-                    </div>
-
-                    {/* Sector */}
-                    {dossier.sector && (
-                      <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                        <Building2 className="w-4 h-4 mr-2 text-gray-400" />
-                        <span className="truncate">{dossier.sector}</span>
-                      </div>
-                    )}
-
-                    {/* Ministry */}
-                    {dossier.ministry && (
-                      <div className="flex items-center text-sm">
-                        <Landmark className="w-4 h-4 mr-2 text-indigo-500" />
-                        <span className="truncate font-medium text-indigo-600 dark:text-indigo-400">
-                          {dossier.ministry.shortName || dossier.ministry.name}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center text-sm">
-                      <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
-                      <span className="font-semibold text-gray-900 dark:text-white">
-                        {formatAmount(dossier.investmentAmount, dossier.currency)}
-                      </span>
-                    </div>
-
-                    {/* Progress */}
-                    <div className="pt-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium text-gray-500">Progression</span>
-                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                          {currentStepName}
-                        </span>
-                      </div>
-                      <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            dossier.status === 'REJECTED' ? 'bg-red-500' :
-                            dossier.status === 'APPROVED' || dossier.status === 'COMPLETED' ? 'bg-green-500' : 'bg-purple-500'
-                          }`}
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                      {/* Progress Steps - Dynamic */}
-                      <div className="flex justify-between mt-1">
-                        {workflowSteps.map((step) => {
-                          const isCompleted = dossier.currentStep >= step.stepNumber ||
-                            (dossier.status === 'APPROVED' || dossier.status === 'COMPLETED');
-                          const isCurrent = dossier.currentStep === step.stepNumber;
-                          return (
-                            <div
-                              key={step.id}
-                              className={`w-2 h-2 rounded-full transition-all ${
-                                isCompleted
-                                  ? dossier.status === 'REJECTED' ? 'bg-red-500' : 'bg-purple-500'
-                                  : isCurrent
-                                    ? 'bg-purple-300 ring-2 ring-purple-500 ring-offset-1'
-                                    : 'bg-gray-200 dark:bg-gray-600'
-                              }`}
-                              title={`${step.name}${step.responsibleRole ? ` - ${step.responsibleRole}` : ''}`}
-                            />
-                          );
-                        })}
+                      {/* Barre de progression horizontale */}
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{currentStepName}</span>
+                          <span className="text-xs font-bold text-amber-700 dark:text-amber-400">{progress}%</span>
+                        </div>
+                        <div className="h-2 bg-stone-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              dossier.status === 'REJECTED' ? 'bg-rose-500' :
+                              dossier.status === 'APPROVED' || dossier.status === 'COMPLETED' ? 'bg-emerald-500' : 'bg-orange-500'
+                            }`}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
-                      <div className="flex items-center text-xs text-gray-500">
-                        <Calendar className="w-3.5 h-3.5 mr-1" />
-                        {formatDate(dossier.submittedAt || dossier.createdAt)}
+                    {/* Colonne droite - Actions et infos */}
+                    <div className="lg:w-1/4 p-4 bg-gray-50 dark:bg-gray-700/50 flex flex-col justify-between">
+                      <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                        <div className="flex items-center">
+                          <Calendar className="w-4 h-4 mr-2 text-gray-500 dark:text-gray-400" />
+                          <span>{formatDate(dossier.submittedAt || dossier.createdAt)}</span>
+                        </div>
+                        {isUrgent && (
+                          <span className="inline-flex items-center text-red-500 font-medium">
+                            <AlertCircle className="w-4 h-4 mr-1" />
+                            {daysSinceSubmission} jours
+                          </span>
+                        )}
                       </div>
-                      {dossier.status !== 'DRAFT' && dossier.status !== 'APPROVED' && dossier.status !== 'REJECTED' && (
-                        <span className={`text-xs font-medium ${isUrgent ? 'text-red-500' : 'text-gray-500'}`}>
-                          {daysSinceSubmission} jour{daysSinceSubmission > 1 ? 's' : ''}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2 mt-3">
+                        <Link
+                          href={`/guichet-unique/dossiers/${dossier.id}`}
+                          className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-amber-500/90 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium"
+                        >
+                          <Eye className="w-4 h-4 mr-1.5" />
+                          Voir
+                        </Link>
+                        <Link
+                          href={`/guichet-unique/dossiers/${dossier.id}/edit`}
+                          className="p-2 text-gray-700 dark:text-gray-200 hover:text-amber-600 hover:bg-stone-100 dark:hover:bg-amber-900/30 rounded-lg transition-colors"
+                          title="Modifier"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Link>
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      <Link
-                        href={`/guichet-unique/dossiers/${dossier.id}`}
-                        className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg"
-                        title="Voir details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Link>
-                      <Link
-                        href={`/guichet-unique/dossiers/${dossier.id}/edit`}
-                        className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg"
-                        title="Modifier"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Link>
-                    </div>
-                    <Link
-                      href={`/guichet-unique/dossiers/${dossier.id}`}
-                      className="inline-flex items-center text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 font-medium"
-                    >
-                      Voir plus
-                      <ArrowRight className="w-4 h-4 ml-1" />
-                    </Link>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Pagination */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-            <p className="text-sm text-gray-500">
-              Affichage de <span className="font-medium">{dossiers.length}</span> sur{" "}
-              <span className="font-medium">{pagination.total}</span> licences
+          {/* Pagination - Style attenue */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-stone-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="font-semibold text-gray-900 dark:text-white">{dossiers.length}</span> sur{" "}
+              <span className="font-semibold text-gray-900 dark:text-white">{pagination.total}</span> licences
             </p>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
                 disabled={pagination.page <= 1}
-                className="p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+                className="p-2 border border-stone-200 dark:border-gray-600 rounded-lg hover:bg-stone-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-400" />
               </button>
               {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
                 const startPage = Math.max(1, Math.min(pagination.page - 2, pagination.totalPages - 4));
@@ -557,10 +507,10 @@ export default function LicencesPage() {
                   <button
                     key={page}
                     onClick={() => setPagination(prev => ({ ...prev, page }))}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                       pagination.page === page
-                        ? "bg-purple-600 text-white"
-                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        ? "bg-amber-500 text-white shadow-md"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-gray-700"
                     }`}
                   >
                     {page}
@@ -570,9 +520,9 @@ export default function LicencesPage() {
               <button
                 onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
                 disabled={pagination.page >= pagination.totalPages}
-                className="p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+                className="p-2 border border-stone-200 dark:border-gray-600 rounded-lg hover:bg-stone-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
               </button>
             </div>
           </div>

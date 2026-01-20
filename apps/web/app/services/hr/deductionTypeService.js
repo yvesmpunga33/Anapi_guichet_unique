@@ -2,7 +2,7 @@
 
 import http from '../../http-common';
 
-const ENDPOINT = '/hr/deduction-types';
+const ENDPOINT = '/hr-payroll/deduction-types';
 
 // Recuperer la liste des types de reductions
 export const getDeductionTypes = async (params = {}) => {

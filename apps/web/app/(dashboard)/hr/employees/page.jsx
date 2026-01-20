@@ -470,8 +470,9 @@ export default function EmployeesListPage() {
         search: searchQuery,
       });
       if (response.success) {
-        setEmployees(response.data || []);
-        setTotalEmployees(response.pagination?.total || response.data?.length || 0);
+        const employeesData = response.data?.employees || response.data || [];
+        setEmployees(Array.isArray(employeesData) ? employeesData : []);
+        setTotalEmployees(response.data?.pagination?.total || response.pagination?.total || employeesData.length || 0);
       }
     } catch (error) {
       console.error('Error loading employees:', error);

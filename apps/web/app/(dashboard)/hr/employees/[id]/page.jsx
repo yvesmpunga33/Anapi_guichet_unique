@@ -337,7 +337,9 @@ export default function EmployeeDetailPage() {
       setLoading(true);
       const response = await getEmployeeById(id);
       if (response.success) {
-        setEmployee(response.data);
+        // Handle nested response structure: response.data.employee or response.data directly
+        const employeeData = response.data?.employee || response.data;
+        setEmployee(employeeData);
       } else {
         throw new Error(response.message);
       }

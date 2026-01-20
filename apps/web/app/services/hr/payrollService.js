@@ -3,7 +3,7 @@
  */
 import http from '../../http-common';
 
-const ENDPOINT = '/payrolls';
+const ENDPOINT = '/hr-payroll/payrolls';
 
 // === CALCUL ET TRAITEMENT ===
 

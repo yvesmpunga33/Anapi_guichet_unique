@@ -37,6 +37,7 @@ import {
   Maximize2,
   Minimize2,
   Landmark,
+  Trash2,
 } from "lucide-react";
 
 const statusConfig = {
@@ -326,12 +327,21 @@ export default function DossierDetailPage() {
   useEffect(() => {
     const fetchWorkflowSteps = async () => {
       try {
-        const response = await fetch('/api/config/workflow-steps?type=AGREMENT');
+        // Déterminer l'URL du backend
+        const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        const baseUrl = hostname === 'anapi.futurissvision.com' || hostname === 'www.anapi.futurissvision.com'
+          ? 'https://anapibackend.futurissvision.com/api/v1'
+          : 'http://localhost:3502/api/v1';
+
+        const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+        const response = await fetch(`${baseUrl}/config/workflow-steps?type=AGREMENT`, { headers });
         if (response.ok) {
           const data = await response.json();
           // Transformer les etapes pour avoir le format attendu
           const steps = (data.steps || []).map(s => ({
-            step: s.stepNumber,
+            step: s.step,
             name: s.name,
             description: s.description,
             color: s.color,
@@ -339,17 +349,17 @@ export default function DossierDetailPage() {
             responsibleRole: s.responsibleRole,
           }));
           setWorkflowSteps(steps);
+        } else {
+          throw new Error('Failed to fetch workflow steps');
         }
       } catch (error) {
         console.error('Error fetching workflow steps:', error);
         // Fallback aux etapes par defaut si l'API echoue
         setWorkflowSteps([
-          { step: 1, name: "Soumission", description: "Depot du dossier" },
-          { step: 2, name: "Verification", description: "Controle documents" },
-          { step: 3, name: "Examen Technique", description: "Analyse technique" },
-          { step: 4, name: "Examen Juridique", description: "Validation legale" },
-          { step: 5, name: "Commission", description: "Decision finale" },
-          { step: 6, name: "Agrement", description: "Delivrance" },
+          { step: 1, name: "Soumission", description: "Depot du dossier", color: "#3B82F6" },
+          { step: 2, name: "Verification", description: "Controle documents", color: "#10B981" },
+          { step: 3, name: "Examen Technique", description: "Analyse technique", color: "#F59E0B" },
+          { step: 4, name: "Decision finale", description: "Approbation", color: "#8B5CF6" },
         ]);
       }
     };
@@ -456,6 +466,77 @@ export default function DossierDetailPage() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Supprimer le dossier avec confirmation
+  const handleDelete = async () => {
+    const result = await Swal.fire({
+      title: 'Confirmer la suppression',
+      html: `
+        <p>Êtes-vous sûr de vouloir supprimer ce dossier ?</p>
+        <p class="text-sm text-gray-500 mt-2"><strong>Référence:</strong> ${dossier.reference}</p>
+        <p class="text-sm text-gray-500"><strong>Projet:</strong> ${dossier.projectName}</p>
+        <p class="text-sm text-red-500 mt-3">Cette action est irréversible.</p>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#EF4444',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Oui, supprimer',
+      cancelButtonText: 'Annuler',
+      reverseButtons: true,
+    });
+
+    if (result.isConfirmed) {
+      try {
+        // Déterminer l'URL du backend
+        const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        const baseUrl = hostname === 'anapi.futurissvision.com' || hostname === 'www.anapi.futurissvision.com'
+          ? 'https://anapibackend.futurissvision.com/api/v1'
+          : 'http://localhost:3502/api/v1';
+
+        const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+        const headers = {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        };
+
+        const response = await fetch(`${baseUrl}/guichet-unique/dossiers/${params.id}`, {
+          method: 'DELETE',
+          headers,
+        });
+
+        if (response.ok) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Dossier supprimé',
+            text: 'Le dossier a été supprimé avec succès.',
+            timer: 3000,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end',
+          });
+          // Rediriger vers la liste des dossiers
+          router.push('/guichet-unique/dossiers');
+        } else {
+          const error = await response.json();
+          Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: error.error || 'Erreur lors de la suppression du dossier.',
+            confirmButtonColor: '#3B82F6',
+          });
+        }
+      } catch (error) {
+        console.error('Error deleting dossier:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: 'Une erreur est survenue lors de la suppression du dossier.',
+          confirmButtonColor: '#3B82F6',
+        });
+      }
     }
   };
 
@@ -800,18 +881,27 @@ export default function DossierDetailPage() {
             <Edit className="w-4 h-4 mr-2" />
             Modifier
           </button>
+          <button
+            onClick={handleDelete}
+            className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            title="Supprimer ce dossier"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Supprimer
+          </button>
         </div>
       </div>
 
       {/* Workflow Progress - Etapes dynamiques */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 overflow-hidden">
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-6">Progression du dossier</h3>
         {workflowSteps.length > 0 ? (
-          <div className="relative">
+          <div className="relative overflow-x-auto pb-4">
+            <div className="min-w-max">
             {/* Ligne de progression en arrière-plan */}
-            <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-600 mx-8" />
+            <div className="absolute top-5 left-8 right-8 h-1 bg-gray-200 dark:bg-gray-600" />
             <div
-              className="absolute top-5 left-0 h-1 bg-green-500 mx-8 transition-all duration-500"
+              className="absolute top-5 left-8 h-1 bg-green-500 transition-all duration-500"
               style={{ width: `calc(${((dossier.currentStep - 1) / (workflowSteps.length - 1)) * 100}% - 4rem)` }}
             />
 
@@ -890,6 +980,7 @@ export default function DossierDetailPage() {
                   </div>
                 );
               })}
+            </div>
             </div>
           </div>
         ) : (

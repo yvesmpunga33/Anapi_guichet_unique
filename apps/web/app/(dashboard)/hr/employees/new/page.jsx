@@ -24,10 +24,20 @@ import {
   ChevronDown,
   ChevronUp,
   AlertCircle,
+  Plus,
+  Loader2,
+  Building2,
+  Award,
+  Layers,
+  FileText,
 } from 'lucide-react';
 
 import { createEmployee, uploadEmployeePhoto } from '@/app/services/hr';
-import { getAllConfigs, configsToOptions, CONFIG_TYPES } from '@/app/services/hr/hrconfigService';
+import { getDepartments, createDepartment } from '@/app/services/hr/departmentService';
+import { getPositions, createPosition } from '@/app/services/hr/positionService';
+import { getGrades, createGrade } from '@/app/services/hr/gradeService';
+import { getCategories, createCategory } from '@/app/services/hr/categoryService';
+import { getContractTypes, createContractType } from '@/app/services/hr/contractTypeService';
 
 // Form Section Component
 function FormSection({ icon: Icon, title, color = 'text-[#0A1628]', children, defaultOpen = true }) {
@@ -134,6 +144,536 @@ function FormSelect({
         ))}
       </select>
       {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+    </div>
+  );
+}
+
+// Form Select with Add Button Component
+function FormSelectWithAdd({
+  label,
+  name,
+  value,
+  onChange,
+  options = [],
+  placeholder,
+  required = false,
+  error,
+  disabled = false,
+  className = '',
+  onAddClick,
+  addButtonTitle = 'Ajouter',
+}) {
+  return (
+    <div className={className}>
+      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+        {label}
+        {required && <span className="ml-1 text-red-500">*</span>}
+      </label>
+      <div className="flex gap-2">
+        <select
+          name={name}
+          value={value}
+          onChange={onChange}
+          required={required}
+          disabled={disabled}
+          className={`flex-1 rounded-lg border px-4 py-2.5 transition-colors focus:outline-none focus:ring-2 dark:bg-gray-700 dark:text-white ${
+            error
+              ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20'
+              : 'border-gray-300 focus:border-[#D4A853] focus:ring-[#D4A853]/20 dark:border-gray-600'
+          } ${disabled ? 'cursor-not-allowed bg-gray-100 dark:bg-gray-800' : ''}`}
+        >
+          <option value="">{placeholder || `-- Selectionner --`}</option>
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={onAddClick}
+          className="flex items-center justify-center rounded-lg bg-[#D4A853] px-3 py-2.5 text-white transition-colors hover:bg-[#D4A853]/90"
+          title={addButtonTitle}
+        >
+          <Plus className="h-5 w-5" />
+        </button>
+      </div>
+      {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+    </div>
+  );
+}
+
+// Quick Add Modal Component - Adapté à chaque type
+function QuickAddModal({ open, onClose, onSave, type, icon: Icon, title, loading }) {
+  const intl = useIntl();
+  const [formData, setFormData] = useState({});
+  const [error, setError] = useState('');
+
+  // Initialiser le formulaire selon le type
+  useEffect(() => {
+    if (open) {
+      switch (type) {
+        case 'department':
+          setFormData({ code: '', nom: '', description: '', budget: '', couleur: '#667eea' });
+          break;
+        case 'position':
+          setFormData({ code: '', title: '', description: '', workDaysPerWeek: 5, workHoursPerDay: 8 });
+          break;
+        case 'grade':
+          setFormData({ code: '', nom: '', description: '', niveau: 10, salaire_min: '', salaire_max: '', couleur: '#667eea' });
+          break;
+        case 'category':
+          setFormData({ code: '', nom: '', description: '', salaire_type: 'mensuel' });
+          break;
+        case 'contractType':
+          setFormData({ code: '', name: '', description: '', defaultDuration: '' });
+          break;
+        default:
+          setFormData({ code: '', nom: '', description: '' });
+      }
+      setError('');
+    }
+  }, [open, type]);
+
+  const handleChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    // Validation selon le type
+    const nameField = type === 'position' ? 'title' : type === 'contractType' ? 'name' : 'nom';
+    if (!formData[nameField]?.trim()) {
+      setError(intl.formatMessage({ id: 'common.nameRequired', defaultMessage: 'Le nom est requis' }));
+      return;
+    }
+    setError('');
+    await onSave(formData);
+  };
+
+  if (!open) return null;
+
+  // Rendu des champs spécifiques selon le type
+  const renderFields = () => {
+    const inputClass = "w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-[#D4A853] focus:outline-none focus:ring-2 focus:ring-[#D4A853]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white";
+    const labelClass = "mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300";
+
+    switch (type) {
+      case 'department':
+        return (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Code</label>
+                <input
+                  type="text"
+                  value={formData.code || ''}
+                  onChange={(e) => handleChange('code', e.target.value.toUpperCase())}
+                  placeholder="DEP-001"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Couleur</label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    value={formData.couleur || '#667eea'}
+                    onChange={(e) => handleChange('couleur', e.target.value)}
+                    className="h-[42px] w-16 rounded-lg border border-gray-300 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={formData.couleur || '#667eea'}
+                    onChange={(e) => handleChange('couleur', e.target.value)}
+                    className={`${inputClass} flex-1`}
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Nom du departement <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                value={formData.nom || ''}
+                onChange={(e) => handleChange('nom', e.target.value)}
+                placeholder="Ex: Direction Generale"
+                required
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Budget annuel (USD)</label>
+              <input
+                type="number"
+                value={formData.budget || ''}
+                onChange={(e) => handleChange('budget', e.target.value)}
+                placeholder="Ex: 50000"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Description</label>
+              <textarea
+                value={formData.description || ''}
+                onChange={(e) => handleChange('description', e.target.value)}
+                placeholder="Description du departement..."
+                rows={2}
+                className={inputClass}
+              />
+            </div>
+          </>
+        );
+
+      case 'position':
+        return (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Code</label>
+                <input
+                  type="text"
+                  value={formData.code || ''}
+                  onChange={(e) => handleChange('code', e.target.value.toUpperCase())}
+                  placeholder="POS-001"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Titre du poste <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={formData.title || ''}
+                  onChange={(e) => handleChange('title', e.target.value)}
+                  placeholder="Ex: Directeur Technique"
+                  required
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Jours/semaine</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="7"
+                  value={formData.workDaysPerWeek || 5}
+                  onChange={(e) => handleChange('workDaysPerWeek', parseInt(e.target.value))}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Heures/jour</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="24"
+                  value={formData.workHoursPerDay || 8}
+                  onChange={(e) => handleChange('workHoursPerDay', parseInt(e.target.value))}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Description</label>
+              <textarea
+                value={formData.description || ''}
+                onChange={(e) => handleChange('description', e.target.value)}
+                placeholder="Responsabilites du poste..."
+                rows={2}
+                className={inputClass}
+              />
+            </div>
+          </>
+        );
+
+      case 'grade':
+        return (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Code</label>
+                <input
+                  type="text"
+                  value={formData.code || ''}
+                  onChange={(e) => handleChange('code', e.target.value.toUpperCase())}
+                  placeholder="GRD-001"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Niveau</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={formData.niveau || 10}
+                  onChange={(e) => handleChange('niveau', parseInt(e.target.value))}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Nom du grade <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                value={formData.nom || ''}
+                onChange={(e) => handleChange('nom', e.target.value)}
+                placeholder="Ex: Cadre Superieur"
+                required
+                className={inputClass}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Salaire min (USD)</label>
+                <input
+                  type="number"
+                  value={formData.salaire_min || ''}
+                  onChange={(e) => handleChange('salaire_min', e.target.value)}
+                  placeholder="1000"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Salaire max (USD)</label>
+                <input
+                  type="number"
+                  value={formData.salaire_max || ''}
+                  onChange={(e) => handleChange('salaire_max', e.target.value)}
+                  placeholder="5000"
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Couleur</label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    value={formData.couleur || '#667eea'}
+                    onChange={(e) => handleChange('couleur', e.target.value)}
+                    className="h-[42px] w-12 rounded-lg border border-gray-300 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={formData.couleur || '#667eea'}
+                    onChange={(e) => handleChange('couleur', e.target.value)}
+                    className={`${inputClass} flex-1`}
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Description</label>
+              <textarea
+                value={formData.description || ''}
+                onChange={(e) => handleChange('description', e.target.value)}
+                placeholder="Description du grade..."
+                rows={2}
+                className={inputClass}
+              />
+            </div>
+          </>
+        );
+
+      case 'category':
+        return (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Code</label>
+                <input
+                  type="text"
+                  value={formData.code || ''}
+                  onChange={(e) => handleChange('code', e.target.value.toUpperCase())}
+                  placeholder="CAT-001"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Type de salaire</label>
+                <select
+                  value={formData.salaire_type || 'mensuel'}
+                  onChange={(e) => handleChange('salaire_type', e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="mensuel">Mensuel</option>
+                  <option value="journalier">Journalier</option>
+                  <option value="horaire">Horaire</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Nom de la categorie <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                value={formData.nom || ''}
+                onChange={(e) => handleChange('nom', e.target.value)}
+                placeholder="Ex: Cadre"
+                required
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Description</label>
+              <textarea
+                value={formData.description || ''}
+                onChange={(e) => handleChange('description', e.target.value)}
+                placeholder="Description de la categorie..."
+                rows={2}
+                className={inputClass}
+              />
+            </div>
+          </>
+        );
+
+      case 'contractType':
+        return (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Code <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={formData.code || ''}
+                  onChange={(e) => handleChange('code', e.target.value.toUpperCase())}
+                  placeholder="CDI"
+                  required
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Duree par defaut (mois)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.defaultDuration || ''}
+                  onChange={(e) => handleChange('defaultDuration', e.target.value ? parseInt(e.target.value) : null)}
+                  placeholder="12 (vide = indetermine)"
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Nom du type de contrat <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                value={formData.name || ''}
+                onChange={(e) => handleChange('name', e.target.value)}
+                placeholder="Ex: Contrat a Duree Indeterminee"
+                required
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Description</label>
+              <textarea
+                value={formData.description || ''}
+                onChange={(e) => handleChange('description', e.target.value)}
+                placeholder="Description du type de contrat..."
+                rows={2}
+                className={inputClass}
+              />
+            </div>
+          </>
+        );
+
+      default:
+        return (
+          <>
+            <div>
+              <label className={labelClass}>Code</label>
+              <input
+                type="text"
+                value={formData.code || ''}
+                onChange={(e) => handleChange('code', e.target.value.toUpperCase())}
+                placeholder="CODE-001"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Nom <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                value={formData.nom || ''}
+                onChange={(e) => handleChange('nom', e.target.value)}
+                placeholder="Nom..."
+                required
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Description</label>
+              <textarea
+                value={formData.description || ''}
+                onChange={(e) => handleChange('description', e.target.value)}
+                placeholder="Description..."
+                rows={2}
+                className={inputClass}
+              />
+            </div>
+          </>
+        );
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl dark:bg-gray-800">
+        {/* Header */}
+        <div className="sticky top-0 flex items-center gap-3 border-b border-gray-200 p-6 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#0A1628]">
+            <Icon className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {intl.formatMessage({ id: 'hr.employees.quickAdd', defaultMessage: 'Ajout rapide' })}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {error && (
+            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
+              {error}
+            </div>
+          )}
+
+          {renderFields()}
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              {intl.formatMessage({ id: 'common.cancel', defaultMessage: 'Annuler' })}
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#D4A853] px-4 py-2.5 text-white transition-colors hover:bg-[#D4A853]/90 disabled:opacity-50"
+            >
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {intl.formatMessage({ id: 'common.create', defaultMessage: 'Creer' })}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
@@ -245,6 +785,10 @@ export default function NewEmployeePage() {
   const [photoPreview, setPhotoPreview] = useState(null);
   const photoInputRef = useRef(null);
 
+  // Quick Add Modal states
+  const [quickAddModal, setQuickAddModal] = useState({ open: false, type: null });
+  const [quickAddLoading, setQuickAddLoading] = useState(false);
+
   // Load configurations
   useEffect(() => {
     loadConfigs();
@@ -253,19 +797,35 @@ export default function NewEmployeePage() {
   const loadConfigs = async () => {
     try {
       setConfigLoading(true);
-      const response = await getAllConfigs();
-      if (response.success && response.data) {
-        setConfigs({
-          departements: configsToOptions(response.data[CONFIG_TYPES.DEPARTEMENT] || []),
-          postes: configsToOptions(response.data[CONFIG_TYPES.POSTE] || []),
-          grades: configsToOptions(response.data[CONFIG_TYPES.GRADE] || []),
-          categories: configsToOptions(response.data[CONFIG_TYPES.CATEGORIE] || []),
-          typesContrat: configsToOptions(response.data[CONFIG_TYPES.TYPE_CONTRAT] || [], true),
-          statuts: configsToOptions(response.data[CONFIG_TYPES.STATUT_EMPLOYE] || []),
-          banques: configsToOptions(response.data[CONFIG_TYPES.BANQUE] || []),
-          liensParente: configsToOptions(response.data[CONFIG_TYPES.LIEN_PARENTE] || []),
-        });
-      }
+
+      // Load all configurations in parallel
+      const [deptsRes, positionsRes, gradesRes, categoriesRes, contractTypesRes] = await Promise.all([
+        getDepartments({ limit: 100 }),
+        getPositions({ limit: 100 }),
+        getGrades({ limit: 100 }),
+        getCategories({ limit: 100 }),
+        getContractTypes({ limit: 100 }),
+      ]);
+
+      // Transform data for select options
+      const transformToOptions = (items, labelKey = 'nom', valueKey = 'id') => {
+        if (!items || !Array.isArray(items)) return [];
+        return items.map(item => ({
+          value: item[valueKey] || item.id,
+          label: item[labelKey] || item.name || item.title || item.nom,
+        }));
+      };
+
+      setConfigs({
+        departements: transformToOptions(deptsRes?.data?.departments || deptsRes?.data || [], 'nom', 'id'),
+        postes: transformToOptions(positionsRes?.data?.positions || positionsRes?.data || [], 'title', 'id'),
+        grades: transformToOptions(gradesRes?.data?.grades || gradesRes?.data || [], 'nom', 'id'),
+        categories: transformToOptions(categoriesRes?.data?.categories || categoriesRes?.data || [], 'nom', 'id'),
+        typesContrat: transformToOptions(contractTypesRes?.data?.contractTypes || contractTypesRes?.data || [], 'name', 'code'),
+        statuts: [],
+        banques: [],
+        liensParente: [],
+      });
     } catch (error) {
       console.error('Error loading configs:', error);
     } finally {
@@ -434,6 +994,85 @@ export default function NewEmployeePage() {
         removePhoto();
       }
     });
+  };
+
+  // Quick Add handlers
+  const openQuickAddModal = (type) => {
+    setQuickAddModal({ open: true, type });
+  };
+
+  const closeQuickAddModal = () => {
+    setQuickAddModal({ open: false, type: null });
+  };
+
+  const handleQuickAdd = async (data) => {
+    setQuickAddLoading(true);
+    try {
+      let response;
+      const { type } = quickAddModal;
+
+      switch (type) {
+        case 'department':
+          response = await createDepartment({ code: data.code, nom: data.nom, description: data.description });
+          break;
+        case 'position':
+          response = await createPosition({ code: data.code, title: data.nom, description: data.description });
+          break;
+        case 'grade':
+          response = await createGrade({ code: data.code, nom: data.nom, description: data.description });
+          break;
+        case 'category':
+          response = await createCategory({ code: data.code, nom: data.nom, description: data.description });
+          break;
+        case 'contractType':
+          response = await createContractType({ code: data.code, name: data.nom, description: data.description });
+          break;
+        default:
+          throw new Error('Type inconnu');
+      }
+
+      if (response.success) {
+        Swal.fire({
+          title: intl.formatMessage({ id: 'common.success', defaultMessage: 'Succes' }),
+          text: intl.formatMessage({ id: 'hr.employees.quickAddSuccess', defaultMessage: 'Element ajoute avec succes' }),
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        closeQuickAddModal();
+        // Reload configs to include the new item
+        await loadConfigs();
+      } else {
+        throw new Error(response.message || 'Erreur lors de la creation');
+      }
+    } catch (error) {
+      console.error('Error in quick add:', error);
+      Swal.fire({
+        title: intl.formatMessage({ id: 'common.error', defaultMessage: 'Erreur' }),
+        text: error.message || intl.formatMessage({ id: 'hr.employees.quickAddError', defaultMessage: 'Impossible de creer l\'element' }),
+        icon: 'error',
+      });
+    } finally {
+      setQuickAddLoading(false);
+    }
+  };
+
+  // Get modal config based on type
+  const getModalConfig = () => {
+    switch (quickAddModal.type) {
+      case 'department':
+        return { icon: Building2, title: intl.formatMessage({ id: 'hr.employees.addDepartment', defaultMessage: 'Nouveau Departement' }) };
+      case 'position':
+        return { icon: Briefcase, title: intl.formatMessage({ id: 'hr.employees.addPosition', defaultMessage: 'Nouveau Poste' }) };
+      case 'grade':
+        return { icon: Award, title: intl.formatMessage({ id: 'hr.employees.addGrade', defaultMessage: 'Nouveau Grade' }) };
+      case 'category':
+        return { icon: Layers, title: intl.formatMessage({ id: 'hr.employees.addCategory', defaultMessage: 'Nouvelle Categorie' }) };
+      case 'contractType':
+        return { icon: FileText, title: intl.formatMessage({ id: 'hr.employees.addContractType', defaultMessage: 'Nouveau Type de Contrat' }) };
+      default:
+        return { icon: Plus, title: 'Ajouter' };
+    }
   };
 
   // Gender options
@@ -768,45 +1407,55 @@ export default function NewEmployeePage() {
             color="text-blue-600"
           >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <FormSelect
+              <FormSelectWithAdd
                 label={intl.formatMessage({ id: 'hr.employees.department', defaultMessage: 'Departement' })}
                 name="departement"
                 value={formData.departement}
                 onChange={handleChange}
                 options={configs.departements}
                 error={errors.departement}
+                onAddClick={() => openQuickAddModal('department')}
+                addButtonTitle={intl.formatMessage({ id: 'hr.employees.addDepartment', defaultMessage: 'Ajouter un departement' })}
               />
-              <FormSelect
+              <FormSelectWithAdd
                 label={intl.formatMessage({ id: 'hr.employees.position', defaultMessage: 'Poste' })}
                 name="poste"
                 value={formData.poste}
                 onChange={handleChange}
                 options={configs.postes}
                 error={errors.poste}
+                onAddClick={() => openQuickAddModal('position')}
+                addButtonTitle={intl.formatMessage({ id: 'hr.employees.addPosition', defaultMessage: 'Ajouter un poste' })}
               />
-              <FormSelect
+              <FormSelectWithAdd
                 label={intl.formatMessage({ id: 'hr.employees.grade', defaultMessage: 'Grade' })}
                 name="grade"
                 value={formData.grade}
                 onChange={handleChange}
                 options={configs.grades}
                 error={errors.grade}
+                onAddClick={() => openQuickAddModal('grade')}
+                addButtonTitle={intl.formatMessage({ id: 'hr.employees.addGrade', defaultMessage: 'Ajouter un grade' })}
               />
-              <FormSelect
+              <FormSelectWithAdd
                 label={intl.formatMessage({ id: 'hr.employees.category', defaultMessage: 'Categorie' })}
                 name="categorie"
                 value={formData.categorie}
                 onChange={handleChange}
                 options={configs.categories}
                 error={errors.categorie}
+                onAddClick={() => openQuickAddModal('category')}
+                addButtonTitle={intl.formatMessage({ id: 'hr.employees.addCategory', defaultMessage: 'Ajouter une categorie' })}
               />
-              <FormSelect
+              <FormSelectWithAdd
                 label={intl.formatMessage({ id: 'hr.employees.contractType', defaultMessage: 'Type de contrat' })}
                 name="typeContrat"
                 value={formData.typeContrat}
                 onChange={handleChange}
                 options={configs.typesContrat}
                 error={errors.typeContrat}
+                onAddClick={() => openQuickAddModal('contractType')}
+                addButtonTitle={intl.formatMessage({ id: 'hr.employees.addContractType', defaultMessage: 'Ajouter un type de contrat' })}
               />
               <FormSelect
                 label={intl.formatMessage({ id: 'hr.employees.status', defaultMessage: 'Statut' })}
@@ -956,6 +1605,17 @@ export default function NewEmployeePage() {
           </div>
         </form>
       )}
+
+      {/* Quick Add Modal */}
+      <QuickAddModal
+        open={quickAddModal.open}
+        onClose={closeQuickAddModal}
+        onSave={handleQuickAdd}
+        type={quickAddModal.type}
+        icon={getModalConfig().icon}
+        title={getModalConfig().title}
+        loading={quickAddLoading}
+      />
     </div>
   );
 }

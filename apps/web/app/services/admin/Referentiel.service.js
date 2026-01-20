@@ -22,30 +22,36 @@ export const ReferentielProvinceDelete = (id) => {
   return http.delete(`/referentiels/provinces/${id}`);
 };
 
-// ============ VILLES ============
+// ============ VILLES / CITIES ============
 export const VilleList = (params = {}) => {
   const queryString = new URLSearchParams(params).toString();
-  return http.get(`/referentiels/villes${queryString ? `?${queryString}` : ''}`);
+  return http.get(`/referentiels/cities${queryString ? `?${queryString}` : ''}`);
+};
+
+// Alias using /cities endpoint
+export const ReferentielCityList = (params = {}) => {
+  const queryString = new URLSearchParams(params).toString();
+  return http.get(`/referentiels/cities${queryString ? `?${queryString}` : ''}`);
 };
 
 export const VilleGetById = (id) => {
-  return http.get(`/referentiels/villes/${id}`);
+  return http.get(`/referentiels/cities/${id}`);
 };
 
 export const VilleCreate = (data) => {
-  return http.post('/referentiels/villes', data);
+  return http.post('/referentiels/cities', data);
 };
 
 export const VilleUpdate = (id, data) => {
-  return http.put(`/referentiels/villes/${id}`, data);
+  return http.put(`/referentiels/cities/${id}`, data);
 };
 
 export const VilleDelete = (id) => {
-  return http.delete(`/referentiels/villes/${id}`);
+  return http.delete(`/referentiels/cities/${id}`);
 };
 
 export const VilleListByProvince = (provinceId) => {
-  return http.get(`/referentiels/villes?provinceId=${provinceId}`);
+  return http.get(`/referentiels/cities?provinceId=${provinceId}`);
 };
 
 // ============ COMMUNES ============
@@ -138,4 +144,26 @@ export const CurrencyUpdate = (id, data) => {
 
 export const CurrencyDelete = (id) => {
   return http.delete(`/referentiels/currencies/${id}`);
+};
+
+// ============ COUNTRIES ============
+export const CountryList = (params = {}) => {
+  const queryString = new URLSearchParams(params).toString();
+  return http.get(`/referentiels/countries${queryString ? `?${queryString}` : ''}`);
+};
+
+export const CountryGetById = (id) => {
+  return http.get(`/referentiels/countries/${id}`);
+};
+
+export const CountryCreate = (data) => {
+  return http.post('/referentiels/countries', data);
+};
+
+export const CountryUpdate = (id, data) => {
+  return http.put(`/referentiels/countries/${id}`, data);
+};
+
+export const CountryDelete = (id) => {
+  return http.delete(`/referentiels/countries/${id}`);
 };

@@ -103,7 +103,7 @@ export default function ProjectDetailPage() {
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState(null);
   const [milestoneForm, setMilestoneForm] = useState({
-    name: "", description: "", dueDate: "", status: "PENDING", progress: 0,
+    name: "", description: "", dueDate: "", status: "PENDING", progress: "",
     plannedBudget: "", actualBudget: "", deliverables: "", priority: "MEDIUM"
   });
 
@@ -122,9 +122,9 @@ export default function ProjectDetailPage() {
   const [loadingImpacts, setLoadingImpacts] = useState(false);
   const [showImpactModal, setShowImpactModal] = useState(false);
   const [impactForm, setImpactForm] = useState({
-    reportDate: new Date().toISOString().split('T')[0], directJobs: 0, indirectJobs: 0,
-    localRevenue: 0, taxContribution: 0, exportValue: 0, localPurchases: 0,
-    trainingHours: 0, environmentalScore: 0, socialScore: 0, notes: ""
+    reportDate: new Date().toISOString().split('T')[0], directJobs: "", indirectJobs: "",
+    localRevenue: "", taxContribution: "", exportValue: "", localPurchases: "",
+    trainingHours: "", environmentalScore: "", socialScore: "", notes: ""
   });
 
   // Check if edit mode is requested via URL parameter
@@ -142,7 +142,8 @@ export default function ProjectDetailPage() {
       setError(null);
 
       const response = await ProjectGetById(params.id);
-      const data = response.data;
+      // API returns { success: true, data: { investment: {...} } }
+      const data = response.data?.data?.investment || response.data?.investment || response.data;
 
       setProject(data);
       setEditedProject(data);
@@ -186,7 +187,7 @@ export default function ProjectDetailPage() {
       setSaving(true);
 
       const response = await ProjectUpdate(params.id, editedProject);
-      const updatedProject = response.data;
+      const updatedProject = response.data?.data?.investment || response.data?.investment || response.data;
 
       setProject(updatedProject);
       setEditedProject(updatedProject);
@@ -227,7 +228,9 @@ export default function ProjectDetailPage() {
       const response = await fetch(`/api/investments/projects/${params.id}/documents`);
       if (response.ok) {
         const data = await response.json();
-        setDocuments(data.documents || []);
+        // API returns { success: true, data: { documents: [...] } }
+        const docs = data.data?.documents || data.documents || [];
+        setDocuments(docs);
       }
     } catch (err) {
       console.error("Error fetching documents:", err);
@@ -562,7 +565,9 @@ export default function ProjectDetailPage() {
         throw new Error(data.error || "Erreur lors de l'upload");
       }
 
-      const newDoc = await response.json();
+      const result = await response.json();
+      // API returns { success: true, data: { document: {...} } }
+      const newDoc = result.data?.document || result.document || result;
       setDocuments([newDoc, ...documents]);
       setShowUploadModal(false);
       setSelectedFile(null);
@@ -619,9 +624,11 @@ export default function ProjectDetailPage() {
 
   // Format file size
   const formatFileSize = (bytes) => {
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    if (!bytes || isNaN(bytes)) return "-";
+    const size = parseInt(bytes);
+    if (size < 1024) return size + " B";
+    if (size < 1024 * 1024) return (size / 1024).toFixed(1) + " KB";
+    return (size / (1024 * 1024)).toFixed(1) + " MB";
   };
 
   // Print project details
@@ -706,7 +713,7 @@ export default function ProjectDetailPage() {
             ${project.projectName}
             <span class="status-badge status-${project.status?.toLowerCase()}">${status.label}</span>
           </div>
-          <div class="project-code">${project.projectCode} ${project.sector ? `• ${project.sector}` : ''} ${project.subSector ? `• ${project.subSector}` : ''}</div>
+          <div class="project-code">${project.projectCode} ${project.sector ? `• ${project.sector?.nameFr || project.sector?.name || ''}` : ''} ${project.subSector ? `• ${project.subSector}` : ''}</div>
         </div>
 
         ${project.progress > 0 ? `
@@ -753,7 +760,7 @@ export default function ProjectDetailPage() {
           <div class="info-grid">
             <div class="info-item">
               <div class="info-label">Localisation</div>
-              <div class="info-value">${[project.city, project.province].filter(Boolean).join(', ') || 'Non definie'}</div>
+              <div class="info-value">${[project.city?.name, project.province?.name || project.province?.nameFr].filter(Boolean).join(', ') || 'Non definie'}</div>
             </div>
             <div class="info-item">
               <div class="info-label">Devise</div>
@@ -849,9 +856,10 @@ export default function ProjectDetailPage() {
     );
   }
 
-  const status = statusConfig[project.status] || statusConfig.DRAFT;
+  const status = statusConfig[project.status?.toUpperCase()] || statusConfig.DRAFT;
   const StatusIcon = status.icon;
-  const SectorIcon = sectorIcons[project.sector] || Factory;
+  const sectorName = project.sector?.nameFr || project.sector?.name || project.sector || "";
+  const SectorIcon = sectorIcons[sectorName] || Factory;
 
   return (
     <div className="space-y-6">
@@ -880,11 +888,11 @@ export default function ProjectDetailPage() {
               </div>
               <div className="flex items-center gap-3 mt-1">
                 <p className="text-gray-500 dark:text-gray-400">{project.projectCode}</p>
-                {project.sector && (
+                {sectorName && (
                   <>
                     <span className="text-gray-400">•</span>
                     <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-600 dark:text-gray-300">
-                      {project.sector}
+                      {sectorName}
                     </span>
                   </>
                 )}
@@ -1086,9 +1094,9 @@ export default function ProjectDetailPage() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Secteur</label>
                     <input
                       type="text"
-                      value={editedProject.sector || ""}
-                      onChange={(e) => setEditedProject({ ...editedProject, sector: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      value={editedProject.sector?.nameFr || editedProject.sector?.name || ""}
+                      readOnly
+                      className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-900 dark:text-white cursor-not-allowed"
                     />
                   </div>
                   <div>
@@ -1136,7 +1144,7 @@ export default function ProjectDetailPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Secteur</p>
-                    <p className="text-gray-900 dark:text-white mt-1">{project.sector || "-"}</p>
+                    <p className="text-gray-900 dark:text-white mt-1">{project.sector?.nameFr || project.sector?.name || "-"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Sous-secteur</p>
@@ -1269,15 +1277,18 @@ export default function ProjectDetailPage() {
               <div className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
                 <div>
-                  {project.province && (
+                  {(project.province || project.city) && (
                     <p className="text-gray-900 dark:text-white">
-                      {project.city ? `${project.city}, ` : ""}{project.province}
+                      {project.city?.name ? `${project.city.name}, ` : ""}{project.province?.name || project.province?.nameFr || ""}
                     </p>
                   )}
                   {project.address && (
                     <p className="text-sm text-gray-500 dark:text-gray-400">{project.address}</p>
                   )}
-                  {!project.province && !project.city && !project.address && (
+                  {project.notes && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{project.notes}</p>
+                  )}
+                  {!project.province && !project.city && !project.address && !project.notes && (
                     <p className="text-gray-500 dark:text-gray-400 italic">Localisation non definie</p>
                   )}
                 </div>
@@ -1857,9 +1868,9 @@ export default function ProjectDetailPage() {
               </div>
             ) : (
               <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                {documents.map((doc) => (
+                {documents.map((doc, index) => (
                   <div
-                    key={doc.id}
+                    key={doc.id || `doc-${index}`}
                     className={`p-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors ${
                       selectedDoc?.id === doc.id ? "bg-blue-50 dark:bg-blue-900/20" : ""
                     }`}
@@ -1888,7 +1899,7 @@ export default function ProjectDetailPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <a
-                        href={doc.url}
+                        href={`/api/investments/projects/${params.id}/documents/${doc.id}/download`}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
@@ -1898,8 +1909,8 @@ export default function ProjectDetailPage() {
                         <Eye className="w-4 h-4" />
                       </a>
                       <a
-                        href={doc.url}
-                        download={doc.originalName}
+                        href={`/api/investments/projects/${params.id}/documents/${doc.id}/download`}
+                        download={doc.originalName || doc.name}
                         onClick={(e) => e.stopPropagation()}
                         className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                         title="Telecharger"
@@ -1933,18 +1944,18 @@ export default function ProjectDetailPage() {
             {selectedDoc ? (
               <div className="p-4">
                 {/* Preview based on type */}
-                {selectedDoc.type === "image" || selectedDoc.mimeType?.startsWith("image/") ? (
+                {selectedDoc.mimeType?.startsWith("image/") ? (
                   <div className="aspect-video bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden mb-4">
                     <img
-                      src={selectedDoc.url}
+                      src={`/api/investments/projects/${params.id}/documents/${selectedDoc.id}/download`}
                       alt={selectedDoc.name}
                       className="w-full h-full object-contain"
                     />
                   </div>
-                ) : selectedDoc.type === "pdf" || selectedDoc.mimeType === "application/pdf" ? (
+                ) : selectedDoc.mimeType === "application/pdf" ? (
                   <div className="aspect-[3/4] bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden mb-4">
                     <iframe
-                      src={selectedDoc.url}
+                      src={`/api/investments/projects/${params.id}/documents/${selectedDoc.id}/download`}
                       className="w-full h-full"
                       title={selectedDoc.name}
                     />
@@ -1973,7 +1984,7 @@ export default function ProjectDetailPage() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Type</p>
-                      <p className="text-gray-900 dark:text-white">{selectedDoc.type}</p>
+                      <p className="text-gray-900 dark:text-white">{selectedDoc.mimeType || selectedDoc.extension || '-'}</p>
                     </div>
                   </div>
                   <div>
@@ -1984,7 +1995,7 @@ export default function ProjectDetailPage() {
 
                 <div className="flex gap-2 mt-4">
                   <a
-                    href={selectedDoc.url}
+                    href={`/api/investments/projects/${params.id}/documents/${selectedDoc.id}/download`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center text-sm"
@@ -1992,8 +2003,8 @@ export default function ProjectDetailPage() {
                     Ouvrir
                   </a>
                   <a
-                    href={selectedDoc.url}
-                    download={selectedDoc.originalName}
+                    href={`/api/investments/projects/${params.id}/documents/${selectedDoc.id}/download`}
+                    download={selectedDoc.originalName || selectedDoc.name}
                     className="flex-1 px-4 py-2 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-center text-sm"
                   >
                     Telecharger
@@ -2312,8 +2323,10 @@ export default function ProjectDetailPage() {
                     type="number"
                     min="0"
                     max="100"
+                    placeholder="0"
                     value={milestoneForm.progress}
-                    onChange={(e) => setMilestoneForm({ ...milestoneForm, progress: parseInt(e.target.value) || 0 })}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setMilestoneForm({ ...milestoneForm, progress: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
@@ -2323,20 +2336,24 @@ export default function ProjectDetailPage() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Budget prevu</label>
                   <input
                     type="number"
+                    min="0"
+                    placeholder="0"
                     value={milestoneForm.plannedBudget}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setMilestoneForm({ ...milestoneForm, plannedBudget: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="0"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Budget reel</label>
                   <input
                     type="number"
+                    min="0"
+                    placeholder="0"
                     value={milestoneForm.actualBudget}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setMilestoneForm({ ...milestoneForm, actualBudget: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="0"
                   />
                 </div>
               </div>
@@ -2526,8 +2543,10 @@ export default function ProjectDetailPage() {
                   <input
                     type="number"
                     min="0"
+                    placeholder="0"
                     value={impactForm.directJobs}
-                    onChange={(e) => setImpactForm({ ...impactForm, directJobs: parseInt(e.target.value) || 0 })}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setImpactForm({ ...impactForm, directJobs: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
@@ -2536,8 +2555,10 @@ export default function ProjectDetailPage() {
                   <input
                     type="number"
                     min="0"
+                    placeholder="0"
                     value={impactForm.indirectJobs}
-                    onChange={(e) => setImpactForm({ ...impactForm, indirectJobs: parseInt(e.target.value) || 0 })}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setImpactForm({ ...impactForm, indirectJobs: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
@@ -2548,8 +2569,10 @@ export default function ProjectDetailPage() {
                   <input
                     type="number"
                     min="0"
+                    placeholder="0"
                     value={impactForm.localRevenue}
-                    onChange={(e) => setImpactForm({ ...impactForm, localRevenue: parseFloat(e.target.value) || 0 })}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setImpactForm({ ...impactForm, localRevenue: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
@@ -2558,8 +2581,10 @@ export default function ProjectDetailPage() {
                   <input
                     type="number"
                     min="0"
+                    placeholder="0"
                     value={impactForm.taxContribution}
-                    onChange={(e) => setImpactForm({ ...impactForm, taxContribution: parseFloat(e.target.value) || 0 })}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setImpactForm({ ...impactForm, taxContribution: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
@@ -2570,8 +2595,10 @@ export default function ProjectDetailPage() {
                   <input
                     type="number"
                     min="0"
+                    placeholder="0"
                     value={impactForm.exportValue}
-                    onChange={(e) => setImpactForm({ ...impactForm, exportValue: parseFloat(e.target.value) || 0 })}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setImpactForm({ ...impactForm, exportValue: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
@@ -2580,42 +2607,50 @@ export default function ProjectDetailPage() {
                   <input
                     type="number"
                     min="0"
+                    placeholder="0"
                     value={impactForm.localPurchases}
-                    onChange={(e) => setImpactForm({ ...impactForm, localPurchases: parseFloat(e.target.value) || 0 })}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setImpactForm({ ...impactForm, localPurchases: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Heures de formation</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 h-10 flex items-end">Heures de formation</label>
                   <input
                     type="number"
                     min="0"
+                    placeholder="0"
                     value={impactForm.trainingHours}
-                    onChange={(e) => setImpactForm({ ...impactForm, trainingHours: parseInt(e.target.value) || 0 })}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setImpactForm({ ...impactForm, trainingHours: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Score environnemental (0-10)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 h-10 flex items-end">Score environnemental (0-100)</label>
                   <input
                     type="number"
                     min="0"
-                    max="10"
+                    max="100"
+                    placeholder="0"
                     value={impactForm.environmentalScore}
-                    onChange={(e) => setImpactForm({ ...impactForm, environmentalScore: parseInt(e.target.value) || 0 })}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setImpactForm({ ...impactForm, environmentalScore: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Score social (0-10)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 h-10 flex items-end">Score social (0-100)</label>
                   <input
                     type="number"
                     min="0"
-                    max="10"
+                    max="100"
+                    placeholder="0"
                     value={impactForm.socialScore}
-                    onChange={(e) => setImpactForm({ ...impactForm, socialScore: parseInt(e.target.value) || 0 })}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setImpactForm({ ...impactForm, socialScore: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>

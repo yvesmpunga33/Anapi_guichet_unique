@@ -34,6 +34,21 @@ export default function LegalDashboardPage() {
       setStats(response.data);
     } catch (error) {
       console.error("Error fetching stats:", error);
+      // Set default empty stats on error
+      setStats({
+        data: {
+          totals: {
+            juridicalTexts: 0,
+            contracts: 0,
+            alerts: 0,
+            domains: 0,
+            documentTypes: 0,
+            contractTypes: 0,
+            pendingAlerts: 0,
+            activeContracts: 0
+          }
+        }
+      });
     } finally {
       setLoading(false);
     }

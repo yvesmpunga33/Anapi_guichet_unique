@@ -2,8 +2,8 @@
 
 import http from '../../http-common';
 
-const TYPE_ENDPOINT = '/attendance-types';
-const CONFIG_ENDPOINT = '/attendance-configs';
+const TYPE_ENDPOINT = '/hr-payroll/attendance-types';
+const CONFIG_ENDPOINT = '/hr-payroll/attendance-configs';
 
 // ==========================================
 // TYPES DE POINTAGE

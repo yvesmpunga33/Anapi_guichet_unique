@@ -2,8 +2,8 @@
 
 import http from '../../http-common';
 
-const ATTENDANCE_ENDPOINT = '/attendances';
-const JUSTIFICATION_ENDPOINT = '/justifications';
+const ATTENDANCE_ENDPOINT = '/hr-payroll/attendances';
+const JUSTIFICATION_ENDPOINT = '/hr-payroll/justifications';
 
 // ==========================================
 // CONSTANTES

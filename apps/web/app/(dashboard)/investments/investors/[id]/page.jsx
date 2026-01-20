@@ -30,10 +30,23 @@ import {
   AlertCircle,
   Loader2,
   RefreshCw,
+  Upload,
+  Download,
+  Eye,
+  File,
+  Image,
+  FileIcon,
 } from "lucide-react";
 
 // Services
-import { InvestorGetById, InvestorUpdate, InvestorDelete } from "@/app/services/admin/Investor.service";
+import {
+  InvestorGetById,
+  InvestorUpdate,
+  InvestorDelete,
+  InvestorGetDocuments,
+  InvestorAddDocument,
+  InvestorDeleteDocument
+} from "@/app/services/admin/Investor.service";
 
 const investorTypes = {
   company: { label: "Societe", icon: Building2 },
@@ -75,6 +88,20 @@ export default function InvestorDetailPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Document states
+  const [documents, setDocuments] = useState([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [documentName, setDocumentName] = useState("");
+  const [documentDescription, setDocumentDescription] = useState("");
+  const [documentType, setDocumentType] = useState("autre");
+  const [deletingDocumentId, setDeletingDocumentId] = useState(null);
+  const [previewDocument, setPreviewDocument] = useState(null);
+  const [previewBlobUrl, setPreviewBlobUrl] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+
   // Check if edit mode is requested via URL parameter
   useEffect(() => {
     const editParam = searchParams.get("edit");
@@ -90,10 +117,11 @@ export default function InvestorDetailPage() {
       setError(null);
 
       const response = await InvestorGetById(params.id);
-      const data = response.data;
+      // L'API retourne { success: true, data: { investor: {...} } }
+      const investorData = response.data?.data?.investor || response.data?.investor || response.data;
 
-      setInvestor(data);
-      setEditedInvestor(data);
+      setInvestor(investorData);
+      setEditedInvestor(investorData);
     } catch (err) {
       console.error("Error fetching investor:", err);
       if (err.response?.status === 404) {
@@ -111,6 +139,200 @@ export default function InvestorDetailPage() {
       fetchInvestor();
     }
   }, [params.id]);
+
+  // Fetch documents when tab changes to documents
+  const fetchDocuments = async () => {
+    try {
+      setLoadingDocuments(true);
+      const response = await InvestorGetDocuments(params.id);
+      const docs = response.data?.data?.documents || response.data?.documents || [];
+      setDocuments(docs);
+    } catch (err) {
+      console.error("Error fetching documents:", err);
+    } finally {
+      setLoadingDocuments(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "documents" && params.id) {
+      fetchDocuments();
+    }
+  }, [activeTab, params.id]);
+
+  // Handle file selection
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      if (!documentName) {
+        setDocumentName(file.name.replace(/\.[^/.]+$/, "")); // Remove extension
+      }
+    }
+  };
+
+  // Handle document upload
+  const handleUploadDocument = async () => {
+    if (!selectedFile) {
+      alert("Veuillez selectionner un fichier");
+      return;
+    }
+
+    try {
+      setUploadingDocument(true);
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("name", documentName || selectedFile.name);
+      formData.append("description", documentDescription);
+      formData.append("type", documentType);
+
+      await InvestorAddDocument(params.id, formData);
+
+      // Reset form and close modal
+      setSelectedFile(null);
+      setDocumentName("");
+      setDocumentDescription("");
+      setDocumentType("autre");
+      setShowUploadModal(false);
+
+      // Refresh documents list
+      fetchDocuments();
+    } catch (err) {
+      console.error("Error uploading document:", err);
+      alert(err.response?.data?.message || "Erreur lors de l'upload du document");
+    } finally {
+      setUploadingDocument(false);
+    }
+  };
+
+  // Handle document delete
+  const handleDeleteDocument = async (documentId) => {
+    if (!confirm("Etes-vous sur de vouloir supprimer ce document ?")) {
+      return;
+    }
+
+    try {
+      setDeletingDocumentId(documentId);
+      await InvestorDeleteDocument(params.id, documentId);
+      fetchDocuments();
+    } catch (err) {
+      console.error("Error deleting document:", err);
+      alert(err.response?.data?.message || "Erreur lors de la suppression");
+    } finally {
+      setDeletingDocumentId(null);
+    }
+  };
+
+  // Format file size
+  const formatFileSize = (bytes) => {
+    if (!bytes) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  // Get document icon based on mime type
+  const getDocumentIcon = (mimeType) => {
+    if (mimeType?.startsWith("image/")) return Image;
+    if (mimeType === "application/pdf") return FileText;
+    return File;
+  };
+
+  // Document type labels
+  const documentTypeLabels = {
+    rccm: "RCCM",
+    id_nat: "ID National",
+    nif: "NIF",
+    statuts: "Statuts",
+    contrat: "Contrat",
+    autre: "Autre"
+  };
+
+  // Get auth token for document preview URLs
+  const getAuthToken = () => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("authToken") || "";
+    }
+    return "";
+  };
+
+  // Open document preview - fetch with auth and create blob URL
+  const openDocumentPreview = async (doc) => {
+    setPreviewDocument(doc);
+    setLoadingPreview(true);
+    setPreviewBlobUrl(null);
+
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3502";
+      const token = getAuthToken();
+
+      const response = await fetch(`${baseUrl}/api/v1/investors/${params.id}/documents/${doc.id}/view`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load document');
+      }
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      setPreviewBlobUrl(blobUrl);
+    } catch (err) {
+      console.error("Error loading preview:", err);
+      alert("Erreur lors du chargement de l'apercu");
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  // Close preview and cleanup blob URL
+  const closePreview = () => {
+    if (previewBlobUrl) {
+      URL.revokeObjectURL(previewBlobUrl);
+    }
+    setPreviewDocument(null);
+    setPreviewBlobUrl(null);
+  };
+
+  // Download document with authentication
+  const downloadDocument = async (doc) => {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3502";
+      const token = getAuthToken();
+
+      const response = await fetch(`${baseUrl}/api/v1/investors/${params.id}/documents/${doc.id}/download`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download document');
+      }
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      // Create a temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = doc.originalName || doc.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Cleanup
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("Error downloading document:", err);
+      alert("Erreur lors du telechargement");
+    }
+  };
 
   const formatAmount = (amount, currency = "USD") => {
     return new Intl.NumberFormat("fr-FR", {
@@ -134,7 +356,8 @@ export default function InvestorDetailPage() {
       setSaving(true);
 
       const response = await InvestorUpdate(params.id, editedInvestor);
-      const updatedInvestor = response.data;
+      // L'API retourne { success: true, data: { investor: {...} } }
+      const updatedInvestor = response.data?.data?.investor || response.data?.investor || response.data;
 
       setInvestor(updatedInvestor);
       setEditedInvestor(updatedInvestor);
@@ -803,16 +1026,335 @@ export default function InvestorDetailPage() {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
           <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Documents
+              Documents ({documents.length})
             </h3>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
+            >
+              <Upload className="w-4 h-4" />
               Ajouter un document
             </button>
           </div>
-          <div className="text-center py-12">
-            <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">Aucun document</p>
-            <p className="text-sm text-gray-400 mt-1">Les documents seront affiches ici</p>
+
+          {loadingDocuments ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+            </div>
+          ) : documents.length > 0 ? (
+            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+              {documents.map((doc) => {
+                const DocIcon = getDocumentIcon(doc.mimeType);
+                return (
+                  <div
+                    key={doc.id}
+                    className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                          <DocIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-white">{doc.name}</p>
+                          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">
+                              {documentTypeLabels[doc.type] || doc.type}
+                            </span>
+                            <span>{formatFileSize(doc.size)}</span>
+                            <span>•</span>
+                            <span>{formatDate(doc.createdAt)}</span>
+                          </div>
+                          {doc.description && (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{doc.description}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {/* Preview button - only for images and PDF */}
+                        {(doc.mimeType?.startsWith("image/") || doc.mimeType === "application/pdf") && (
+                          <button
+                            onClick={() => openDocumentPreview(doc)}
+                            className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                            title="Visualiser"
+                          >
+                            <Eye className="w-5 h-5" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => downloadDocument(doc)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                          title="Telecharger"
+                        >
+                          <Download className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteDocument(doc.id)}
+                          disabled={deletingDocumentId === doc.id}
+                          className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50"
+                          title="Supprimer"
+                        >
+                          {deletingDocumentId === doc.id ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400">Aucun document</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                Cliquez sur "Ajouter un document" pour telecharger vos fichiers
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Upload Document Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Ajouter un document
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    setSelectedFile(null);
+                    setDocumentName("");
+                    setDocumentDescription("");
+                    setDocumentType("autre");
+                  }}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* File Upload Area */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Fichier *
+                </label>
+                <div
+                  className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                    selectedFile
+                      ? "border-green-400 bg-green-50 dark:bg-green-900/20"
+                      : "border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500"
+                  }`}
+                  onClick={() => document.getElementById("document-file-input").click()}
+                >
+                  <input
+                    id="document-file-input"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  {selectedFile ? (
+                    <div className="flex items-center justify-center gap-3">
+                      <CheckCircle2 className="w-8 h-8 text-green-500" />
+                      <div className="text-left">
+                        <p className="font-medium text-gray-900 dark:text-white">{selectedFile.name}</p>
+                        <p className="text-sm text-gray-500">{formatFileSize(selectedFile.size)}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-600 dark:text-gray-400">
+                        Cliquez pour selectionner un fichier
+                      </p>
+                      <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                        PDF, Images, Word (max 50 MB)
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Document Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Nom du document
+                </label>
+                <input
+                  type="text"
+                  value={documentName}
+                  onChange={(e) => setDocumentName(e.target.value)}
+                  placeholder="Nom du document"
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+
+              {/* Document Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Type de document
+                </label>
+                <select
+                  value={documentType}
+                  onChange={(e) => setDocumentType(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="rccm">RCCM</option>
+                  <option value="id_nat">ID National</option>
+                  <option value="nif">NIF</option>
+                  <option value="statuts">Statuts</option>
+                  <option value="contrat">Contrat</option>
+                  <option value="autre">Autre</option>
+                </select>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description (optionnel)
+                </label>
+                <textarea
+                  rows={3}
+                  value={documentDescription}
+                  onChange={(e) => setDocumentDescription(e.target.value)}
+                  placeholder="Description du document..."
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setSelectedFile(null);
+                  setDocumentName("");
+                  setDocumentDescription("");
+                  setDocumentType("autre");
+                }}
+                disabled={uploadingDocument}
+                className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300 disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleUploadDocument}
+                disabled={!selectedFile || uploadingDocument}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {uploadingDocument ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Upload en cours...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    Telecharger
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Document Preview Modal */}
+      {previewDocument && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-5xl w-full max-h-[90vh] flex flex-col">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                  {previewDocument.mimeType?.startsWith("image/") ? (
+                    <Image className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  ) : (
+                    <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">{previewDocument.name}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {documentTypeLabels[previewDocument.type] || previewDocument.type} • {formatFileSize(previewDocument.size)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => downloadDocument(previewDocument)}
+                  className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                  title="Telecharger"
+                >
+                  <Download className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={closePreview}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto p-4 bg-gray-100 dark:bg-gray-900">
+              {loadingPreview ? (
+                <div className="flex flex-col items-center justify-center min-h-[400px]">
+                  <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
+                  <p className="text-gray-500 dark:text-gray-400">Chargement de l'apercu...</p>
+                </div>
+              ) : previewBlobUrl ? (
+                previewDocument.mimeType?.startsWith("image/") ? (
+                  <div className="flex items-center justify-center min-h-[400px]">
+                    <img
+                      src={previewBlobUrl}
+                      alt={previewDocument.name}
+                      className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
+                    />
+                  </div>
+                ) : previewDocument.mimeType === "application/pdf" ? (
+                  <iframe
+                    src={previewBlobUrl}
+                    className="w-full h-[70vh] rounded-lg border-0"
+                    title={previewDocument.name}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center min-h-[400px] text-gray-500 dark:text-gray-400">
+                    <File className="w-16 h-16 mb-4" />
+                    <p>Apercu non disponible pour ce type de fichier</p>
+                  </div>
+                )
+              ) : (
+                <div className="flex flex-col items-center justify-center min-h-[400px] text-gray-500 dark:text-gray-400">
+                  <AlertCircle className="w-16 h-16 mb-4 text-red-400" />
+                  <p>Erreur lors du chargement de l'apercu</p>
+                  <button
+                    onClick={() => openDocumentPreview(previewDocument)}
+                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Reessayer
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {previewDocument.description && (
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  <span className="font-medium">Description:</span> {previewDocument.description}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

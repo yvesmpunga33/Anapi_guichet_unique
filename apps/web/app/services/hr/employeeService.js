@@ -2,7 +2,7 @@
 
 import http from '../../http-common';
 
-const ENDPOINT = '/hr/employees';
+const ENDPOINT = '/hr-payroll/employees';
 
 // Recuperer la liste des employes avec pagination et filtres
 export const getEmployees = async (params = {}) => {
@@ -25,8 +25,13 @@ export const getEmployees = async (params = {}) => {
 
 // Recuperer les statistiques des employes
 export const getEmployeeStats = async () => {
-  const response = await http.get(`${ENDPOINT}/stats`);
-  return response.data;
+  try {
+    const response = await http.get(`${ENDPOINT}/statistics`);
+    return response.data;
+  } catch (error) {
+    console.warn('Employee stats fetch failed:', error.message);
+    return { success: false, data: { total: 0, actifs: 0, nouveaux: 0, enConge: 0 } };
+  }
 };
 
 // Recuperer la liste des departements

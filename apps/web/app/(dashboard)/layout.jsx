@@ -282,11 +282,11 @@ const getNavigation = (intl) => [
         name: intl.formatMessage({ id: "nav.hrConfig", defaultMessage: "Configuration RH" }),
         icon: Settings,
         subItems: [
-          { name: intl.formatMessage({ id: "nav.departments", defaultMessage: "Départements" }), href: "/hr/departments" },
-          { name: intl.formatMessage({ id: "nav.positions", defaultMessage: "Postes" }), href: "/hr/positions" },
-          { name: intl.formatMessage({ id: "nav.salaryGrades", defaultMessage: "Grades" }), href: "/hr/grades" },
-          { name: intl.formatMessage({ id: "nav.categories", defaultMessage: "Catégories" }), href: "/hr/categories" },
-          { name: intl.formatMessage({ id: "nav.hrConfigMain", defaultMessage: "Configuration" }), href: "/hr/config" },
+          { name: intl.formatMessage({ id: "nav.departments", defaultMessage: "Départements" }), href: "/hr/config/departments" },
+          { name: intl.formatMessage({ id: "nav.positions", defaultMessage: "Postes" }), href: "/hr/config/positions" },
+          { name: intl.formatMessage({ id: "nav.salaryGrades", defaultMessage: "Grades" }), href: "/hr/config/grades" },
+          { name: intl.formatMessage({ id: "nav.categories", defaultMessage: "Catégories" }), href: "/hr/config/categories" },
+          { name: intl.formatMessage({ id: "nav.contractTypes", defaultMessage: "Types de contrat" }), href: "/hr/config/contract-types" },
         ]
       },
       {
@@ -403,6 +403,13 @@ function DashboardLayoutContent({ children }) {
       window.location.href = `/login?callbackUrl=${encodeURIComponent(pathname)}`;
     }
   }, [status, pathname]);
+
+  // Synchroniser le token NextAuth avec localStorage pour http-common.js
+  useEffect(() => {
+    if (session?.accessToken) {
+      localStorage.setItem('authToken', session.accessToken);
+    }
+  }, [session?.accessToken]);
 
   // Afficher un écran de chargement pendant la vérification de session
   if (status === "loading") {

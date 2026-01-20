@@ -52,6 +52,7 @@ import {
   departmentService,
   attendanceService,
   leaveService,
+  dashboardService,
 } from '@/app/services/hr';
 
 // ANAPI Color Scheme
@@ -621,44 +622,49 @@ export default function HRDashboardPage() {
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
 
-      // Fetch data from services
-      const [employeesRes, departmentsRes] = await Promise.all([
-        employeeService.getEmployees({ limit: 100 }).catch(() => ({ data: { employees: [], total: 0 } })),
-        departmentService.getDepartments().catch(() => ({ data: [] })),
+      // Fetch dashboard data from backend
+      const [dashboardRes, departmentsRes] = await Promise.all([
+        dashboardService.getDashboardStats().catch(() => ({ data: null })),
+        departmentService.getDepartments().catch(() => ({ data: { departments: [] } })),
       ]);
 
-      const employeesList = employeesRes?.data?.employees || [];
-      const departmentsList = departmentsRes?.data || [];
+      const dashboardData = dashboardRes?.data || {};
+      const departmentsList = departmentsRes?.data?.departments || [];
 
-      // Calculate stats
-      const activeEmployees = employeesList.filter(e => e.status === 'ACTIVE').length;
-      const onLeave = employeesList.filter(e => e.status === 'ON_LEAVE').length;
-      const totalSalary = employeesList.reduce((acc, e) => acc + (e.baseSalary || 0), 0);
+      // Extract stats from dashboard response
+      const statistics = dashboardData.statistics || {};
+      const counts = dashboardData.counts || {};
+      const employeesByDepartment = dashboardData.employeesByDepartment || [];
 
       setStats({
-        totalEmployees: employeesList.length,
-        presentToday: activeEmployees,
-        onLeave: onLeave,
-        totalSalary: totalSalary,
-        departments: departmentsList.length,
+        totalEmployees: parseInt(statistics.total_employees || 0),
+        presentToday: parseInt(statistics.active_employees || 0),
+        onLeave: 0, // TODO: Fetch from leaves endpoint
+        totalSalary: parseFloat(statistics.total_salaries || 0),
+        departments: counts.departments || departmentsList.length,
       });
 
-      // Map departments with employee counts
-      const deptWithCounts = departmentsList.map(dept => ({
-        ...dept,
-        employeeCount: employeesList.filter(e => e.departmentId === dept.id).length,
-      }));
+      // Map departments with employee counts from backend
+      const deptWithCounts = departmentsList.map(dept => {
+        const deptStats = employeesByDepartment.find(d => d.departement === dept.nom);
+        return {
+          ...dept,
+          name: dept.nom,
+          employeeCount: parseInt(deptStats?.count || 0),
+        };
+      });
 
       setDepartments(deptWithCounts);
-      setEmployees(employeesList.slice(0, 5));
+      setEmployees(dashboardData.recentEmployees || []);
 
-      // Generate sample attendance data for the week
+      // Generate attendance data for the week (TODO: fetch from real API)
+      const totalActive = parseInt(statistics.active_employees || 10);
       const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven'];
       const sampleAttendance = weekDays.map(day => ({
         day,
-        present: Math.floor(Math.random() * activeEmployees) + Math.floor(activeEmployees * 0.7),
-        absent: Math.floor(Math.random() * 5),
-        late: Math.floor(Math.random() * 3),
+        present: Math.floor(totalActive * 0.85 + Math.random() * totalActive * 0.15),
+        absent: Math.floor(Math.random() * 3),
+        late: Math.floor(Math.random() * 2),
       }));
       setAttendanceData(sampleAttendance);
 

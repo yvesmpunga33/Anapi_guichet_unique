@@ -22,7 +22,38 @@ import {
   EyeOff,
   CheckCircle,
   AlertTriangle,
+  MapPin,
+  Map,
+  Users,
+  TrendingUp,
+  Building2,
+  Star,
+  Filter,
+  RefreshCw,
+  Factory,
 } from "lucide-react";
+import {
+  ReferentielProvinceList,
+  ReferentielProvinceCreate,
+  ReferentielProvinceUpdate,
+  ReferentielProvinceDelete,
+  VilleList,
+  VilleCreate,
+  VilleUpdate,
+  VilleDelete,
+  CurrencyList,
+  CurrencyCreate,
+  CurrencyUpdate,
+  CurrencyDelete,
+  CountryList,
+  CountryCreate,
+  CountryUpdate,
+  CountryDelete,
+  ReferentielSectorList,
+  ReferentielSectorCreate,
+  ReferentielSectorUpdate,
+  ReferentielSectorDelete,
+} from "@/app/services/admin/Referentiel.service";
 
 export default function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState("currencies");
@@ -82,9 +113,9 @@ export default function AdminSettingsPage() {
   const fetchCurrencies = async () => {
     setLoadingCurrencies(true);
     try {
-      const response = await fetch("/api/referentiels/currencies");
-      const data = await response.json();
-      setCurrencies(data.currencies || []);
+      const response = await CurrencyList();
+      const data = response.data;
+      setCurrencies(data.currencies || data.data || []);
     } catch (error) {
       console.error("Error fetching currencies:", error);
     } finally {
@@ -135,27 +166,16 @@ export default function AdminSettingsPage() {
 
     setSavingCurrency(true);
     try {
-      const url = editingCurrencyId
-        ? `/api/referentiels/currencies/${editingCurrencyId}`
-        : "/api/referentiels/currencies";
-      const method = editingCurrencyId ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(currencyFormData),
-      });
-
-      if (response.ok) {
-        fetchCurrencies();
-        resetCurrencyForm();
+      if (editingCurrencyId) {
+        await CurrencyUpdate(editingCurrencyId, currencyFormData);
       } else {
-        const error = await response.json();
-        alert(error.error || "Erreur lors de l'enregistrement");
+        await CurrencyCreate(currencyFormData);
       }
+      fetchCurrencies();
+      resetCurrencyForm();
     } catch (error) {
       console.error("Error saving currency:", error);
-      alert("Erreur lors de l'enregistrement");
+      alert(error.response?.data?.error || "Erreur lors de l'enregistrement");
     } finally {
       setSavingCurrency(false);
     }
@@ -164,30 +184,18 @@ export default function AdminSettingsPage() {
   const handleDeleteCurrency = async (id) => {
     if (!confirm("Voulez-vous vraiment supprimer cette devise ?")) return;
     try {
-      const response = await fetch(`/api/referentiels/currencies/${id}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        fetchCurrencies();
-      } else {
-        const error = await response.json();
-        alert(error.error || "Erreur lors de la suppression");
-      }
+      await CurrencyDelete(id);
+      fetchCurrencies();
     } catch (error) {
       console.error("Error deleting currency:", error);
+      alert(error.response?.data?.error || "Erreur lors de la suppression");
     }
   };
 
   const handleToggleCurrencyActive = async (currency) => {
     try {
-      const response = await fetch(`/api/referentiels/currencies/${currency.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: !currency.isActive }),
-      });
-      if (response.ok) {
-        fetchCurrencies();
-      }
+      await CurrencyUpdate(currency.id, { isActive: !currency.isActive });
+      fetchCurrencies();
     } catch (error) {
       console.error("Error toggling currency:", error);
     }
@@ -198,15 +206,13 @@ export default function AdminSettingsPage() {
   const fetchCountries = async () => {
     setLoadingCountries(true);
     try {
-      let url = "/api/referentiels/countries";
-      const params = new URLSearchParams();
-      if (countrySearch) params.append("search", countrySearch);
-      if (countryFilter) params.append("continent", countryFilter);
-      if (params.toString()) url += `?${params.toString()}`;
+      const params = {};
+      if (countrySearch) params.search = countrySearch;
+      if (countryFilter) params.continent = countryFilter;
 
-      const response = await fetch(url);
-      const data = await response.json();
-      setCountries(data.countries || []);
+      const response = await CountryList(params);
+      const data = response.data;
+      setCountries(data.countries || data.data || []);
       setContinents(data.continents || []);
     } catch (error) {
       console.error("Error fetching countries:", error);
@@ -269,27 +275,16 @@ export default function AdminSettingsPage() {
 
     setSavingCountry(true);
     try {
-      const url = editingCountryId
-        ? `/api/referentiels/countries/${editingCountryId}`
-        : "/api/referentiels/countries";
-      const method = editingCountryId ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(countryFormData),
-      });
-
-      if (response.ok) {
-        fetchCountries();
-        resetCountryForm();
+      if (editingCountryId) {
+        await CountryUpdate(editingCountryId, countryFormData);
       } else {
-        const error = await response.json();
-        alert(error.error || "Erreur lors de l'enregistrement");
+        await CountryCreate(countryFormData);
       }
+      fetchCountries();
+      resetCountryForm();
     } catch (error) {
       console.error("Error saving country:", error);
-      alert("Erreur lors de l'enregistrement");
+      alert(error.response?.data?.error || "Erreur lors de l'enregistrement");
     } finally {
       setSavingCountry(false);
     }
@@ -298,30 +293,18 @@ export default function AdminSettingsPage() {
   const handleDeleteCountry = async (id) => {
     if (!confirm("Voulez-vous vraiment supprimer ce pays ?")) return;
     try {
-      const response = await fetch(`/api/referentiels/countries/${id}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        fetchCountries();
-      } else {
-        const error = await response.json();
-        alert(error.error || "Erreur lors de la suppression");
-      }
+      await CountryDelete(id);
+      fetchCountries();
     } catch (error) {
       console.error("Error deleting country:", error);
+      alert(error.response?.data?.error || "Erreur lors de la suppression");
     }
   };
 
   const handleToggleCountryActive = async (country) => {
     try {
-      const response = await fetch(`/api/referentiels/countries/${country.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: !country.isActive }),
-      });
-      if (response.ok) {
-        fetchCountries();
-      }
+      await CountryUpdate(country.id, { isActive: !country.isActive });
+      fetchCountries();
     } catch (error) {
       console.error("Error toggling country:", error);
     }
@@ -414,9 +397,464 @@ export default function AdminSettingsPage() {
     }
   }, [activeTab]);
 
+  // ==================== PROVINCES ====================
+  const [provinces, setProvinces] = useState([]);
+  const [loadingProvinces, setLoadingProvinces] = useState(true);
+  const [savingProvince, setSavingProvince] = useState(false);
+  const [showProvinceForm, setShowProvinceForm] = useState(false);
+  const [editingProvinceId, setEditingProvinceId] = useState(null);
+  const [provinceSearch, setProvinceSearch] = useState("");
+  const [provincePage, setProvincePage] = useState(1);
+  const [provincePerPage] = useState(10);
+  const [provinceStats, setProvinceStats] = useState({
+    total: 0,
+    totalPopulation: 0,
+    totalArea: 0,
+    active: 0,
+  });
+  const [provinceFormData, setProvinceFormData] = useState({
+    code: "",
+    name: "",
+    capital: "",
+    population: "",
+    area: "",
+    isActive: true,
+  });
+
+  const fetchProvinces = async () => {
+    setLoadingProvinces(true);
+    try {
+      const response = await ReferentielProvinceList();
+      const data = response.data;
+      // Backend returns { success: true, data: [...] } or { provinces: [...], stats: {...} }
+      const provincesData = data.provinces || data.data || [];
+      setProvinces(Array.isArray(provincesData) ? provincesData : []);
+
+      // Calculate stats from data if not provided
+      if (data.stats) {
+        setProvinceStats(data.stats);
+      } else if (Array.isArray(provincesData)) {
+        setProvinceStats({
+          total: provincesData.length,
+          totalPopulation: provincesData.reduce((sum, p) => sum + (Number(p.population) || 0), 0),
+          totalArea: provincesData.reduce((sum, p) => sum + (Number(p.area) || 0), 0),
+          active: provincesData.filter(p => p.isActive !== false).length,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching provinces:", error);
+    } finally {
+      setLoadingProvinces(false);
+    }
+  };
+
+  const resetProvinceForm = () => {
+    setProvinceFormData({
+      code: "",
+      name: "",
+      capital: "",
+      population: "",
+      area: "",
+      isActive: true,
+    });
+    setEditingProvinceId(null);
+    setShowProvinceForm(false);
+  };
+
+  const handleEditProvince = (province) => {
+    setProvinceFormData({
+      code: province.code || "",
+      name: province.name || "",
+      capital: province.capital || "",
+      population: province.population || "",
+      area: province.area || "",
+      isActive: province.isActive !== false,
+    });
+    setEditingProvinceId(province.id);
+    setShowProvinceForm(true);
+  };
+
+  const handleSubmitProvince = async (e) => {
+    e.preventDefault();
+    if (!provinceFormData.code || !provinceFormData.name) {
+      alert("Code et nom sont requis");
+      return;
+    }
+
+    setSavingProvince(true);
+    try {
+      if (editingProvinceId) {
+        await ReferentielProvinceUpdate(editingProvinceId, provinceFormData);
+      } else {
+        await ReferentielProvinceCreate(provinceFormData);
+      }
+      fetchProvinces();
+      resetProvinceForm();
+    } catch (error) {
+      console.error("Error saving province:", error);
+      alert("Erreur lors de l'enregistrement");
+    } finally {
+      setSavingProvince(false);
+    }
+  };
+
+  const handleDeleteProvince = async (id) => {
+    if (!confirm("Voulez-vous vraiment supprimer cette province ?")) return;
+    try {
+      await ReferentielProvinceDelete(id);
+      fetchProvinces();
+    } catch (error) {
+      console.error("Error deleting province:", error);
+      alert("Erreur lors de la suppression");
+    }
+  };
+
+  const handleToggleProvinceActive = async (province) => {
+    try {
+      await ReferentielProvinceUpdate(province.id, { isActive: !province.isActive });
+      fetchProvinces();
+    } catch (error) {
+      console.error("Error toggling province:", error);
+    }
+  };
+
+  const filteredProvinces = provinces.filter((province) => {
+    const matchesSearch =
+      province.name?.toLowerCase().includes(provinceSearch.toLowerCase()) ||
+      province.code?.toLowerCase().includes(provinceSearch.toLowerCase()) ||
+      province.capital?.toLowerCase().includes(provinceSearch.toLowerCase());
+    return matchesSearch;
+  });
+
+  // Pagination for provinces
+  const provinceTotalPages = Math.ceil(filteredProvinces.length / provincePerPage);
+  const paginatedProvinces = filteredProvinces.slice(
+    (provincePage - 1) * provincePerPage,
+    provincePage * provincePerPage
+  );
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setProvincePage(1);
+  }, [provinceSearch]);
+
+  // ==================== CITIES ====================
+  const [cities, setCities] = useState([]);
+  const [loadingCities, setLoadingCities] = useState(true);
+  const [savingCity, setSavingCity] = useState(false);
+  const [showCityForm, setShowCityForm] = useState(false);
+  const [editingCityId, setEditingCityId] = useState(null);
+  const [citySearch, setCitySearch] = useState("");
+  const [cityProvinceFilter, setCityProvinceFilter] = useState("");
+  const [cityPage, setCityPage] = useState(1);
+  const [cityPerPage] = useState(10);
+  const [cityStats, setCityStats] = useState({
+    total: 0,
+    totalPopulation: 0,
+    capitals: 0,
+    active: 0,
+  });
+  const [cityFormData, setCityFormData] = useState({
+    code: "",
+    name: "",
+    provinceId: "",
+    population: "",
+    isCapital: false,
+    isActive: true,
+  });
+
+  const fetchCities = async () => {
+    setLoadingCities(true);
+    try {
+      const params = {};
+      if (cityProvinceFilter) {
+        params.provinceId = cityProvinceFilter;
+      }
+      const response = await VilleList(params);
+      const data = response.data;
+      // Backend returns { success: true, data: [...] } or { cities: [...], stats: {...} }
+      const citiesData = data.cities || data.data || [];
+      setCities(Array.isArray(citiesData) ? citiesData : []);
+
+      // Calculate stats from data if not provided
+      if (data.stats) {
+        setCityStats(data.stats);
+      } else if (Array.isArray(citiesData)) {
+        setCityStats({
+          total: citiesData.length,
+          totalPopulation: citiesData.reduce((sum, c) => sum + (Number(c.population) || 0), 0),
+          capitals: citiesData.filter(c => c.cityType === 'capital').length,
+          active: citiesData.filter(c => c.isActive !== false).length,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching cities:", error);
+    } finally {
+      setLoadingCities(false);
+    }
+  };
+
+  const resetCityForm = () => {
+    setCityFormData({
+      code: "",
+      name: "",
+      provinceId: cityProvinceFilter || "",
+      population: "",
+      isCapital: false,
+      isActive: true,
+    });
+    setEditingCityId(null);
+    setShowCityForm(false);
+  };
+
+  const handleEditCity = (city) => {
+    setCityFormData({
+      code: city.code || "",
+      name: city.name || "",
+      provinceId: city.provinceId || "",
+      population: city.population || "",
+      isCapital: city.isCapital === true,
+      isActive: city.isActive !== false,
+    });
+    setEditingCityId(city.id);
+    setShowCityForm(true);
+  };
+
+  const handleSubmitCity = async (e) => {
+    e.preventDefault();
+    if (!cityFormData.code || !cityFormData.name || !cityFormData.provinceId) {
+      alert("Code, nom et province sont requis");
+      return;
+    }
+
+    setSavingCity(true);
+    try {
+      if (editingCityId) {
+        await VilleUpdate(editingCityId, cityFormData);
+      } else {
+        await VilleCreate(cityFormData);
+      }
+      fetchCities();
+      resetCityForm();
+    } catch (error) {
+      console.error("Error saving city:", error);
+      alert("Erreur lors de l'enregistrement");
+    } finally {
+      setSavingCity(false);
+    }
+  };
+
+  const handleDeleteCity = async (id) => {
+    if (!confirm("Voulez-vous vraiment supprimer cette ville ?")) return;
+    try {
+      await VilleDelete(id);
+      fetchCities();
+    } catch (error) {
+      console.error("Error deleting city:", error);
+      alert("Erreur lors de la suppression");
+    }
+  };
+
+  const handleToggleCityActive = async (city) => {
+    try {
+      await VilleUpdate(city.id, { isActive: !city.isActive });
+      fetchCities();
+    } catch (error) {
+      console.error("Error toggling city:", error);
+    }
+  };
+
+  const filteredCities = cities.filter((city) => {
+    const matchesSearch =
+      city.name?.toLowerCase().includes(citySearch.toLowerCase()) ||
+      city.code?.toLowerCase().includes(citySearch.toLowerCase()) ||
+      city.province?.name?.toLowerCase().includes(citySearch.toLowerCase());
+    return matchesSearch;
+  });
+
+  // Pagination for cities
+  const cityTotalPages = Math.ceil(filteredCities.length / cityPerPage);
+  const paginatedCities = filteredCities.slice(
+    (cityPage - 1) * cityPerPage,
+    cityPage * cityPerPage
+  );
+
+  // Reset to page 1 when search or filter changes
+  useEffect(() => {
+    setCityPage(1);
+  }, [citySearch, cityProvinceFilter]);
+
+  const formatNumber = (num) => {
+    if (!num) return "-";
+    return new Intl.NumberFormat("fr-FR").format(num);
+  };
+
+  useEffect(() => {
+    if (activeTab === "provinces") {
+      fetchProvinces();
+    } else if (activeTab === "cities") {
+      fetchProvinces(); // For city form dropdown
+      fetchCities();
+    } else if (activeTab === "sectors") {
+      fetchSectors();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === "cities") {
+      fetchCities();
+    }
+  }, [cityProvinceFilter]);
+
+  // ==================== SECTORS ====================
+  const [sectors, setSectors] = useState([]);
+  const [loadingSectors, setLoadingSectors] = useState(true);
+  const [savingSector, setSavingSector] = useState(false);
+  const [showSectorForm, setShowSectorForm] = useState(false);
+  const [editingSectorId, setEditingSectorId] = useState(null);
+  const [sectorSearch, setSectorSearch] = useState("");
+  const [sectorPage, setSectorPage] = useState(1);
+  const [sectorPerPage] = useState(10);
+  const [sectorStats, setSectorStats] = useState({
+    total: 0,
+    active: 0,
+  });
+  const [sectorFormData, setSectorFormData] = useState({
+    code: "",
+    name: "",
+    nameFr: "",
+    description: "",
+    color: "blue",
+    isActive: true,
+  });
+
+  const sectorColors = [
+    { value: "blue", label: "Bleu" },
+    { value: "green", label: "Vert" },
+    { value: "purple", label: "Violet" },
+    { value: "orange", label: "Orange" },
+    { value: "red", label: "Rouge" },
+    { value: "yellow", label: "Jaune" },
+    { value: "pink", label: "Rose" },
+    { value: "gray", label: "Gris" },
+  ];
+
+  const fetchSectors = async () => {
+    setLoadingSectors(true);
+    try {
+      const response = await ReferentielSectorList();
+      const data = response.data;
+      const sectorsData = data.data?.sectors || data.sectors || data.data || [];
+      setSectors(Array.isArray(sectorsData) ? sectorsData : []);
+
+      // Calculate stats
+      if (Array.isArray(sectorsData)) {
+        setSectorStats({
+          total: sectorsData.length,
+          active: sectorsData.filter(s => s.isActive !== false).length,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching sectors:", error);
+    } finally {
+      setLoadingSectors(false);
+    }
+  };
+
+  const resetSectorForm = () => {
+    setSectorFormData({
+      code: "",
+      name: "",
+      nameFr: "",
+      description: "",
+      color: "blue",
+      isActive: true,
+    });
+    setEditingSectorId(null);
+    setShowSectorForm(false);
+  };
+
+  const handleEditSector = (sector) => {
+    setSectorFormData({
+      code: sector.code || "",
+      name: sector.name || "",
+      nameFr: sector.nameFr || "",
+      description: sector.description || "",
+      color: sector.color || "blue",
+      isActive: sector.isActive !== false,
+    });
+    setEditingSectorId(sector.id);
+    setShowSectorForm(true);
+  };
+
+  const handleSubmitSector = async (e) => {
+    e.preventDefault();
+    if (!sectorFormData.code || !sectorFormData.name) {
+      alert("Code et nom sont requis");
+      return;
+    }
+
+    setSavingSector(true);
+    try {
+      if (editingSectorId) {
+        await ReferentielSectorUpdate(editingSectorId, sectorFormData);
+      } else {
+        await ReferentielSectorCreate(sectorFormData);
+      }
+      fetchSectors();
+      resetSectorForm();
+    } catch (error) {
+      console.error("Error saving sector:", error);
+      alert(error.response?.data?.error || "Erreur lors de l'enregistrement");
+    } finally {
+      setSavingSector(false);
+    }
+  };
+
+  const handleDeleteSector = async (id) => {
+    if (!confirm("Voulez-vous vraiment supprimer ce secteur ?")) return;
+    try {
+      await ReferentielSectorDelete(id);
+      fetchSectors();
+    } catch (error) {
+      console.error("Error deleting sector:", error);
+      alert(error.response?.data?.error || "Erreur lors de la suppression");
+    }
+  };
+
+  const handleToggleSectorActive = async (sector) => {
+    try {
+      await ReferentielSectorUpdate(sector.id, { isActive: !sector.isActive });
+      fetchSectors();
+    } catch (error) {
+      console.error("Error toggling sector:", error);
+    }
+  };
+
+  const filteredSectors = sectors.filter((sector) => {
+    const matchesSearch =
+      sector.name?.toLowerCase().includes(sectorSearch.toLowerCase()) ||
+      sector.nameFr?.toLowerCase().includes(sectorSearch.toLowerCase()) ||
+      sector.code?.toLowerCase().includes(sectorSearch.toLowerCase());
+    return matchesSearch;
+  });
+
+  const sectorTotalPages = Math.ceil(filteredSectors.length / sectorPerPage);
+  const paginatedSectors = filteredSectors.slice(
+    (sectorPage - 1) * sectorPerPage,
+    sectorPage * sectorPerPage
+  );
+
+  useEffect(() => {
+    setSectorPage(1);
+  }, [sectorSearch]);
+
   const tabs = [
     { id: "currencies", label: "Devises", icon: DollarSign },
     { id: "countries", label: "Pays", icon: Globe },
+    { id: "provinces", label: "Provinces", icon: Map },
+    { id: "cities", label: "Villes", icon: Building2 },
+    { id: "sectors", label: "Secteurs", icon: Factory },
     { id: "email", label: "Email / SMTP", icon: Mail },
     { id: "document-types", label: "Types de documents", icon: FileText },
     { id: "general", label: "General", icon: Building },
@@ -1157,6 +1595,1193 @@ export default function AdminSettingsPage() {
           {!loadingCountries && countries.length > 0 && (
             <div className="text-sm text-gray-500 text-right">
               {countries.length} pays affiche(s)
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "provinces" && (
+        <div className="space-y-4">
+          {/* Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400">Provinces</p>
+                  <p className="text-2xl font-bold text-white mt-1">{provinceStats.total}</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                  <Map className="w-6 h-6 text-blue-400" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400">Population</p>
+                  <p className="text-2xl font-bold text-white mt-1">
+                    {formatNumber(provinceStats.totalPopulation)}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
+                  <Users className="w-6 h-6 text-green-400" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400">Superficie</p>
+                  <p className="text-2xl font-bold text-white mt-1">
+                    {formatNumber(Math.round(provinceStats.totalArea || 0))} km2
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                  <TrendingUp className="w-6 h-6 text-purple-400" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400">Actives</p>
+                  <p className="text-2xl font-bold text-white mt-1">{provinceStats.active}</p>
+                </div>
+                <div className="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-yellow-400" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <h2 className="text-lg font-semibold text-white">
+              Gestion des provinces
+            </h2>
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={provinceSearch}
+                  onChange={(e) => setProvinceSearch(e.target.value)}
+                  placeholder="Rechercher..."
+                  className="pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 w-full sm:w-48"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  resetProvinceForm();
+                  setShowProvinceForm(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Nouvelle province
+              </button>
+            </div>
+          </div>
+
+          {/* Form */}
+          {showProvinceForm && (
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+              <h3 className="text-lg font-semibold text-white mb-4">
+                {editingProvinceId ? "Modifier la province" : "Nouvelle province"}
+              </h3>
+              <form onSubmit={handleSubmitProvince} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Code *
+                    </label>
+                    <input
+                      type="text"
+                      value={provinceFormData.code}
+                      onChange={(e) =>
+                        setProvinceFormData((prev) => ({
+                          ...prev,
+                          code: e.target.value.toUpperCase(),
+                        }))
+                      }
+                      maxLength={10}
+                      placeholder="KIN"
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Nom *
+                    </label>
+                    <input
+                      type="text"
+                      value={provinceFormData.name}
+                      onChange={(e) =>
+                        setProvinceFormData((prev) => ({ ...prev, name: e.target.value }))
+                      }
+                      placeholder="Kinshasa"
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Capitale
+                    </label>
+                    <input
+                      type="text"
+                      value={provinceFormData.capital}
+                      onChange={(e) =>
+                        setProvinceFormData((prev) => ({ ...prev, capital: e.target.value }))
+                      }
+                      placeholder="Kinshasa"
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Population
+                    </label>
+                    <input
+                      type="number"
+                      value={provinceFormData.population}
+                      onChange={(e) =>
+                        setProvinceFormData((prev) => ({
+                          ...prev,
+                          population: e.target.value,
+                        }))
+                      }
+                      placeholder="17000000"
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Superficie (km2)
+                    </label>
+                    <input
+                      type="number"
+                      value={provinceFormData.area}
+                      onChange={(e) =>
+                        setProvinceFormData((prev) => ({
+                          ...prev,
+                          area: e.target.value,
+                        }))
+                      }
+                      placeholder="9965"
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex items-center pt-8">
+                    <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={provinceFormData.isActive}
+                        onChange={(e) =>
+                          setProvinceFormData((prev) => ({
+                            ...prev,
+                            isActive: e.target.checked,
+                          }))
+                        }
+                        className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
+                      />
+                      Active
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={resetProvinceForm}
+                    className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingProvince}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors"
+                  >
+                    {savingProvince ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    {editingProvinceId ? "Mettre a jour" : "Enregistrer"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Table */}
+          <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+            {loadingProvinces ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+              </div>
+            ) : filteredProvinces.length === 0 ? (
+              <div className="text-center py-12">
+                <Map className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-400">
+                  Aucune province configuree
+                </h3>
+                <p className="text-gray-500 mt-1">
+                  Ajoutez des provinces pour commencer
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-700/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase w-12">
+                        #
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        Province
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        Capitale
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        Population
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        Superficie
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        Statut
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-700">
+                    {paginatedProvinces.map((province, index) => (
+                      <tr key={province.id} className="hover:bg-slate-700/30">
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-medium text-gray-400">{(provincePage - 1) * provincePerPage + index + 1}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                              <MapPin className="w-5 h-5 text-blue-400" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-white">
+                                {province.name}
+                              </p>
+                              <p className="text-xs text-gray-500">{province.code}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-gray-400">
+                            {province.capital || "-"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-gray-400">
+                            {formatNumber(province.population)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-gray-400">
+                            {province.area ? `${formatNumber(Math.round(province.area))} km2` : "-"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => handleToggleProvinceActive(province)}
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              province.isActive
+                                ? "bg-green-500/20 text-green-400"
+                                : "bg-gray-500/20 text-gray-400"
+                            }`}
+                          >
+                            {province.isActive ? "Active" : "Inactive"}
+                          </button>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleEditProvince(province)}
+                              className="p-2 hover:bg-slate-600 rounded-lg transition-colors"
+                              title="Modifier"
+                            >
+                              <Edit className="w-4 h-4 text-gray-400" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteProvince(province.id)}
+                              className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-400" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Pagination Controls */}
+          {!loadingProvinces && filteredProvinces.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-500">
+                Affichage {(provincePage - 1) * provincePerPage + 1} - {Math.min(provincePage * provincePerPage, filteredProvinces.length)} sur {filteredProvinces.length} province(s)
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setProvincePage((p) => Math.max(1, p - 1))}
+                  disabled={provincePage === 1}
+                  className="px-3 py-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
+                >
+                  Precedent
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, provinceTotalPages) }, (_, i) => {
+                    let pageNum;
+                    if (provinceTotalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (provincePage <= 3) {
+                      pageNum = i + 1;
+                    } else if (provincePage >= provinceTotalPages - 2) {
+                      pageNum = provinceTotalPages - 4 + i;
+                    } else {
+                      pageNum = provincePage - 2 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setProvincePage(pageNum)}
+                        className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                          provincePage === pageNum
+                            ? "bg-blue-600 text-white"
+                            : "bg-slate-700 hover:bg-slate-600 text-gray-300"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  onClick={() => setProvincePage((p) => Math.min(provinceTotalPages, p + 1))}
+                  disabled={provincePage === provinceTotalPages}
+                  className="px-3 py-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
+                >
+                  Suivant
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "cities" && (
+        <div className="space-y-4">
+          {/* Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400">Villes</p>
+                  <p className="text-2xl font-bold text-white mt-1">{cityStats.total}</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-blue-400" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400">Population</p>
+                  <p className="text-2xl font-bold text-white mt-1">
+                    {formatNumber(cityStats.totalPopulation)}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
+                  <Users className="w-6 h-6 text-green-400" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400">Capitales</p>
+                  <p className="text-2xl font-bold text-white mt-1">{cityStats.capitals}</p>
+                </div>
+                <div className="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center">
+                  <Star className="w-6 h-6 text-yellow-400" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400">Actives</p>
+                  <p className="text-2xl font-bold text-white mt-1">{cityStats.active}</p>
+                </div>
+                <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-purple-400" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <h2 className="text-lg font-semibold text-white">
+              Gestion des villes
+            </h2>
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={citySearch}
+                  onChange={(e) => setCitySearch(e.target.value)}
+                  placeholder="Rechercher..."
+                  className="pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 w-full sm:w-48"
+                />
+              </div>
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <select
+                  value={cityProvinceFilter}
+                  onChange={(e) => setCityProvinceFilter(e.target.value)}
+                  className="pl-10 pr-8 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 appearance-none min-w-[180px]"
+                >
+                  <option value="">Toutes les provinces</option>
+                  {provinces.map((province) => (
+                    <option key={province.id} value={province.id}>
+                      {province.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={() => {
+                  resetCityForm();
+                  setShowCityForm(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Nouvelle ville
+              </button>
+            </div>
+          </div>
+
+          {/* Form */}
+          {showCityForm && (
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+              <h3 className="text-lg font-semibold text-white mb-4">
+                {editingCityId ? "Modifier la ville" : "Nouvelle ville"}
+              </h3>
+              <form onSubmit={handleSubmitCity} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Code *
+                    </label>
+                    <input
+                      type="text"
+                      value={cityFormData.code}
+                      onChange={(e) =>
+                        setCityFormData((prev) => ({
+                          ...prev,
+                          code: e.target.value.toUpperCase(),
+                        }))
+                      }
+                      maxLength={20}
+                      placeholder="KIN-001"
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Nom *
+                    </label>
+                    <input
+                      type="text"
+                      value={cityFormData.name}
+                      onChange={(e) =>
+                        setCityFormData((prev) => ({ ...prev, name: e.target.value }))
+                      }
+                      placeholder="Kinshasa"
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Province *
+                    </label>
+                    <select
+                      value={cityFormData.provinceId}
+                      onChange={(e) =>
+                        setCityFormData((prev) => ({ ...prev, provinceId: e.target.value }))
+                      }
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                      required
+                    >
+                      <option value="">Selectionner une province</option>
+                      {provinces.map((province) => (
+                        <option key={province.id} value={province.id}>
+                          {province.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Population
+                    </label>
+                    <input
+                      type="number"
+                      value={cityFormData.population}
+                      onChange={(e) =>
+                        setCityFormData((prev) => ({
+                          ...prev,
+                          population: e.target.value,
+                        }))
+                      }
+                      placeholder="500000"
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex items-center gap-6 pt-8">
+                    <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={cityFormData.isCapital}
+                        onChange={(e) =>
+                          setCityFormData((prev) => ({
+                            ...prev,
+                            isCapital: e.target.checked,
+                          }))
+                        }
+                        className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
+                      />
+                      Capitale de province
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={cityFormData.isActive}
+                        onChange={(e) =>
+                          setCityFormData((prev) => ({
+                            ...prev,
+                            isActive: e.target.checked,
+                          }))
+                        }
+                        className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
+                      />
+                      Active
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={resetCityForm}
+                    className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingCity}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors"
+                  >
+                    {savingCity ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    {editingCityId ? "Mettre a jour" : "Enregistrer"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Table */}
+          <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+            {loadingCities ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+              </div>
+            ) : filteredCities.length === 0 ? (
+              <div className="text-center py-12">
+                <Building2 className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-400">
+                  Aucune ville configuree
+                </h3>
+                <p className="text-gray-500 mt-1">
+                  Ajoutez des villes pour commencer
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-700/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase w-12">
+                        #
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        Ville
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        Province
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        Population
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        Type
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        Statut
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-700">
+                    {paginatedCities.map((city, index) => (
+                      <tr key={city.id} className="hover:bg-slate-700/30">
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-medium text-gray-400">{(cityPage - 1) * cityPerPage + index + 1}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                              city.cityType === 'capital'
+                                ? 'bg-yellow-500/20'
+                                : 'bg-blue-500/20'
+                            }`}>
+                              {city.cityType === 'capital' ? (
+                                <Star className="w-5 h-5 text-yellow-400" />
+                              ) : (
+                                <Building2 className="w-5 h-5 text-blue-400" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-white">
+                                {city.name}
+                              </p>
+                              <p className="text-xs text-gray-500">{city.code}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-gray-500" />
+                            <span className="text-sm text-gray-400">
+                              {city.province?.name || "-"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-gray-400">
+                            {formatNumber(city.population)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {city.cityType === 'capital' ? (
+                            <span className="px-2 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400">
+                              Capitale
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 text-xs rounded-full bg-gray-500/20 text-gray-400">
+                              Ville
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => handleToggleCityActive(city)}
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              city.isActive
+                                ? "bg-green-500/20 text-green-400"
+                                : "bg-gray-500/20 text-gray-400"
+                            }`}
+                          >
+                            {city.isActive ? "Active" : "Inactive"}
+                          </button>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleEditCity(city)}
+                              className="p-2 hover:bg-slate-600 rounded-lg transition-colors"
+                              title="Modifier"
+                            >
+                              <Edit className="w-4 h-4 text-gray-400" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCity(city.id)}
+                              className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-400" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Pagination Controls */}
+          {!loadingCities && filteredCities.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-500">
+                Affichage {(cityPage - 1) * cityPerPage + 1} - {Math.min(cityPage * cityPerPage, filteredCities.length)} sur {filteredCities.length} ville(s)
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCityPage((p) => Math.max(1, p - 1))}
+                  disabled={cityPage === 1}
+                  className="px-3 py-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
+                >
+                  Precedent
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, cityTotalPages) }, (_, i) => {
+                    let pageNum;
+                    if (cityTotalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (cityPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (cityPage >= cityTotalPages - 2) {
+                      pageNum = cityTotalPages - 4 + i;
+                    } else {
+                      pageNum = cityPage - 2 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCityPage(pageNum)}
+                        className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                          cityPage === pageNum
+                            ? "bg-blue-600 text-white"
+                            : "bg-slate-700 hover:bg-slate-600 text-gray-300"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  onClick={() => setCityPage((p) => Math.min(cityTotalPages, p + 1))}
+                  disabled={cityPage === cityTotalPages}
+                  className="px-3 py-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
+                >
+                  Suivant
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "sectors" && (
+        <div className="space-y-4">
+          {/* Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400">Secteurs</p>
+                  <p className="text-2xl font-bold text-white mt-1">{sectorStats.total}</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                  <Factory className="w-6 h-6 text-blue-400" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400">Actifs</p>
+                  <p className="text-2xl font-bold text-white mt-1">{sectorStats.active}</p>
+                </div>
+                <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
+                  <Check className="w-6 h-6 text-green-400" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Search and Add */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Rechercher un secteur..."
+                value={sectorSearch}
+                onChange={(e) => setSectorSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <button
+              onClick={() => setShowSectorForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Ajouter un secteur
+            </button>
+          </div>
+
+          {/* Form */}
+          {showSectorForm && (
+            <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">
+                  {editingSectorId ? "Modifier le secteur" : "Nouveau secteur"}
+                </h3>
+                <button
+                  onClick={resetSectorForm}
+                  className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmitSector} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Code <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={sectorFormData.code}
+                      onChange={(e) =>
+                        setSectorFormData((prev) => ({
+                          ...prev,
+                          code: e.target.value.toUpperCase(),
+                        }))
+                      }
+                      placeholder="AGRI"
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Nom <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={sectorFormData.name}
+                      onChange={(e) =>
+                        setSectorFormData((prev) => ({
+                          ...prev,
+                          name: e.target.value,
+                        }))
+                      }
+                      placeholder="Agriculture"
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Nom (Francais)
+                    </label>
+                    <input
+                      type="text"
+                      value={sectorFormData.nameFr}
+                      onChange={(e) =>
+                        setSectorFormData((prev) => ({
+                          ...prev,
+                          nameFr: e.target.value,
+                        }))
+                      }
+                      placeholder="Agriculture"
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      Couleur
+                    </label>
+                    <select
+                      value={sectorFormData.color}
+                      onChange={(e) =>
+                        setSectorFormData((prev) => ({
+                          ...prev,
+                          color: e.target.value,
+                        }))
+                      }
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                    >
+                      {sectorColors.map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={sectorFormData.description}
+                    onChange={(e) =>
+                      setSectorFormData((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
+                    placeholder="Description du secteur..."
+                    rows={3}
+                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sectorFormData.isActive}
+                      onChange={(e) =>
+                        setSectorFormData((prev) => ({
+                          ...prev,
+                          isActive: e.target.checked,
+                        }))
+                      }
+                      className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
+                    />
+                    Actif
+                  </label>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={resetSectorForm}
+                    className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingSector}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors"
+                  >
+                    {savingSector ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    {editingSectorId ? "Mettre a jour" : "Enregistrer"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Table */}
+          <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+            {loadingSectors ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+              </div>
+            ) : filteredSectors.length === 0 ? (
+              <div className="text-center py-12">
+                <Factory className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-400">
+                  Aucun secteur configure
+                </h3>
+                <p className="text-gray-500 mt-1">
+                  Ajoutez des secteurs pour commencer
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-700/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase w-12">
+                        #
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        Secteur
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        Code
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        Description
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">
+                        Statut
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-700">
+                    {paginatedSectors.map((sector, index) => (
+                      <tr key={sector.id} className="hover:bg-slate-700/30">
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-medium text-gray-400">{(sectorPage - 1) * sectorPerPage + index + 1}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 bg-${sector.color || 'blue'}-500/20 rounded-lg flex items-center justify-center`}>
+                              <Factory className={`w-5 h-5 text-${sector.color || 'blue'}-400`} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-white">
+                                {sector.nameFr || sector.name}
+                              </p>
+                              {sector.nameFr && sector.name !== sector.nameFr && (
+                                <p className="text-xs text-gray-500">{sector.name}</p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-1 text-xs rounded bg-slate-700 text-gray-300">
+                            {sector.code}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-gray-400 line-clamp-2">
+                            {sector.description || "-"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => handleToggleSectorActive(sector)}
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              sector.isActive
+                                ? "bg-green-500/20 text-green-400"
+                                : "bg-gray-500/20 text-gray-400"
+                            }`}
+                          >
+                            {sector.isActive ? "Actif" : "Inactif"}
+                          </button>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleEditSector(sector)}
+                              className="p-2 hover:bg-slate-600 rounded-lg transition-colors"
+                              title="Modifier"
+                            >
+                              <Edit className="w-4 h-4 text-gray-400" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSector(sector.id)}
+                              className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-400" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Pagination Controls */}
+          {!loadingSectors && filteredSectors.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-500">
+                Affichage {(sectorPage - 1) * sectorPerPage + 1} - {Math.min(sectorPage * sectorPerPage, filteredSectors.length)} sur {filteredSectors.length} secteur(s)
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSectorPage((p) => Math.max(1, p - 1))}
+                  disabled={sectorPage === 1}
+                  className="px-3 py-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
+                >
+                  Precedent
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, sectorTotalPages) }, (_, i) => {
+                    let pageNum;
+                    if (sectorTotalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (sectorPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (sectorPage >= sectorTotalPages - 2) {
+                      pageNum = sectorTotalPages - 4 + i;
+                    } else {
+                      pageNum = sectorPage - 2 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setSectorPage(pageNum)}
+                        className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                          sectorPage === pageNum
+                            ? "bg-blue-600 text-white"
+                            : "bg-slate-700 hover:bg-slate-600 text-gray-300"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  onClick={() => setSectorPage((p) => Math.min(sectorTotalPages, p + 1))}
+                  disabled={sectorPage === sectorTotalPages}
+                  className="px-3 py-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
+                >
+                  Suivant
+                </button>
+              </div>
             </div>
           )}
         </div>

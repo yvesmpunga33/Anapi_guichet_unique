@@ -2,20 +2,30 @@
 
 import http from '../../http-common';
 
-const ENDPOINT = '/hr-config';
+const ENDPOINT = '/hr-payroll/hr-config';
 
 // Recuperer toutes les configurations groupees par type
 export const getAllConfigs = async (includeInactive = false) => {
-  const params = includeInactive ? '?includeInactive=true' : '';
-  const response = await http.get(`${ENDPOINT}${params}`);
-  return response.data;
+  try {
+    const params = includeInactive ? '?includeInactive=true' : '';
+    const response = await http.get(`${ENDPOINT}${params}`);
+    return response.data;
+  } catch (error) {
+    console.warn('HR Config fetch failed:', error.message);
+    return { success: false, data: {} };
+  }
 };
 
 // Recuperer les configurations par type
 export const getConfigsByType = async (type, includeInactive = false) => {
-  const params = includeInactive ? '?includeInactive=true' : '';
-  const response = await http.get(`${ENDPOINT}/type/${type}${params}`);
-  return response.data;
+  try {
+    const params = includeInactive ? '?includeInactive=true' : '';
+    const response = await http.get(`${ENDPOINT}/type/${type}${params}`);
+    return response.data;
+  } catch (error) {
+    console.warn(`HR Config type ${type} fetch failed:`, error.message);
+    return { success: false, data: [] };
+  }
 };
 
 // Recuperer une configuration par ID

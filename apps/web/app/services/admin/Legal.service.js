@@ -160,7 +160,7 @@ export const ContractTypeDelete = (id) => {
 
 // ============ STATS & ANALYTICS ============
 export const LegalStats = () => {
-  return http.get('/legal/stats');
+  return http.get('/legal/stats/dashboard');
 };
 
 export const LegalAnalytics = (params = {}) => {

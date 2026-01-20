@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useIntl } from "react-intl";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { ReferentielMinistryList } from "@/app/services/admin/Referentiel.service";
 import {
   Landmark,
   ChevronDown,
@@ -33,8 +34,8 @@ export default function MinistriesListPage() {
   const fetchMinistries = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/referentiels/ministries?limit=100`);
-      const result = await response.json();
+      const response = await ReferentielMinistryList({ limit: 100 });
+      const result = response.data;
 
       const data = result.success ? result.data : (result.ministries || []);
       const activeMinistries = data.filter(m => m.isActive !== false);

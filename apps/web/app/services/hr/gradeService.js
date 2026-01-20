@@ -2,16 +2,21 @@
 
 import http from '../../http-common';
 
-const ENDPOINT = '/hr/grades';
+const ENDPOINT = '/hr-payroll/grades';
 
 // Recuperer tous les grades
 export const getGrades = async (params = {}) => {
-  const cleanParams = Object.fromEntries(
-    Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
-  );
-  const queryString = new URLSearchParams(cleanParams).toString();
-  const response = await http.get(`${ENDPOINT}${queryString ? `?${queryString}` : ''}`);
-  return response.data;
+  try {
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
+    );
+    const queryString = new URLSearchParams(cleanParams).toString();
+    const response = await http.get(`${ENDPOINT}${queryString ? `?${queryString}` : ''}`);
+    return response.data;
+  } catch (error) {
+    console.warn('Grades fetch failed:', error.message);
+    return { success: false, data: { grades: [] } };
+  }
 };
 
 // Recuperer un grade par ID

@@ -6,7 +6,7 @@ import http from '../../http-common';
 // TYPES DE CONGES
 // ============================================
 
-const LEAVE_TYPES_ENDPOINT = '/leave-types';
+const LEAVE_TYPES_ENDPOINT = '/hr-payroll/leave-types';
 
 // Recuperer tous les types de conges
 export const getLeaveTypes = async (params = {}) => {
@@ -70,7 +70,7 @@ export const initDefaultLeaveTypes = async () => {
 // DEMANDES DE CONGES
 // ============================================
 
-const LEAVES_ENDPOINT = '/leaves';
+const LEAVES_ENDPOINT = '/hr-payroll/leaves';
 
 // Recuperer toutes les demandes de conges
 export const getLeaves = async (params = {}) => {

@@ -1,6 +1,10 @@
 // HR Services - Index
 // Export all HR-related services
 
+// Dashboard
+export { default as dashboardService } from './dashboardService';
+export * from './dashboardService';
+
 // Employee Management
 export { default as employeeService } from './employeeService';
 export * from './employeeService';
@@ -54,21 +58,45 @@ export * from './categoryService';
 export { default as hrconfigService } from './hrconfigService';
 export * from './hrconfigService';
 
+// Contract Types
+export { default as contractTypeService } from './contractTypeService';
+export * from './contractTypeService';
+
 // Default export with all services grouped
-export default {
-  employeeService: require('./employeeService').default,
-  employeeDocumentService: require('./employeeDocumentService').default,
-  attendanceService: require('./attendanceService').default,
-  attendanceTypeService: require('./attendanceTypeService').default,
-  leaveService: require('./leaveService').default,
-  payrollService: require('./payrollService').default,
-  bonusService: require('./bonusService').default,
-  bonusTypeService: require('./bonusTypeService').default,
-  deductionService: require('./deductionService').default,
-  deductionTypeService: require('./deductionTypeService').default,
-  departmentService: require('./departmentService').default,
-  positionService: require('./positionService').default,
-  gradeService: require('./gradeService').default,
-  categoryService: require('./categoryService').default,
-  hrconfigService: require('./hrconfigService').default,
+import _dashboardService from './dashboardService';
+import _employeeService from './employeeService';
+import _employeeDocumentService from './employeeDocumentService';
+import _attendanceService from './attendanceService';
+import _attendanceTypeService from './attendanceTypeService';
+import _leaveService from './leaveService';
+import _payrollService from './payrollService';
+import _bonusService from './bonusService';
+import _bonusTypeService from './bonusTypeService';
+import _deductionService from './deductionService';
+import _deductionTypeService from './deductionTypeService';
+import _departmentService from './departmentService';
+import _positionService from './positionService';
+import _gradeService from './gradeService';
+import _categoryService from './categoryService';
+import _hrconfigService from './hrconfigService';
+import _contractTypeService from './contractTypeService';
+
+export const hrServices = {
+  dashboardService: _dashboardService,
+  employeeService: _employeeService,
+  employeeDocumentService: _employeeDocumentService,
+  attendanceService: _attendanceService,
+  attendanceTypeService: _attendanceTypeService,
+  leaveService: _leaveService,
+  payrollService: _payrollService,
+  bonusService: _bonusService,
+  bonusTypeService: _bonusTypeService,
+  deductionService: _deductionService,
+  deductionTypeService: _deductionTypeService,
+  departmentService: _departmentService,
+  positionService: _positionService,
+  gradeService: _gradeService,
+  categoryService: _categoryService,
+  hrconfigService: _hrconfigService,
+  contractTypeService: _contractTypeService,
 };

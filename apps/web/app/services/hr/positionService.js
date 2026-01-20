@@ -2,16 +2,21 @@
 
 import http from '../../http-common';
 
-const ENDPOINT = '/hr/positions';
+const ENDPOINT = '/hr-payroll/positions';
 
 // Recuperer tous les postes
 export const getPositions = async (params = {}) => {
-  const cleanParams = Object.fromEntries(
-    Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
-  );
-  const queryString = new URLSearchParams(cleanParams).toString();
-  const response = await http.get(`${ENDPOINT}${queryString ? `?${queryString}` : ''}`);
-  return response.data;
+  try {
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
+    );
+    const queryString = new URLSearchParams(cleanParams).toString();
+    const response = await http.get(`${ENDPOINT}${queryString ? `?${queryString}` : ''}`);
+    return response.data;
+  } catch (error) {
+    console.warn('Positions fetch failed:', error.message);
+    return { success: false, data: { positions: [] } };
+  }
 };
 
 // Recuperer un poste par ID

@@ -2,17 +2,22 @@
 
 import http from '../../http-common';
 
-const ENDPOINT = '/hr/departments';
+const ENDPOINT = '/hr-payroll/departments';
 
 // Recuperer tous les departements
 export const getDepartments = async (params = {}) => {
-  // Filtrer les valeurs undefined et null avant de creer les parametres
-  const cleanParams = Object.fromEntries(
-    Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
-  );
-  const queryString = new URLSearchParams(cleanParams).toString();
-  const response = await http.get(`${ENDPOINT}${queryString ? `?${queryString}` : ''}`);
-  return response.data;
+  try {
+    // Filtrer les valeurs undefined et null avant de creer les parametres
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
+    );
+    const queryString = new URLSearchParams(cleanParams).toString();
+    const response = await http.get(`${ENDPOINT}${queryString ? `?${queryString}` : ''}`);
+    return response.data;
+  } catch (error) {
+    console.warn('Departments fetch failed:', error.message);
+    return { success: false, data: { departments: [] } };
+  }
 };
 
 // Recuperer un departement par ID

@@ -329,15 +329,24 @@ export default function DossiersPage() {
       const response = await DossierList(params);
       const result = response.data;
 
-      setDossiers(result.data || []);
-      setStats(result.stats || stats);
+      // API returns: { success: true, data: { dossiers: [...], pagination: {...} } }
+      const dossiersData = Array.isArray(result?.data?.dossiers)
+        ? result.data.dossiers
+        : Array.isArray(result?.dossiers)
+          ? result.dossiers
+          : [];
+
+      setDossiers(dossiersData);
+      setStats(result.data?.stats || result.stats || stats);
       setPagination(prev => ({
         ...prev,
-        total: result.pagination?.total || 0,
-        totalPages: result.pagination?.totalPages || 0,
+        total: result.data?.pagination?.total || result.pagination?.total || 0,
+        totalPages: result.data?.pagination?.totalPages || result.pagination?.totalPages || 0,
       }));
     } catch (error) {
       console.error('Error fetching dossiers:', error);
+      // Set empty array on error to prevent map error
+      setDossiers([]);
     } finally {
       setLoading(false);
     }
@@ -644,7 +653,7 @@ export default function DossiersPage() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {dossiers.map((dossier) => {
+            {Array.isArray(dossiers) && dossiers.map((dossier) => {
               const status = getStatusConfig(dossier.status);
               const StatusIcon = status.icon;
               const typeInfo = getDossierTypeInfo(dossier.dossierType);

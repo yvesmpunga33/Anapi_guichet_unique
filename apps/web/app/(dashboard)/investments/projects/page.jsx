@@ -104,15 +104,29 @@ export default function ProjectsPage() {
       }
 
       const response = await ProjectList(params);
-      const data = response.data;
+      // API returns { success: true, data: { investments, pagination } }
+      const apiData = response.data?.data || response.data;
+      const investments = apiData?.investments || apiData?.projects || [];
 
-      setProjects(data.projects || []);
-      setStats(data.stats || { total: 0, inProgress: 0, totalAmount: 0, totalJobs: 0 });
-      setSectors(data.sectors || []);
+      setProjects(investments);
+
+      // Calculate stats from investments
+      const calculatedStats = {
+        total: apiData?.pagination?.total || investments.length,
+        inProgress: investments.filter(p => p.status === 'IN_PROGRESS').length,
+        totalAmount: investments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
+        totalJobs: investments.reduce((sum, p) => sum + (parseInt(p.jobsCreated) || 0), 0),
+      };
+      setStats(apiData?.stats || calculatedStats);
+
+      // Extract unique sectors from investments
+      const uniqueSectors = [...new Set(investments.map(p => p.sector?.name).filter(Boolean))];
+      setSectors(apiData?.sectors || uniqueSectors);
+
       setPagination(prev => ({
         ...prev,
-        total: data.pagination?.total || 0,
-        totalPages: data.pagination?.totalPages || 0,
+        total: apiData?.pagination?.total || investments.length,
+        totalPages: apiData?.pagination?.totalPages || Math.ceil(investments.length / prev.limit),
       }));
     } catch (err) {
       console.error('Error fetching projects:', err);
@@ -322,7 +336,7 @@ export default function ProjectsPage() {
           {projects.map((project) => {
             const status = statusConfig[project.status] || statusConfig.DRAFT;
             const StatusIcon = status.icon;
-            const SectorIcon = sectorIcons[project.sector] || Factory;
+            const SectorIcon = sectorIcons[project.sector?.name] || Factory;
 
             return (
               <div
@@ -410,7 +424,7 @@ export default function ProjectsPage() {
                     <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                       <div className="flex items-center gap-1">
                         <MapPin className="w-3.5 h-3.5" />
-                        <span>{project.province || '-'}</span>
+                        <span>{project.province?.name || '-'}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Calendar className="w-3.5 h-3.5" />
@@ -464,8 +478,8 @@ export default function ProjectsPage() {
                         {project.investor?.name || intl.formatMessage({ id: "projects.notAssigned", defaultMessage: "Non assigné" })}
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm text-gray-600 dark:text-gray-300">{project.sector || '-'}</span>
-                        <p className="text-xs text-gray-400">{project.province || '-'}</p>
+                        <span className="text-sm text-gray-600 dark:text-gray-300">{project.sector?.name || '-'}</span>
+                        <p className="text-xs text-gray-400">{project.province?.name || '-'}</p>
                       </td>
                       <td className="px-6 py-4">
                         <p className="font-semibold text-gray-900 dark:text-white">{formatAmount(project.amount, project.currency)}</p>

@@ -2,13 +2,21 @@
 
 import http from '../../http-common';
 
-const ENDPOINT = '/hr/categories';
+const ENDPOINT = '/hr-payroll/categories';
 
 // Recuperer toutes les categories
 export const getCategories = async (params = {}) => {
-  const queryString = new URLSearchParams(params).toString();
-  const response = await http.get(`${ENDPOINT}${queryString ? `?${queryString}` : ''}`);
-  return response.data;
+  try {
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
+    );
+    const queryString = new URLSearchParams(cleanParams).toString();
+    const response = await http.get(`${ENDPOINT}${queryString ? `?${queryString}` : ''}`);
+    return response.data;
+  } catch (error) {
+    console.warn('Categories fetch failed:', error.message);
+    return { success: false, data: { categories: [] } };
+  }
 };
 
 // Recuperer une categorie par ID

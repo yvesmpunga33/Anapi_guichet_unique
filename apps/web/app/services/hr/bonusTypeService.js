@@ -2,7 +2,7 @@
 
 import http from '../../http-common';
 
-const ENDPOINT = '/hr/bonus-types';
+const ENDPOINT = '/hr-payroll/bonus-types';
 
 // Recuperer la liste des types de primes
 export const getBonusTypes = async (params = {}) => {

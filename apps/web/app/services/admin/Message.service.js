@@ -103,5 +103,5 @@ export const ExternalEmailSync = () => {
 
 // ============ UNREAD COUNT ============
 export const MessageUnreadCount = () => {
-  return http.get('/messages/unread-count');
+  return http.get('/messages/unread/count');
 };

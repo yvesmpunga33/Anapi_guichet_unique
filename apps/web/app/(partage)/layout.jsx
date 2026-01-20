@@ -205,6 +205,20 @@ function PartageLayoutContent({ children }) {
 
   const navigation = getNavigation(intl);
 
+  // Initialize all sections as expanded
+  useEffect(() => {
+    setExpandedSections(navigation.map((s) => s.title));
+  }, []);
+
+  // Dark mode
+  useEffect(() => {
+    const savedMode = localStorage.getItem("anapi-dark-mode");
+    if (savedMode === "true") {
+      setDarkMode(true);
+      document.documentElement.classList.add("dark");
+    }
+  }, []);
+
   // Protection d'authentification - Rediriger vers login si non authentifié
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -235,20 +249,6 @@ function PartageLayoutContent({ children }) {
       </div>
     );
   }
-
-  // Initialize all sections as expanded
-  useEffect(() => {
-    setExpandedSections(navigation.map((s) => s.title));
-  }, []);
-
-  // Dark mode
-  useEffect(() => {
-    const savedMode = localStorage.getItem("anapi-dark-mode");
-    if (savedMode === "true") {
-      setDarkMode(true);
-      document.documentElement.classList.add("dark");
-    }
-  }, []);
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);

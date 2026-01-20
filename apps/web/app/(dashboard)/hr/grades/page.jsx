@@ -356,9 +356,11 @@ export default function GradesPage() {
       };
       const response = await getGrades(params);
       if (response.success) {
-        const sortedGrades = (response.data || []).sort((a, b) => (a.niveau || 0) - (b.niveau || 0));
+        const gradesData = response.data?.grades || response.data || [];
+        const gradesArray = Array.isArray(gradesData) ? gradesData : [];
+        const sortedGrades = gradesArray.sort((a, b) => (a.niveau || 0) - (b.niveau || 0));
         setGrades(sortedGrades);
-        setTotal(response.pagination?.total || response.data?.length || 0);
+        setTotal(response.pagination?.total || gradesArray.length || 0);
       }
     } catch (error) {
       console.error('Erreur chargement grades:', error);

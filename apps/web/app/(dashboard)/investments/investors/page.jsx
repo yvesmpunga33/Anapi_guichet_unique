@@ -97,7 +97,7 @@ export default function InvestorsPage() {
       }
 
       const response = await InvestorList(params);
-      const data = response.data;
+      const data = response.data?.data || response.data;
 
       setInvestors(data.investors || []);
       setStats(data.stats || { total: 0, active: 0, verified: 0, pending: 0 });

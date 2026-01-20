@@ -2,7 +2,7 @@
 
 import http from '../../http-common';
 
-const ENDPOINT = '/hr/bonuses';
+const ENDPOINT = '/hr-payroll/bonuses';
 
 // Recuperer toutes les primes
 export const getBonuses = async (params = {}) => {
@@ -55,11 +55,14 @@ export const getBonusById = async (id) => {
 };
 
 // Generer une reference unique
-export const generateReference = async (annee) => {
+export const generateBonusReference = async (annee) => {
   const queryParams = annee ? `?annee=${annee}` : '';
   const response = await http.get(`${ENDPOINT}/generate-reference${queryParams}`);
   return response.data;
 };
+
+// Alias pour compatibilite
+export const generateReference = generateBonusReference;
 
 // Creer une prime
 export const createBonus = async (data) => {
@@ -98,14 +101,17 @@ export const BONUS_FREQUENCIES = {
 };
 
 // Obtenir le label du type
-export const getTypeLabel = (type) => {
+export const getBonusTypeLabel = (type) => {
   return BONUS_TYPES[type] || type;
 };
 
 // Obtenir le label de la frequence
-export const getFrequenceLabel = (frequence) => {
+export const getBonusFrequenceLabel = (frequence) => {
   return BONUS_FREQUENCIES[frequence] || frequence;
 };
+
+// Alias pour compatibilite
+export const getFrequenceLabel = getBonusFrequenceLabel;
 
 // Formater le montant
 export const formatBonusAmount = (bonus) => {
@@ -141,15 +147,17 @@ export default {
   getBonuses,
   getBonusStats,
   getBonusById,
-  generateReference,
+  generateBonusReference,
+  generateReference, // Alias
   createBonus,
   updateBonus,
   deleteBonus,
   toggleBonusStatus,
   BONUS_TYPES,
   BONUS_FREQUENCIES,
-  getTypeLabel,
-  getFrequenceLabel,
+  getBonusTypeLabel,
+  getBonusFrequenceLabel,
+  getFrequenceLabel, // Alias
   formatBonusAmount,
   formatBonusPeriod
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,32 +16,28 @@ import {
   Loader2,
   Save,
   Send,
-  MapPin,
-  Calendar,
   DollarSign,
-  Users,
   Briefcase,
-  Mail,
-  Phone,
-  Hash,
-  Target,
   ClipboardList,
   Shield,
   Factory,
   FileCheck,
-  ChevronRight,
-  Search,
+  ChevronDown,
+  ChevronUp,
   Globe,
-  UserCheck,
+  MapPin,
+  Users,
+  Calendar,
+  Hash,
 } from "lucide-react";
+import InvestorSelector from "@/app/components/InvestorSelector";
 
 const sections = [
-  { id: "investor", name: "Investisseur", icon: Building2 },
   { id: "type", name: "Type de dossier", icon: FileText },
+  { id: "investor", name: "Investisseur", icon: Building2 },
   { id: "project", name: "Projet", icon: Briefcase },
   { id: "financial", name: "Finances", icon: DollarSign },
   { id: "documents", name: "Documents", icon: Upload },
-  { id: "summary", name: "Recapitulatif", icon: ClipboardList },
 ];
 
 const dossierTypes = [
@@ -89,19 +85,15 @@ const dossierTypes = [
   },
 ];
 
-// Les secteurs, provinces, villes et communes sont chargés dynamiquement depuis l'API
-
-// Les documents requis sont maintenant chargés dynamiquement depuis l'API
-
-// Reusable Input Field - defined outside component to prevent re-renders
+// Reusable Input Field
 const InputField = ({ label, required, error, className = "", ...props }) => (
   <div className={className}>
-    <label className="block text-sm font-medium text-gray-400 mb-2">
+    <label className="block text-sm font-medium text-gray-400 mb-1.5">
       {label} {required && <span className="text-orange-500">*</span>}
     </label>
     <input
       {...props}
-      className={`w-full px-4 py-3 bg-gray-800/50 border rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all ${
+      className={`w-full px-3 py-2.5 bg-gray-800/50 border rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all text-sm ${
         error ? "border-red-500" : "border-gray-700"
       }`}
     />
@@ -113,30 +105,24 @@ const InputField = ({ label, required, error, className = "", ...props }) => (
   </div>
 );
 
-// Reusable Select Field - defined outside component to prevent re-renders
-const SelectField = ({ label, required, error, options, placeholder, className = "", ...props }) => (
-  <div className={className}>
-    <label className="block text-sm font-medium text-gray-400 mb-2">
-      {label} {required && <span className="text-orange-500">*</span>}
-    </label>
-    <select
-      {...props}
-      className={`w-full px-4 py-3 bg-gray-800/50 border rounded-xl text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none ${
-        error ? "border-red-500" : "border-gray-700"
-      }`}
-    >
-      <option value="" className="bg-gray-800">{placeholder}</option>
-      {options.map((opt) => (
-        <option key={typeof opt === 'string' ? opt : opt.value} value={typeof opt === 'string' ? opt : opt.value} className="bg-gray-800">
-          {typeof opt === 'string' ? opt : opt.label}
-        </option>
-      ))}
-    </select>
-    {error && (
-      <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-        <AlertCircle className="w-3 h-3" /> {error}
-      </p>
-    )}
+// Section Card Component
+const SectionCard = ({ id, title, icon: Icon, children, isComplete, sectionRef }) => (
+  <div
+    ref={sectionRef}
+    id={`section-${id}`}
+    className="bg-gray-800/30 rounded-xl border border-gray-700/50 overflow-hidden"
+  >
+    <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-700/50 bg-gray-800/20">
+      <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+        isComplete ? "bg-green-500/20 text-green-400" : "bg-orange-500/20 text-orange-400"
+      }`}>
+        {isComplete ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+      </div>
+      <h2 className="text-base font-semibold text-white">{title}</h2>
+    </div>
+    <div className="p-5">
+      {children}
+    </div>
   </div>
 );
 
@@ -145,39 +131,43 @@ function NewDossierForm() {
   const searchParams = useSearchParams();
   const typeFromUrl = searchParams.get("type");
 
+  // Refs for scrolling
+  const sectionRefs = {
+    type: useRef(null),
+    investor: useRef(null),
+    project: useRef(null),
+    financial: useRef(null),
+    documents: useRef(null),
+  };
+
   const [loading, setLoading] = useState(false);
-  const [activeSection, setActiveSection] = useState("investor");
   const [sectors, setSectors] = useState([]);
   const [loadingSectors, setLoadingSectors] = useState(true);
   const [requiredDocuments, setRequiredDocuments] = useState([]);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
 
-  // États pour les données géographiques
+  // Geographic data states
   const [provinces, setProvinces] = useState([]);
   const [loadingProvinces, setLoadingProvinces] = useState(true);
 
-  // Pour l'investisseur
+  // Investor location
   const [investorCities, setInvestorCities] = useState([]);
   const [loadingInvestorCities, setLoadingInvestorCities] = useState(false);
   const [investorCommunes, setInvestorCommunes] = useState([]);
   const [loadingInvestorCommunes, setLoadingInvestorCommunes] = useState(false);
 
-  // Pour le projet
+  // Project location
   const [projectCities, setProjectCities] = useState([]);
   const [loadingProjectCities, setLoadingProjectCities] = useState(false);
   const [projectCommunes, setProjectCommunes] = useState([]);
   const [loadingProjectCommunes, setLoadingProjectCommunes] = useState(false);
 
-  // Liste des pays
+  // Countries
   const [countries, setCountries] = useState([]);
   const [loadingCountries, setLoadingCountries] = useState(true);
 
-  // Recherche investisseur existant
-  const [investorSearch, setInvestorSearch] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [searchingInvestor, setSearchingInvestor] = useState(false);
+  // Selected existing investor
   const [selectedExistingInvestor, setSelectedExistingInvestor] = useState(null);
-  const [showInvestorDropdown, setShowInvestorDropdown] = useState(false);
 
   const [formData, setFormData] = useState({
     dossierType: typeFromUrl || "",
@@ -189,27 +179,22 @@ function NewDossierForm() {
     address: "",
     phone: "",
     email: "",
-    country: "CD", // Code ISO du pays
-    // Investisseur existant
+    country: "CD",
     investorId: null,
-    // Representant legal
     representativeName: "",
     representativeFunction: "",
     representativePhone: "",
     representativeEmail: "",
-    // Investisseur - Province, Ville, Commune
     investorProvinceId: "",
     investorProvince: "",
     investorCityId: "",
     investorCity: "",
     investorCommuneId: "",
     investorCommune: "",
-    // Projet
     projectName: "",
     projectDescription: "",
-    sectors: [], // Multi-sélection des secteurs (tableau d'IDs)
+    sectors: [],
     subSector: "",
-    // Projet - Province, Ville, Commune
     projectProvinceId: "",
     projectProvince: "",
     projectCityId: "",
@@ -225,11 +210,10 @@ function NewDossierForm() {
     endDate: "",
   });
 
-  // Documents associés aux types requis: { documentTypeId: { file, name, size, type } }
   const [documentsByType, setDocumentsByType] = useState({});
   const [errors, setErrors] = useState({});
 
-  // Obtenir les documents requis pour le type de dossier sélectionné
+  // Get required documents
   const getRequiredDocuments = () => {
     return requiredDocuments.map(doc => ({
       id: doc.id,
@@ -239,7 +223,7 @@ function NewDossierForm() {
     }));
   };
 
-  // Charger les secteurs depuis l'API
+  // Load sectors
   useEffect(() => {
     const fetchSectors = async () => {
       try {
@@ -248,7 +232,7 @@ function NewDossierForm() {
         const result = await response.json();
         setSectors(result.sectors || []);
       } catch (err) {
-        console.error("Erreur chargement secteurs:", err);
+        console.error("Error loading sectors:", err);
       } finally {
         setLoadingSectors(false);
       }
@@ -256,7 +240,7 @@ function NewDossierForm() {
     fetchSectors();
   }, []);
 
-  // Charger les pays depuis l'API
+  // Load countries
   useEffect(() => {
     const fetchCountries = async () => {
       try {
@@ -265,7 +249,7 @@ function NewDossierForm() {
         const result = await response.json();
         setCountries(result.countries || []);
       } catch (err) {
-        console.error("Erreur chargement pays:", err);
+        console.error("Error loading countries:", err);
       } finally {
         setLoadingCountries(false);
       }
@@ -273,33 +257,7 @@ function NewDossierForm() {
     fetchCountries();
   }, []);
 
-  // Recherche investisseur existant avec debounce
-  useEffect(() => {
-    const searchInvestors = async () => {
-      if (!investorSearch || investorSearch.length < 2) {
-        setSearchResults([]);
-        setShowInvestorDropdown(false);
-        return;
-      }
-      try {
-        setSearchingInvestor(true);
-        const response = await fetch(`/api/investors/search?q=${encodeURIComponent(investorSearch)}`);
-        const result = await response.json();
-        setSearchResults(result.investors || []);
-        setShowInvestorDropdown(true);
-      } catch (err) {
-        console.error("Erreur recherche investisseur:", err);
-        setSearchResults([]);
-      } finally {
-        setSearchingInvestor(false);
-      }
-    };
-
-    const debounceTimer = setTimeout(searchInvestors, 300);
-    return () => clearTimeout(debounceTimer);
-  }, [investorSearch]);
-
-  // Charger les documents requis depuis l'API lorsque le type de dossier change
+  // Load required documents when dossier type changes
   useEffect(() => {
     const fetchRequiredDocuments = async () => {
       if (!formData.dossierType) {
@@ -313,10 +271,9 @@ function NewDossierForm() {
         );
         const result = await response.json();
         setRequiredDocuments(result.documents || []);
-        // Réinitialiser les documents uploadés quand le type change
         setDocumentsByType({});
       } catch (err) {
-        console.error("Erreur chargement documents requis:", err);
+        console.error("Error loading required documents:", err);
         setRequiredDocuments([]);
       } finally {
         setLoadingDocuments(false);
@@ -325,7 +282,7 @@ function NewDossierForm() {
     fetchRequiredDocuments();
   }, [formData.dossierType]);
 
-  // Charger les provinces depuis l'API
+  // Load provinces
   useEffect(() => {
     const fetchProvinces = async () => {
       try {
@@ -334,7 +291,7 @@ function NewDossierForm() {
         const result = await response.json();
         setProvinces(result.provinces || []);
       } catch (err) {
-        console.error("Erreur chargement provinces:", err);
+        console.error("Error loading provinces:", err);
       } finally {
         setLoadingProvinces(false);
       }
@@ -342,7 +299,7 @@ function NewDossierForm() {
     fetchProvinces();
   }, []);
 
-  // Charger les villes de l'investisseur quand la province change
+  // Load investor cities
   useEffect(() => {
     const fetchInvestorCities = async () => {
       if (!formData.investorProvinceId) {
@@ -355,7 +312,7 @@ function NewDossierForm() {
         const result = await response.json();
         setInvestorCities(result.cities || []);
       } catch (err) {
-        console.error("Erreur chargement villes investisseur:", err);
+        console.error("Error loading investor cities:", err);
         setInvestorCities([]);
       } finally {
         setLoadingInvestorCities(false);
@@ -364,7 +321,7 @@ function NewDossierForm() {
     fetchInvestorCities();
   }, [formData.investorProvinceId]);
 
-  // Charger les communes de l'investisseur quand la ville change
+  // Load investor communes
   useEffect(() => {
     const fetchInvestorCommunes = async () => {
       if (!formData.investorCityId) {
@@ -377,7 +334,7 @@ function NewDossierForm() {
         const result = await response.json();
         setInvestorCommunes(result.communes || []);
       } catch (err) {
-        console.error("Erreur chargement communes investisseur:", err);
+        console.error("Error loading investor communes:", err);
         setInvestorCommunes([]);
       } finally {
         setLoadingInvestorCommunes(false);
@@ -386,7 +343,7 @@ function NewDossierForm() {
     fetchInvestorCommunes();
   }, [formData.investorCityId]);
 
-  // Charger les villes du projet quand la province change
+  // Load project cities
   useEffect(() => {
     const fetchProjectCities = async () => {
       if (!formData.projectProvinceId) {
@@ -399,7 +356,7 @@ function NewDossierForm() {
         const result = await response.json();
         setProjectCities(result.cities || []);
       } catch (err) {
-        console.error("Erreur chargement villes projet:", err);
+        console.error("Error loading project cities:", err);
         setProjectCities([]);
       } finally {
         setLoadingProjectCities(false);
@@ -408,7 +365,7 @@ function NewDossierForm() {
     fetchProjectCities();
   }, [formData.projectProvinceId]);
 
-  // Charger les communes du projet quand la ville change
+  // Load project communes
   useEffect(() => {
     const fetchProjectCommunes = async () => {
       if (!formData.projectCityId) {
@@ -421,7 +378,7 @@ function NewDossierForm() {
         const result = await response.json();
         setProjectCommunes(result.communes || []);
       } catch (err) {
-        console.error("Erreur chargement communes projet:", err);
+        console.error("Error loading project communes:", err);
         setProjectCommunes([]);
       } finally {
         setLoadingProjectCommunes(false);
@@ -437,14 +394,13 @@ function NewDossierForm() {
     }
   };
 
-  // Gestion des changements en cascade pour l'investisseur
+  // Cascade handlers for investor location
   const handleInvestorProvinceChange = (provinceId) => {
     const province = provinces.find(p => p.id === provinceId);
     setFormData(prev => ({
       ...prev,
       investorProvinceId: provinceId,
       investorProvince: province?.name || "",
-      // Réinitialiser ville et commune
       investorCityId: "",
       investorCity: "",
       investorCommuneId: "",
@@ -459,7 +415,6 @@ function NewDossierForm() {
       ...prev,
       investorCityId: cityId,
       investorCity: city?.name || "",
-      // Réinitialiser commune
       investorCommuneId: "",
       investorCommune: "",
     }));
@@ -474,14 +429,13 @@ function NewDossierForm() {
     }));
   };
 
-  // Gestion des changements en cascade pour le projet
+  // Cascade handlers for project location
   const handleProjectProvinceChange = (provinceId) => {
     const province = provinces.find(p => p.id === provinceId);
     setFormData(prev => ({
       ...prev,
       projectProvinceId: provinceId,
       projectProvince: province?.name || "",
-      // Réinitialiser ville et commune
       projectCityId: "",
       projectCity: "",
       projectCommuneId: "",
@@ -496,7 +450,6 @@ function NewDossierForm() {
       ...prev,
       projectCityId: cityId,
       projectCity: city?.name || "",
-      // Réinitialiser commune
       projectCommuneId: "",
       projectCommune: "",
     }));
@@ -511,12 +464,9 @@ function NewDossierForm() {
     }));
   };
 
-  // Sélectionner un investisseur existant
+  // Select existing investor
   const handleSelectExistingInvestor = (investor) => {
     setSelectedExistingInvestor(investor);
-    setInvestorSearch("");
-    setShowInvestorDropdown(false);
-    // Pré-remplir le formulaire avec les données de l'investisseur
     setFormData(prev => ({
       ...prev,
       investorId: investor.id,
@@ -542,7 +492,7 @@ function NewDossierForm() {
     }));
   };
 
-  // Réinitialiser la sélection d'investisseur
+  // Clear existing investor
   const handleClearExistingInvestor = () => {
     setSelectedExistingInvestor(null);
     setFormData(prev => ({
@@ -570,7 +520,7 @@ function NewDossierForm() {
     }));
   };
 
-  // Upload un fichier pour un type de document spécifique
+  // File upload handlers
   const handleFileUploadForType = (documentTypeId, e) => {
     const file = e.target.files[0];
     if (file) {
@@ -583,14 +533,12 @@ function NewDossierForm() {
           type: file.type,
         },
       }));
-      // Effacer l'erreur pour ce document
       if (errors[`doc_${documentTypeId}`]) {
         setErrors((prev) => ({ ...prev, [`doc_${documentTypeId}`]: null }));
       }
     }
   };
 
-  // Supprimer un fichier pour un type de document
   const removeDocumentForType = (documentTypeId) => {
     setDocumentsByType((prev) => {
       const newDocs = { ...prev };
@@ -599,159 +547,15 @@ function NewDossierForm() {
     });
   };
 
-  const currentSectionIndex = sections.findIndex(s => s.id === activeSection);
-
-  // Validation par section
-  const validateSection = (sectionId) => {
-    const newErrors = {};
-
-    switch (sectionId) {
-      case "investor":
-        if (!formData.investorName.trim()) {
-          newErrors.investorName = "Le nom est obligatoire";
-        }
-        if (!formData.email.trim()) {
-          newErrors.email = "L'email est obligatoire";
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-          newErrors.email = "Format d'email invalide";
-        }
-        if (!formData.phone.trim()) {
-          newErrors.phone = "Le telephone est obligatoire";
-        }
-        break;
-
-      case "type":
-        if (!formData.dossierType) {
-          newErrors.dossierType = "Veuillez selectionner un type de dossier";
-        }
-        break;
-
-      case "project":
-        if (!formData.projectName.trim()) {
-          newErrors.projectName = "Le nom du projet est obligatoire";
-        }
-        if (!formData.sectors || formData.sectors.length === 0) {
-          newErrors.sectors = "Selectionnez au moins un secteur d'activite";
-        }
-        if (!formData.projectProvince) {
-          newErrors.projectProvince = "La province du projet est obligatoire";
-        }
-        break;
-
-      case "financial":
-        if (!formData.investmentAmount.trim()) {
-          newErrors.investmentAmount = "Le montant d'investissement est obligatoire";
-        }
-        break;
-
-      case "documents":
-        // Vérifier que tous les documents requis sont fournis
-        const requiredDocs = getRequiredDocuments().filter(d => d.required);
-        requiredDocs.forEach((doc) => {
-          if (!documentsByType[doc.id]) {
-            newErrors[`doc_${doc.id}`] = `Le document "${doc.name}" est requis`;
-          }
-        });
-        if (Object.keys(newErrors).length > 0) {
-          newErrors.documents = "Veuillez fournir tous les documents requis";
-        }
-        break;
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const goToNextSection = () => {
-    // Valider la section actuelle avant de passer à la suivante
-    if (!validateSection(activeSection)) {
-      return; // Ne pas avancer si la validation échoue
-    }
-
-    if (currentSectionIndex < sections.length - 1) {
-      setActiveSection(sections[currentSectionIndex + 1].id);
+  // Scroll to section
+  const scrollToSection = (sectionId) => {
+    const ref = sectionRefs[sectionId];
+    if (ref?.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
-  const goToPrevSection = () => {
-    if (currentSectionIndex > 0) {
-      setActiveSection(sections[currentSectionIndex - 1].id);
-    }
-  };
-
-  // Navigation par sidebar - valide la section actuelle si on avance
-  const handleSectionClick = (sectionId) => {
-    const targetIndex = sections.findIndex(s => s.id === sectionId);
-
-    // Si on va en arrière ou reste sur la même section, pas de validation
-    if (targetIndex <= currentSectionIndex) {
-      setActiveSection(sectionId);
-      return;
-    }
-
-    // Si on avance, valider toutes les sections entre la section actuelle et la cible
-    for (let i = currentSectionIndex; i < targetIndex; i++) {
-      if (!validateSection(sections[i].id)) {
-        // Rester sur la section qui a échoué la validation
-        setActiveSection(sections[i].id);
-        return;
-      }
-    }
-
-    // Toutes les validations passées, aller à la section cible
-    setActiveSection(sectionId);
-  };
-
-  const handleSubmit = async (isDraft = false) => {
-    // Validate all sections before submitting (not for drafts)
-    if (!isDraft) {
-      for (const section of sections.slice(0, -1)) { // Exclude summary section
-        if (!validateSection(section.id)) {
-          setActiveSection(section.id);
-          return;
-        }
-      }
-    }
-
-    setLoading(true);
-    try {
-      // Créer FormData pour l'upload de fichiers
-      const submitFormData = new FormData();
-
-      // Ajouter les données JSON du formulaire
-      submitFormData.append('data', JSON.stringify({
-        ...formData,
-        isDraft,
-      }));
-
-      // Ajouter les fichiers documents
-      Object.entries(documentsByType).forEach(([docTypeId, docInfo]) => {
-        if (docInfo.file) {
-          submitFormData.append(`documents[${docTypeId}]`, docInfo.file);
-        }
-      });
-
-      // Utiliser l'endpoint d'upload
-      const response = await fetch('/api/guichet-unique/dossiers/upload', {
-        method: 'POST',
-        body: submitFormData, // Pas de Content-Type header pour FormData
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Erreur lors de la soumission');
-      }
-
-      // Redirect to dossiers list on success
-      router.push("/guichet-unique/dossiers");
-    } catch (error) {
-      console.error('Submit error:', error);
-      setErrors({ submit: error.message });
-      setLoading(false);
-    }
-  };
-
+  // Section completion check
   const isSectionComplete = (sectionId) => {
     switch (sectionId) {
       case "type":
@@ -763,7 +567,6 @@ function NewDossierForm() {
       case "financial":
         return !!formData.investmentAmount;
       case "documents":
-        // Vérifier que tous les documents requis sont fournis
         const requiredDocs = getRequiredDocuments().filter(d => d.required);
         return requiredDocs.every(doc => documentsByType[doc.id]);
       default:
@@ -771,8 +574,117 @@ function NewDossierForm() {
     }
   };
 
+  // Validate all sections
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Type validation
+    if (!formData.dossierType) {
+      newErrors.dossierType = "Veuillez selectionner un type de dossier";
+    }
+
+    // Investor validation
+    if (!formData.investorName.trim()) {
+      newErrors.investorName = "Le nom est obligatoire";
+    }
+    if (!formData.email.trim()) {
+      newErrors.email = "L'email est obligatoire";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Format d'email invalide";
+    }
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Le telephone est obligatoire";
+    }
+
+    // Project validation
+    if (!formData.projectName.trim()) {
+      newErrors.projectName = "Le nom du projet est obligatoire";
+    }
+    if (!formData.sectors || formData.sectors.length === 0) {
+      newErrors.sectors = "Selectionnez au moins un secteur d'activite";
+    }
+    if (!formData.projectProvince) {
+      newErrors.projectProvince = "La province du projet est obligatoire";
+    }
+
+    // Financial validation
+    if (!formData.investmentAmount.trim()) {
+      newErrors.investmentAmount = "Le montant d'investissement est obligatoire";
+    }
+
+    // Documents validation
+    const requiredDocs = getRequiredDocuments().filter(d => d.required);
+    requiredDocs.forEach((doc) => {
+      if (!documentsByType[doc.id]) {
+        newErrors[`doc_${doc.id}`] = `Le document "${doc.name}" est requis`;
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (isDraft = false) => {
+    if (!isDraft && !validateForm()) {
+      // Scroll to first error section
+      if (errors.dossierType) scrollToSection('type');
+      else if (errors.investorName || errors.email || errors.phone) scrollToSection('investor');
+      else if (errors.projectName || errors.sectors || errors.projectProvince) scrollToSection('project');
+      else if (errors.investmentAmount) scrollToSection('financial');
+      else scrollToSection('documents');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const submitFormData = new FormData();
+      submitFormData.append('data', JSON.stringify({
+        ...formData,
+        isDraft,
+      }));
+
+      Object.entries(documentsByType).forEach(([docTypeId, docInfo]) => {
+        if (docInfo.file) {
+          submitFormData.append(`documents[${docTypeId}]`, docInfo.file);
+        }
+      });
+
+      // Get auth token
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch('/api/guichet-unique/dossiers/upload', {
+        method: 'POST',
+        headers,
+        body: submitFormData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        // Handle different error formats from API
+        const errorMessage = typeof result.error === 'string'
+          ? result.error
+          : result.message || result.error?.message || JSON.stringify(result.error) || 'Erreur lors de la soumission';
+        throw new Error(errorMessage);
+      }
+
+      router.push("/guichet-unique/dossiers");
+    } catch (error) {
+      console.error('Submit error:', error);
+      setErrors({ submit: error.message || 'Une erreur est survenue' });
+      setLoading(false);
+    }
+  };
+
+  const completedSections = sections.filter(s => isSectionComplete(s.id)).length;
+  const progressPercent = Math.round((completedSections / sections.length) * 100);
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pb-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
@@ -787,14 +699,14 @@ function NewDossierForm() {
               Nouveau Dossier d'Investissement
             </h1>
             <p className="text-sm text-gray-500">
-              Enregistrement d'un nouveau dossier
+              Remplissez toutes les sections pour soumettre votre dossier
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <Link
             href="/guichet-unique/dossiers"
-            className="px-4 py-2 text-orange-500 border border-orange-500 rounded-xl hover:bg-orange-500/10 transition-colors font-medium"
+            className="px-4 py-2 text-gray-400 border border-gray-600 rounded-xl hover:bg-gray-700/50 transition-colors font-medium"
           >
             Annuler
           </Link>
@@ -806,44 +718,81 @@ function NewDossierForm() {
             <Save className="w-4 h-4" />
             Brouillon
           </button>
+          <button
+            onClick={() => handleSubmit(false)}
+            disabled={loading}
+            className="flex items-center gap-2 px-5 py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors font-medium disabled:opacity-50"
+          >
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+            Soumettre
+          </button>
         </div>
       </div>
 
-      {/* Main Content - Two Column Layout */}
+      {/* Error message */}
+      {errors.submit && (
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+          <p className="text-red-400 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" />
+            {errors.submit}
+          </p>
+        </div>
+      )}
+
+      {/* Main Content */}
       <div className="flex gap-6">
-        {/* Left Sidebar - Section Navigation */}
-        <div className="w-72 flex-shrink-0">
-          <div className="bg-gray-800/50 rounded-2xl p-4 sticky top-4">
+        {/* Left Sidebar - Navigation */}
+        <div className="w-64 flex-shrink-0">
+          <div className="bg-gray-800/50 rounded-xl p-4 sticky top-4">
+            {/* Progress */}
+            <div className="mb-4 pb-4 border-b border-gray-700">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-400">Progression</span>
+                <span className="text-sm font-medium text-orange-400">{progressPercent}%</span>
+              </div>
+              <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-orange-500 to-orange-400 transition-all duration-300"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {completedSections} / {sections.length} sections completes
+              </p>
+            </div>
+
+            {/* Navigation */}
             <nav className="space-y-1">
-              {sections.map((section, index) => {
+              {sections.map((section) => {
                 const SectionIcon = section.icon;
-                const isActive = activeSection === section.id;
                 const isComplete = isSectionComplete(section.id);
 
                 return (
                   <button
                     key={section.id}
-                    onClick={() => handleSectionClick(section.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left ${
-                      isActive
-                        ? "bg-orange-500/20 text-orange-400"
+                    onClick={() => scrollToSection(section.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left ${
+                      isComplete
+                        ? "text-green-400 hover:bg-green-500/10"
                         : "text-gray-400 hover:bg-gray-700/50 hover:text-white"
                     }`}
                   >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      isActive
-                        ? "bg-orange-500 text-white"
-                        : isComplete
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                      isComplete
                         ? "bg-green-500/20 text-green-400"
                         : "bg-gray-700 text-gray-400"
                     }`}>
-                      {isComplete && !isActive ? (
+                      {isComplete ? (
                         <CheckCircle2 className="w-4 h-4" />
                       ) : (
                         <SectionIcon className="w-4 h-4" />
                       )}
                     </div>
-                    <span className="font-medium">{section.name}</span>
+                    <span className="text-sm font-medium">{section.name}</span>
                   </button>
                 );
               })}
@@ -851,160 +800,100 @@ function NewDossierForm() {
           </div>
         </div>
 
-        {/* Right Content Area */}
-        <div className="flex-1">
-          <div className="bg-gray-800/30 rounded-2xl border border-gray-700/50">
-            {/* Section Type de dossier */}
-            {activeSection === "type" && (
-              <div className="p-6">
-                <h2 className="text-lg font-semibold text-white mb-1">
-                  Type de dossier
-                </h2>
-                <p className="text-sm text-gray-500 mb-6">
-                  Selectionnez le type de procedure administrative
-                </p>
+        {/* Right Content - All Sections */}
+        <div className="flex-1 space-y-6">
+          {/* Section: Type de dossier */}
+          <SectionCard
+            id="type"
+            title="Type de dossier"
+            icon={FileText}
+            isComplete={isSectionComplete("type")}
+            sectionRef={sectionRefs.type}
+          >
+            <p className="text-sm text-gray-500 mb-4">
+              Selectionnez le type de procedure administrative
+            </p>
 
-                {errors.dossierType && (
-                  <p className="text-red-400 text-sm mb-4 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" /> {errors.dossierType}
-                  </p>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  {dossierTypes.map((type) => {
-                    const TypeIcon = type.icon;
-                    const isSelected = formData.dossierType === type.value;
-
-                    return (
-                      <label
-                        key={type.value}
-                        className={`relative flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                          isSelected
-                            ? "border-orange-500 bg-orange-500/10"
-                            : errors.dossierType
-                            ? "border-red-500/50 hover:border-red-400 bg-gray-800/30"
-                            : "border-gray-700 hover:border-gray-600 bg-gray-800/30"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="dossierType"
-                          value={type.value}
-                          checked={isSelected}
-                          onChange={(e) => handleChange("dossierType", e.target.value)}
-                          className="sr-only"
-                        />
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                          isSelected ? "bg-orange-500 text-white" : "bg-gray-700 text-gray-400"
-                        }`}>
-                          <TypeIcon className="w-5 h-5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-white text-sm">
-                            {type.label}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {type.description}
-                          </p>
-                        </div>
-                        {isSelected && (
-                          <CheckCircle2 className="w-5 h-5 text-orange-500 absolute top-3 right-3" />
-                        )}
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
+            {errors.dossierType && (
+              <p className="text-red-400 text-sm mb-4 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" /> {errors.dossierType}
+              </p>
             )}
 
-            {/* Section Investisseur */}
-            {activeSection === "investor" && (
-              <div className="p-6">
-                <h2 className="text-lg font-semibold text-white mb-1">
-                  Informations de l'investisseur
-                </h2>
-                <p className="text-sm text-gray-500 mb-6">
-                  Renseignez les informations du demandeur ou selectionnez un investisseur existant
-                </p>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+              {dossierTypes.map((type) => {
+                const TypeIcon = type.icon;
+                const isSelected = formData.dossierType === type.value;
 
-                {/* Recherche investisseur existant */}
-                <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Search className="w-4 h-4 text-blue-400" />
-                    <span className="text-sm font-medium text-blue-400">Rechercher un investisseur existant</span>
-                  </div>
-
-                  {selectedExistingInvestor ? (
-                    <div className="flex items-center justify-between p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <UserCheck className="w-5 h-5 text-green-400" />
-                        <div>
-                          <p className="text-white font-medium">{selectedExistingInvestor.name}</p>
-                          <p className="text-xs text-gray-400">
-                            {selectedExistingInvestor.rccm || selectedExistingInvestor.email}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleClearExistingInvestor}
-                        className="p-1 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                return (
+                  <label
+                    key={type.value}
+                    className={`relative flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                      isSelected
+                        ? "border-orange-500 bg-orange-500/10"
+                        : errors.dossierType
+                        ? "border-red-500/50 hover:border-red-400 bg-gray-800/30"
+                        : "border-gray-700 hover:border-gray-600 bg-gray-800/30"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="dossierType"
+                      value={type.value}
+                      checked={isSelected}
+                      onChange={(e) => handleChange("dossierType", e.target.value)}
+                      className="sr-only"
+                    />
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      isSelected ? "bg-orange-500 text-white" : "bg-gray-700 text-gray-400"
+                    }`}>
+                      <TypeIcon className="w-4 h-4" />
                     </div>
-                  ) : (
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={investorSearch}
-                        onChange={(e) => setInvestorSearch(e.target.value)}
-                        placeholder="Rechercher par nom, RCCM, email..."
-                        className="w-full px-4 py-2 pl-10 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                      {searchingInvestor && (
-                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 animate-spin" />
-                      )}
-
-                      {/* Dropdown des résultats */}
-                      {showInvestorDropdown && searchResults.length > 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                          {searchResults.map((inv) => (
-                            <button
-                              key={inv.id}
-                              type="button"
-                              onClick={() => handleSelectExistingInvestor(inv)}
-                              className="w-full px-4 py-3 text-left hover:bg-gray-700/50 border-b border-gray-700/50 last:border-0"
-                            >
-                              <p className="text-white font-medium">{inv.name}</p>
-                              <p className="text-xs text-gray-400">
-                                {inv.rccm && `RCCM: ${inv.rccm} • `}
-                                {inv.email}
-                              </p>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {showInvestorDropdown && investorSearch.length >= 2 && searchResults.length === 0 && !searchingInvestor && (
-                        <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg p-4 text-center">
-                          <p className="text-gray-400 text-sm">Aucun investisseur trouve</p>
-                          <p className="text-xs text-gray-500 mt-1">Remplissez le formulaire pour creer un nouveau</p>
-                        </div>
-                      )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-white text-sm leading-tight">
+                        {type.label}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {type.description}
+                      </p>
                     </div>
-                  )}
-                </div>
+                    {isSelected && (
+                      <CheckCircle2 className="w-4 h-4 text-orange-500 absolute top-2 right-2" />
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          </SectionCard>
 
-                {/* Type d'investisseur */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-400 mb-3">
+          {/* Section: Investisseur */}
+          <SectionCard
+            id="investor"
+            title="Informations de l'investisseur"
+            icon={Building2}
+            isComplete={isSectionComplete("investor")}
+            sectionRef={sectionRefs.investor}
+          >
+            {/* Investor selector */}
+            <div className="mb-5">
+              <InvestorSelector
+                selectedInvestor={selectedExistingInvestor}
+                onSelect={handleSelectExistingInvestor}
+                onClear={handleClearExistingInvestor}
+              />
+            </div>
+
+            {/* Only show form if no existing investor selected */}
+            {!selectedExistingInvestor && (
+              <>
+                {/* Investor type */}
+                <div className="mb-5">
+                  <label className="block text-sm font-medium text-gray-400 mb-2">
                     Type d'investisseur
                   </label>
-                  <div className="flex gap-4">
+                  <div className="flex gap-3">
                     <label
-                      className={`flex-1 flex items-center justify-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                      className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all ${
                         formData.investorType === "company"
                           ? "border-orange-500 bg-orange-500/10 text-orange-400"
                           : "border-gray-700 text-gray-400 hover:border-gray-600"
@@ -1018,11 +907,11 @@ function NewDossierForm() {
                         onChange={(e) => handleChange("investorType", e.target.value)}
                         className="sr-only"
                       />
-                      <Building2 className="w-5 h-5" />
-                      <span className="font-medium">Entreprise</span>
+                      <Building2 className="w-4 h-4" />
+                      <span className="font-medium text-sm">Entreprise</span>
                     </label>
                     <label
-                      className={`flex-1 flex items-center justify-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                      className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all ${
                         formData.investorType === "individual"
                           ? "border-orange-500 bg-orange-500/10 text-orange-400"
                           : "border-gray-700 text-gray-400 hover:border-gray-600"
@@ -1036,13 +925,13 @@ function NewDossierForm() {
                         onChange={(e) => handleChange("investorType", e.target.value)}
                         className="sr-only"
                       />
-                      <User className="w-5 h-5" />
-                      <span className="font-medium">Individuel</span>
+                      <User className="w-4 h-4" />
+                      <span className="font-medium text-sm">Individuel</span>
                     </label>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <InputField
                     label={formData.investorType === "company" ? "Nom de l'entreprise" : "Nom complet"}
                     required
@@ -1051,8 +940,32 @@ function NewDossierForm() {
                     onChange={(e) => handleChange("investorName", e.target.value)}
                     placeholder={formData.investorType === "company" ? "Ex: Congo Mining Corp" : "Ex: Jean Mukendi"}
                     error={errors.investorName}
-                    className="col-span-2"
+                    className="lg:col-span-2"
                   />
+
+                  {/* Country */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1.5">
+                      <Globe className="w-3 h-3 inline mr-1" />
+                      Pays
+                    </label>
+                    <select
+                      value={formData.country}
+                      onChange={(e) => handleChange("country", e.target.value)}
+                      disabled={loadingCountries}
+                      className="w-full px-3 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50 text-sm"
+                    >
+                      {loadingCountries ? (
+                        <option value="" className="bg-gray-800">Chargement...</option>
+                      ) : (
+                        countries.map((country) => (
+                          <option key={country.code} value={country.code} className="bg-gray-800">
+                            {country.name}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
 
                   {formData.investorType === "company" && (
                     <>
@@ -1076,7 +989,6 @@ function NewDossierForm() {
                         value={formData.nif}
                         onChange={(e) => handleChange("nif", e.target.value)}
                         placeholder="AXXXXXXX"
-                        className="col-span-2"
                       />
                     </>
                   )}
@@ -1100,19 +1012,19 @@ function NewDossierForm() {
                     error={errors.phone}
                   />
 
-                  {/* Province, Ville, Commune en cascade */}
+                  {/* Province */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                    <label className="block text-sm font-medium text-gray-400 mb-1.5">
                       Province
                     </label>
                     <select
                       value={formData.investorProvinceId}
                       onChange={(e) => handleInvestorProvinceChange(e.target.value)}
                       disabled={loadingProvinces}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50"
+                      className="w-full px-3 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50 text-sm"
                     >
                       <option value="" className="bg-gray-800">
-                        {loadingProvinces ? "Chargement..." : "Selectionnez une province"}
+                        {loadingProvinces ? "Chargement..." : "Selectionnez"}
                       </option>
                       {provinces.map((prov) => (
                         <option key={prov.id} value={prov.id} className="bg-gray-800">
@@ -1122,22 +1034,19 @@ function NewDossierForm() {
                     </select>
                   </div>
 
+                  {/* City */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                    <label className="block text-sm font-medium text-gray-400 mb-1.5">
                       Ville
                     </label>
                     <select
                       value={formData.investorCityId}
                       onChange={(e) => handleInvestorCityChange(e.target.value)}
                       disabled={!formData.investorProvinceId || loadingInvestorCities}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50"
+                      className="w-full px-3 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50 text-sm"
                     >
                       <option value="" className="bg-gray-800">
-                        {loadingInvestorCities
-                          ? "Chargement..."
-                          : !formData.investorProvinceId
-                            ? "Selectionnez d'abord une province"
-                            : "Selectionnez une ville"}
+                        {loadingInvestorCities ? "Chargement..." : !formData.investorProvinceId ? "Province d'abord" : "Selectionnez"}
                       </option>
                       {investorCities.map((city) => (
                         <option key={city.id} value={city.id} className="bg-gray-800">
@@ -1147,24 +1056,19 @@ function NewDossierForm() {
                     </select>
                   </div>
 
+                  {/* Commune */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                    <label className="block text-sm font-medium text-gray-400 mb-1.5">
                       Commune
                     </label>
                     <select
                       value={formData.investorCommuneId}
                       onChange={(e) => handleInvestorCommuneChange(e.target.value)}
                       disabled={!formData.investorCityId || loadingInvestorCommunes}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50"
+                      className="w-full px-3 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50 text-sm"
                     >
                       <option value="" className="bg-gray-800">
-                        {loadingInvestorCommunes
-                          ? "Chargement..."
-                          : !formData.investorCityId
-                            ? "Selectionnez d'abord une ville"
-                            : investorCommunes.length === 0
-                              ? "Aucune commune disponible"
-                              : "Selectionnez une commune"}
+                        {loadingInvestorCommunes ? "Chargement..." : !formData.investorCityId ? "Ville d'abord" : investorCommunes.length === 0 ? "Aucune" : "Selectionnez"}
                       </option>
                       {investorCommunes.map((commune) => (
                         <option key={commune.id} value={commune.id} className="bg-gray-800">
@@ -1180,45 +1084,19 @@ function NewDossierForm() {
                     value={formData.address}
                     onChange={(e) => handleChange("address", e.target.value)}
                     placeholder="Numero, Avenue"
+                    className="lg:col-span-2"
                   />
-
-                  {/* Pays */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
-                      <Globe className="w-4 h-4 inline mr-1" />
-                      Pays
-                    </label>
-                    <select
-                      value={formData.country}
-                      onChange={(e) => handleChange("country", e.target.value)}
-                      disabled={loadingCountries}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50"
-                    >
-                      {loadingCountries ? (
-                        <option value="" className="bg-gray-800">Chargement...</option>
-                      ) : (
-                        countries.map((country) => (
-                          <option key={country.code} value={country.code} className="bg-gray-800">
-                            {country.name}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                  </div>
                 </div>
 
-                {/* Section Représentant légal - uniquement pour les entreprises */}
+                {/* Legal representative - only for companies */}
                 {formData.investorType === "company" && (
-                  <div className="mt-6 pt-6 border-t border-gray-700">
+                  <div className="mt-5 pt-5 border-t border-gray-700">
                     <div className="flex items-center gap-2 mb-4">
-                      <User className="w-5 h-5 text-orange-400" />
-                      <h3 className="text-md font-medium text-white">Representant legal</h3>
+                      <User className="w-4 h-4 text-orange-400" />
+                      <h3 className="text-sm font-medium text-white">Representant legal</h3>
                     </div>
-                    <p className="text-sm text-gray-500 mb-4">
-                      Informations sur le representant legal ou le dirigeant de l'entreprise
-                    </p>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <InputField
                         label="Nom complet"
                         type="text"
@@ -1250,794 +1128,445 @@ function NewDossierForm() {
                     </div>
                   </div>
                 )}
+              </>
+            )}
+          </SectionCard>
+
+          {/* Section: Projet */}
+          <SectionCard
+            id="project"
+            title="Details du projet"
+            icon={Briefcase}
+            isComplete={isSectionComplete("project")}
+            sectionRef={sectionRefs.project}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <InputField
+                label="Nom du projet"
+                required
+                type="text"
+                value={formData.projectName}
+                onChange={(e) => handleChange("projectName", e.target.value)}
+                placeholder="Ex: Usine agroalimentaire"
+                error={errors.projectName}
+                className="lg:col-span-2"
+              />
+
+              <InputField
+                label="Sous-secteur / Specialite"
+                type="text"
+                value={formData.subSector}
+                onChange={(e) => handleChange("subSector", e.target.value)}
+                placeholder="Ex: Transformation cereales"
+              />
+
+              {/* Province */}
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1.5">
+                  Province du projet <span className="text-orange-500">*</span>
+                </label>
+                <select
+                  value={formData.projectProvinceId}
+                  onChange={(e) => handleProjectProvinceChange(e.target.value)}
+                  disabled={loadingProvinces}
+                  className={`w-full px-3 py-2.5 bg-gray-800/50 border rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50 text-sm ${
+                    errors.projectProvince ? "border-red-500" : "border-gray-700"
+                  }`}
+                >
+                  <option value="" className="bg-gray-800">
+                    {loadingProvinces ? "Chargement..." : "Selectionnez"}
+                  </option>
+                  {provinces.map((prov) => (
+                    <option key={prov.id} value={prov.id} className="bg-gray-800">
+                      {prov.name}
+                    </option>
+                  ))}
+                </select>
+                {errors.projectProvince && (
+                  <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> {errors.projectProvince}
+                  </p>
+                )}
+              </div>
+
+              {/* City */}
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1.5">
+                  Ville du projet
+                </label>
+                <select
+                  value={formData.projectCityId}
+                  onChange={(e) => handleProjectCityChange(e.target.value)}
+                  disabled={!formData.projectProvinceId || loadingProjectCities}
+                  className="w-full px-3 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50 text-sm"
+                >
+                  <option value="" className="bg-gray-800">
+                    {loadingProjectCities ? "Chargement..." : !formData.projectProvinceId ? "Province d'abord" : "Selectionnez"}
+                  </option>
+                  {projectCities.map((city) => (
+                    <option key={city.id} value={city.id} className="bg-gray-800">
+                      {city.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Commune */}
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1.5">
+                  Commune du projet
+                </label>
+                <select
+                  value={formData.projectCommuneId}
+                  onChange={(e) => handleProjectCommuneChange(e.target.value)}
+                  disabled={!formData.projectCityId || loadingProjectCommunes}
+                  className="w-full px-3 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50 text-sm"
+                >
+                  <option value="" className="bg-gray-800">
+                    {loadingProjectCommunes ? "Chargement..." : !formData.projectCityId ? "Ville d'abord" : projectCommunes.length === 0 ? "Aucune" : "Selectionnez"}
+                  </option>
+                  {projectCommunes.map((commune) => (
+                    <option key={commune.id} value={commune.id} className="bg-gray-800">
+                      {commune.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <InputField
+                label="Adresse du site"
+                type="text"
+                value={formData.projectAddress}
+                onChange={(e) => handleChange("projectAddress", e.target.value)}
+                placeholder="Localisation exacte"
+                className="lg:col-span-3"
+              />
+
+              <div className="lg:col-span-3">
+                <label className="block text-sm font-medium text-gray-400 mb-1.5">
+                  Description du projet
+                </label>
+                <textarea
+                  value={formData.projectDescription}
+                  onChange={(e) => handleChange("projectDescription", e.target.value)}
+                  rows={3}
+                  placeholder="Decrivez le projet, ses objectifs et son impact..."
+                  className="w-full px-3 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Sectors selection */}
+            <div className="mt-5 pt-5 border-t border-gray-700">
+              <label className="block text-sm font-medium text-gray-400 mb-2">
+                Secteurs d'activite <span className="text-orange-500">*</span>
+              </label>
+              <p className="text-xs text-gray-500 mb-3">
+                Selectionnez un ou plusieurs secteurs. Chaque secteur est lie a un ministere de tutelle.
+              </p>
+
+              {loadingSectors ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
+                  <span className="ml-2 text-gray-400 text-sm">Chargement des secteurs...</span>
+                </div>
+              ) : (
+                <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[250px] overflow-y-auto p-3 rounded-xl border ${
+                  errors.sectors ? "border-red-500" : "border-gray-700"
+                } bg-gray-800/30`}>
+                  {sectors.map((sector) => {
+                    const isSelected = formData.sectors.includes(sector.id);
+                    return (
+                      <label
+                        key={sector.id}
+                        className={`flex items-start gap-2 p-2.5 rounded-lg cursor-pointer transition-all ${
+                          isSelected
+                            ? "bg-orange-500/20 border border-orange-500/50"
+                            : "bg-gray-800/50 border border-gray-700 hover:border-gray-600"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleChange("sectors", [...formData.sectors, sector.id]);
+                            } else {
+                              handleChange("sectors", formData.sectors.filter(id => id !== sector.id));
+                            }
+                          }}
+                          className="w-4 h-4 mt-0.5 text-orange-500 bg-gray-700 border-gray-600 rounded focus:ring-orange-500"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-medium text-xs ${isSelected ? "text-orange-400" : "text-white"}`}>
+                            {sector.name}
+                          </p>
+                          {sector.ministry && (
+                            <p className="text-xs text-gray-500 mt-0.5 truncate">
+                              {sector.ministry.name}
+                            </p>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+
+              {errors.sectors && (
+                <p className="text-red-400 text-xs mt-2 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> {errors.sectors}
+                </p>
+              )}
+
+              {/* Selected sectors display */}
+              {formData.sectors.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {sectors.filter(s => formData.sectors.includes(s.id)).map(sector => (
+                    <span
+                      key={sector.id}
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs"
+                    >
+                      <Factory className="w-3 h-3" />
+                      {sector.name}
+                      <button
+                        type="button"
+                        onClick={() => handleChange("sectors", formData.sectors.filter(id => id !== sector.id))}
+                        className="ml-1 hover:text-orange-300"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </SectionCard>
+
+          {/* Section: Finances */}
+          <SectionCard
+            id="financial"
+            title="Informations financieres"
+            icon={DollarSign}
+            isComplete={isSectionComplete("financial")}
+            sectionRef={sectionRefs.financial}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-2">
+                <label className="block text-sm font-medium text-gray-400 mb-1.5">
+                  Montant d'investissement <span className="text-orange-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={formData.investmentAmount}
+                    onChange={(e) => handleChange("investmentAmount", e.target.value)}
+                    placeholder="Ex: 5,000,000"
+                    className={`flex-1 px-3 py-2.5 bg-gray-800/50 border rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 text-sm ${
+                      errors.investmentAmount ? "border-red-500" : "border-gray-700"
+                    }`}
+                  />
+                  <select
+                    value={formData.currency}
+                    onChange={(e) => handleChange("currency", e.target.value)}
+                    className="w-24 px-3 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-orange-500 text-sm"
+                  >
+                    <option value="USD" className="bg-gray-800">USD</option>
+                    <option value="CDF" className="bg-gray-800">CDF</option>
+                    <option value="EUR" className="bg-gray-800">EUR</option>
+                  </select>
+                </div>
+                {errors.investmentAmount && (
+                  <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> {errors.investmentAmount}
+                  </p>
+                )}
+              </div>
+
+              <div className="hidden lg:block" />
+
+              <InputField
+                label="Emplois directs a creer"
+                type="number"
+                min="0"
+                value={formData.directJobs}
+                onChange={(e) => handleChange("directJobs", e.target.value)}
+                placeholder="Ex: 100"
+              />
+              <InputField
+                label="Emplois indirects a creer"
+                type="number"
+                min="0"
+                value={formData.indirectJobs}
+                onChange={(e) => handleChange("indirectJobs", e.target.value)}
+                placeholder="Ex: 250"
+              />
+
+              <div className="hidden lg:block" />
+
+              <InputField
+                label="Date de debut prevue"
+                type="date"
+                value={formData.startDate}
+                onChange={(e) => handleChange("startDate", e.target.value)}
+              />
+              <InputField
+                label="Date de fin prevue"
+                type="date"
+                value={formData.endDate}
+                onChange={(e) => handleChange("endDate", e.target.value)}
+              />
+            </div>
+          </SectionCard>
+
+          {/* Section: Documents */}
+          <SectionCard
+            id="documents"
+            title="Documents justificatifs"
+            icon={Upload}
+            isComplete={isSectionComplete("documents")}
+            sectionRef={sectionRefs.documents}
+          >
+            {/* Message if no dossier type selected */}
+            {!formData.dossierType && (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 text-center">
+                <AlertCircle className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
+                <p className="text-yellow-400 font-medium text-sm">
+                  Type de dossier non selectionne
+                </p>
+                <p className="text-xs text-yellow-300/70 mt-1">
+                  Veuillez d'abord selectionner un type de dossier pour voir les documents requis.
+                </p>
               </div>
             )}
 
-            {/* Section Projet */}
-            {activeSection === "project" && (
-              <div className="p-6">
-                <h2 className="text-lg font-semibold text-white mb-1">
-                  Details du projet
-                </h2>
-                <p className="text-sm text-gray-500 mb-6">
-                  Decrivez votre projet d'investissement
+            {/* Loading */}
+            {formData.dossierType && loadingDocuments && (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
+                <span className="ml-2 text-gray-400 text-sm">Chargement des documents requis...</span>
+              </div>
+            )}
+
+            {/* No documents configured */}
+            {formData.dossierType && !loadingDocuments && getRequiredDocuments().length === 0 && (
+              <div className="bg-gray-800/30 border border-gray-700 rounded-xl p-4 text-center">
+                <FileText className="w-8 h-8 text-gray-500 mx-auto mb-2" />
+                <p className="text-gray-400 text-sm">
+                  Aucun document requis configure pour ce type de dossier.
                 </p>
+              </div>
+            )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <InputField
-                    label="Nom du projet"
-                    required
-                    type="text"
-                    value={formData.projectName}
-                    onChange={(e) => handleChange("projectName", e.target.value)}
-                    placeholder="Ex: Usine agroalimentaire"
-                    error={errors.projectName}
-                    className="col-span-2"
-                  />
+            {/* Documents list */}
+            {formData.dossierType && !loadingDocuments && getRequiredDocuments().length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {getRequiredDocuments().map((docType) => {
+                  const uploadedDoc = documentsByType[docType.id];
+                  const hasError = errors[`doc_${docType.id}`];
 
-                  {/* Multi-sélection des secteurs */}
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
-                      Secteurs d'activite <span className="text-orange-500">*</span>
-                    </label>
-                    <p className="text-xs text-gray-500 mb-3">
-                      Selectionnez un ou plusieurs secteurs. Chaque secteur est lie a un ministere de tutelle.
-                    </p>
-
-                    {loadingSectors ? (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
-                        <span className="ml-2 text-gray-400">Chargement des secteurs...</span>
-                      </div>
-                    ) : (
-                      <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[300px] overflow-y-auto p-3 rounded-xl border ${
-                        errors.sectors ? "border-red-500" : "border-gray-700"
-                      } bg-gray-800/30`}>
-                        {sectors.map((sector) => {
-                          const isSelected = formData.sectors.includes(sector.id);
-                          return (
-                            <label
-                              key={sector.id}
-                              className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all ${
-                                isSelected
-                                  ? "bg-orange-500/20 border border-orange-500/50"
-                                  : "bg-gray-800/50 border border-gray-700 hover:border-gray-600"
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    handleChange("sectors", [...formData.sectors, sector.id]);
-                                  } else {
-                                    handleChange("sectors", formData.sectors.filter(id => id !== sector.id));
-                                  }
-                                }}
-                                className="w-4 h-4 mt-1 text-orange-500 bg-gray-700 border-gray-600 rounded focus:ring-orange-500"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <p className={`font-medium text-sm ${isSelected ? "text-orange-400" : "text-white"}`}>
-                                  {sector.name}
-                                </p>
-                                <p className="text-xs text-gray-500">{sector.code}</p>
-                                {sector.ministry && (
-                                  <div className="flex items-center gap-1 mt-1">
-                                    <Building2 className="w-3 h-3 text-blue-400" />
-                                    <span className="text-xs text-blue-400">
-                                      {sector.ministry.name}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {errors.sectors && (
-                      <p className="text-red-400 text-xs mt-2 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> {errors.sectors}
-                      </p>
-                    )}
-
-                    {/* Afficher les secteurs sélectionnés avec leurs ministères */}
-                    {formData.sectors.length > 0 && (
-                      <div className="mt-4 p-3 bg-gray-800/50 rounded-xl border border-gray-700">
-                        <p className="text-xs font-medium text-gray-400 mb-2">
-                          {formData.sectors.length} secteur(s) selectionne(s) - Ministeres impliques:
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {(() => {
-                            const selectedSectors = sectors.filter(s => formData.sectors.includes(s.id));
-                            const uniqueMinistries = [...new Map(
-                              selectedSectors
-                                .filter(s => s.ministry)
-                                .map(s => [s.ministry.id, s.ministry])
-                            ).values()];
-
-                            return uniqueMinistries.map(ministry => (
-                              <span
-                                key={ministry.id}
-                                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/20 text-blue-400 rounded-lg text-xs"
-                              >
-                                <Building2 className="w-3 h-3" />
-                                {ministry.name}
-                              </span>
-                            ));
-                          })()}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <InputField
-                    label="Sous-secteur / Specialite"
-                    type="text"
-                    value={formData.subSector}
-                    onChange={(e) => handleChange("subSector", e.target.value)}
-                    placeholder="Ex: Transformation cereales"
-                    className="col-span-2"
-                  />
-
-                  {/* Province, Ville, Commune du projet en cascade */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
-                      Province du projet <span className="text-orange-500">*</span>
-                    </label>
-                    <select
-                      value={formData.projectProvinceId}
-                      onChange={(e) => handleProjectProvinceChange(e.target.value)}
-                      disabled={loadingProvinces}
-                      className={`w-full px-4 py-3 bg-gray-800/50 border rounded-xl text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50 ${
-                        errors.projectProvince ? "border-red-500" : "border-gray-700"
+                  return (
+                    <div
+                      key={docType.id}
+                      className={`p-3 rounded-xl border-2 transition-all ${
+                        uploadedDoc
+                          ? "border-green-500/50 bg-green-500/5"
+                          : hasError
+                          ? "border-red-500/50 bg-red-500/5"
+                          : "border-gray-700 bg-gray-800/30"
                       }`}
                     >
-                      <option value="" className="bg-gray-800">
-                        {loadingProvinces ? "Chargement..." : "Selectionnez une province"}
-                      </option>
-                      {provinces.map((prov) => (
-                        <option key={prov.id} value={prov.id} className="bg-gray-800">
-                          {prov.name}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.projectProvince && (
-                      <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> {errors.projectProvince}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
-                      Ville du projet
-                    </label>
-                    <select
-                      value={formData.projectCityId}
-                      onChange={(e) => handleProjectCityChange(e.target.value)}
-                      disabled={!formData.projectProvinceId || loadingProjectCities}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50"
-                    >
-                      <option value="" className="bg-gray-800">
-                        {loadingProjectCities
-                          ? "Chargement..."
-                          : !formData.projectProvinceId
-                            ? "Selectionnez d'abord une province"
-                            : "Selectionnez une ville"}
-                      </option>
-                      {projectCities.map((city) => (
-                        <option key={city.id} value={city.id} className="bg-gray-800">
-                          {city.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
-                      Commune du projet
-                    </label>
-                    <select
-                      value={formData.projectCommuneId}
-                      onChange={(e) => handleProjectCommuneChange(e.target.value)}
-                      disabled={!formData.projectCityId || loadingProjectCommunes}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none disabled:opacity-50"
-                    >
-                      <option value="" className="bg-gray-800">
-                        {loadingProjectCommunes
-                          ? "Chargement..."
-                          : !formData.projectCityId
-                            ? "Selectionnez d'abord une ville"
-                            : projectCommunes.length === 0
-                              ? "Aucune commune disponible"
-                              : "Selectionnez une commune"}
-                      </option>
-                      {projectCommunes.map((commune) => (
-                        <option key={commune.id} value={commune.id} className="bg-gray-800">
-                          {commune.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <InputField
-                    label="Adresse du site"
-                    type="text"
-                    value={formData.projectAddress}
-                    onChange={(e) => handleChange("projectAddress", e.target.value)}
-                    placeholder="Localisation exacte"
-                  />
-
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
-                      Description du projet
-                    </label>
-                    <textarea
-                      value={formData.projectDescription}
-                      onChange={(e) => handleChange("projectDescription", e.target.value)}
-                      rows={4}
-                      placeholder="Decrivez le projet, ses objectifs et son impact..."
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Section Finances */}
-            {activeSection === "financial" && (
-              <div className="p-6">
-                <h2 className="text-lg font-semibold text-white mb-1">
-                  Informations financieres
-                </h2>
-                <p className="text-sm text-gray-500 mb-6">
-                  Budget et impact economique du projet
-                </p>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
-                      Montant d'investissement <span className="text-orange-500">*</span>
-                    </label>
-                    <div className="flex gap-3">
-                      <input
-                        type="text"
-                        value={formData.investmentAmount}
-                        onChange={(e) => handleChange("investmentAmount", e.target.value)}
-                        placeholder="Ex: 5,000,000"
-                        className={`flex-1 px-4 py-3 bg-gray-800/50 border rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 ${
-                          errors.investmentAmount ? "border-red-500" : "border-gray-700"
-                        }`}
-                      />
-                      <select
-                        value={formData.currency}
-                        onChange={(e) => handleChange("currency", e.target.value)}
-                        className="w-28 px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-orange-500"
-                      >
-                        <option value="USD" className="bg-gray-800">USD</option>
-                        <option value="CDF" className="bg-gray-800">CDF</option>
-                        <option value="EUR" className="bg-gray-800">EUR</option>
-                      </select>
-                    </div>
-                    {errors.investmentAmount && (
-                      <p className="text-red-400 text-xs mt-2 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> {errors.investmentAmount}
-                      </p>
-                    )}
-                  </div>
-
-                  <InputField
-                    label="Emplois directs a creer"
-                    type="number"
-                    min="0"
-                    value={formData.directJobs}
-                    onChange={(e) => handleChange("directJobs", e.target.value)}
-                    placeholder="Ex: 100"
-                  />
-                  <InputField
-                    label="Emplois indirects a creer"
-                    type="number"
-                    min="0"
-                    value={formData.indirectJobs}
-                    onChange={(e) => handleChange("indirectJobs", e.target.value)}
-                    placeholder="Ex: 250"
-                  />
-
-                  <InputField
-                    label="Date de debut prevue"
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(e) => handleChange("startDate", e.target.value)}
-                  />
-                  <InputField
-                    label="Date de fin prevue"
-                    type="date"
-                    value={formData.endDate}
-                    onChange={(e) => handleChange("endDate", e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Section Documents */}
-            {activeSection === "documents" && (
-              <div className="p-6">
-                <h2 className="text-lg font-semibold text-white mb-1">
-                  Documents justificatifs
-                </h2>
-                <p className="text-sm text-gray-500 mb-6">
-                  Telechargez les pieces requises pour votre dossier
-                </p>
-
-                {/* Message d'erreur global */}
-                {errors.documents && (
-                  <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
-                    <p className="text-red-400 flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.documents}
-                    </p>
-                  </div>
-                )}
-
-                {/* Message si aucun type de dossier sélectionné */}
-                {!formData.dossierType && (
-                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6 text-center">
-                    <AlertCircle className="w-10 h-10 text-yellow-400 mx-auto mb-3" />
-                    <p className="text-yellow-400 font-medium mb-1">
-                      Type de dossier non selectionne
-                    </p>
-                    <p className="text-sm text-yellow-300/70">
-                      Veuillez d'abord selectionner un type de dossier pour voir les documents requis.
-                    </p>
-                  </div>
-                )}
-
-                {/* Liste des documents requis avec upload */}
-                {formData.dossierType && loadingDocuments && (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
-                    <span className="ml-2 text-gray-400">Chargement des documents requis...</span>
-                  </div>
-                )}
-
-                {formData.dossierType && !loadingDocuments && getRequiredDocuments().length === 0 && (
-                  <div className="bg-gray-800/30 border border-gray-700 rounded-xl p-6 text-center">
-                    <FileText className="w-10 h-10 text-gray-500 mx-auto mb-3" />
-                    <p className="text-gray-400">
-                      Aucun document requis configure pour ce type de dossier.
-                    </p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Contactez l'administrateur pour configurer les documents requis.
-                    </p>
-                  </div>
-                )}
-
-                {formData.dossierType && !loadingDocuments && getRequiredDocuments().length > 0 && (
-                  <div className="space-y-4">
-                    {getRequiredDocuments().map((docType) => {
-                      const uploadedDoc = documentsByType[docType.id];
-                      const hasError = errors[`doc_${docType.id}`];
-
-                      return (
-                        <div
-                          key={docType.id}
-                          className={`p-4 rounded-xl border-2 transition-all ${
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                             uploadedDoc
-                              ? "border-green-500/50 bg-green-500/5"
+                              ? "bg-green-500/20"
                               : hasError
-                              ? "border-red-500/50 bg-red-500/5"
-                              : "border-gray-700 bg-gray-800/30"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            {/* Info du document requis */}
-                            <div className="flex items-start gap-3 flex-1">
-                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                              ? "bg-red-500/20"
+                              : "bg-gray-700"
+                          }`}>
+                            {uploadedDoc ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-400" />
+                            ) : (
+                              <FileText className={`w-4 h-4 ${hasError ? "text-red-400" : "text-gray-400"}`} />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className={`font-medium text-sm ${
                                 uploadedDoc
-                                  ? "bg-green-500/20"
+                                  ? "text-green-400"
                                   : hasError
-                                  ? "bg-red-500/20"
-                                  : "bg-gray-700"
+                                  ? "text-red-400"
+                                  : "text-white"
                               }`}>
-                                {uploadedDoc ? (
-                                  <CheckCircle2 className="w-5 h-5 text-green-400" />
-                                ) : (
-                                  <FileText className={`w-5 h-5 ${hasError ? "text-red-400" : "text-gray-400"}`} />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <p className={`font-medium ${
-                                    uploadedDoc
-                                      ? "text-green-400"
-                                      : hasError
-                                      ? "text-red-400"
-                                      : "text-white"
-                                  }`}>
-                                    {docType.name}
-                                  </p>
-                                  {docType.required && (
-                                    <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded font-medium">
-                                      Requis
-                                    </span>
-                                  )}
-                                </div>
-
-                                {/* Fichier uploadé */}
-                                {uploadedDoc && (
-                                  <div className="flex items-center gap-2 mt-2 p-2 bg-gray-800/50 rounded-lg">
-                                    <FileText className="w-4 h-4 text-orange-400" />
-                                    <span className="text-sm text-gray-300 truncate flex-1">
-                                      {uploadedDoc.name}
-                                    </span>
-                                    <span className="text-xs text-gray-500">
-                                      {uploadedDoc.size}
-                                    </span>
-                                    <button
-                                      onClick={() => removeDocumentForType(docType.id)}
-                                      className="p-1 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
-                                    >
-                                      <X className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                )}
-
-                                {/* Message d'erreur */}
-                                {hasError && !uploadedDoc && (
-                                  <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                                    <AlertCircle className="w-3 h-3" />
-                                    Document requis non fourni
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Bouton upload */}
-                            <label className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-colors font-medium text-sm ${
-                              uploadedDoc
-                                ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                                : "bg-orange-500 text-white hover:bg-orange-600"
-                            }`}>
-                              {uploadedDoc ? (
-                                <>
-                                  <Upload className="w-4 h-4" />
-                                  Remplacer
-                                </>
-                              ) : (
-                                <>
-                                  <Plus className="w-4 h-4" />
-                                  Selectionner
-                                </>
-                              )}
-                              <input
-                                type="file"
-                                onChange={(e) => handleFileUploadForType(docType.id, e)}
-                                className="hidden"
-                                accept=".pdf,.jpg,.jpeg,.png"
-                              />
-                            </label>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Résumé */}
-                    <div className="mt-6 p-4 bg-gray-800/30 rounded-xl border border-gray-700">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-5 h-5 text-gray-400" />
-                          <span className="text-gray-400">Documents telecharges:</span>
-                        </div>
-                        <span className="text-white font-medium">
-                          {Object.keys(documentsByType).length} / {getRequiredDocuments().length}
-                        </span>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {getRequiredDocuments().map((docType) => (
-                          <span
-                            key={docType.id}
-                            className={`px-2 py-1 rounded text-xs font-medium ${
-                              documentsByType[docType.id]
-                                ? "bg-green-500/20 text-green-400"
-                                : docType.required
-                                ? "bg-red-500/20 text-red-400"
-                                : "bg-gray-700 text-gray-400"
-                            }`}
-                          >
-                            {docType.name.split(" ")[0]}
-                            {documentsByType[docType.id] && " ✓"}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Section Recapitulatif */}
-            {activeSection === "summary" && (
-              <div className="p-6">
-                <h2 className="text-lg font-semibold text-white mb-1">
-                  Recapitulatif
-                </h2>
-                <p className="text-sm text-gray-500 mb-6">
-                  Verifiez les informations avant soumission
-                </p>
-
-                {errors.submit && (
-                  <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
-                    <p className="text-red-400 flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.submit}
-                    </p>
-                  </div>
-                )}
-
-                <div className="space-y-6">
-                  {/* Type */}
-                  <div className="bg-gray-800/30 rounded-xl p-4">
-                    <h3 className="text-sm font-medium text-gray-400 mb-3">Type de dossier</h3>
-                    <p className="text-white font-medium">
-                      {dossierTypes.find(t => t.value === formData.dossierType)?.label || "Non selectionne"}
-                    </p>
-                  </div>
-
-                  {/* Investisseur */}
-                  <div className="bg-gray-800/30 rounded-xl p-4">
-                    <h3 className="text-sm font-medium text-gray-400 mb-3">Investisseur</h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-500">Type:</span>
-                        <span className="text-white ml-2">{formData.investorType === "company" ? "Entreprise" : "Individuel"}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Nom:</span>
-                        <span className="text-white ml-2">{formData.investorName || "-"}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Email:</span>
-                        <span className="text-white ml-2">{formData.email || "-"}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Telephone:</span>
-                        <span className="text-white ml-2">{formData.phone || "-"}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Pays:</span>
-                        <span className="text-white ml-2">
-                          {countries.find(c => c.code === formData.country)?.name || formData.country || "-"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Province:</span>
-                        <span className="text-white ml-2">{formData.investorProvince || "-"}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Ville:</span>
-                        <span className="text-white ml-2">{formData.investorCity || "-"}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Commune:</span>
-                        <span className="text-white ml-2">{formData.investorCommune || "-"}</span>
-                      </div>
-                      {formData.investorType === "company" && formData.rccm && (
-                        <div>
-                          <span className="text-gray-500">RCCM:</span>
-                          <span className="text-white ml-2">{formData.rccm}</span>
-                        </div>
-                      )}
-                      {formData.investorType === "company" && formData.idNat && (
-                        <div>
-                          <span className="text-gray-500">ID National:</span>
-                          <span className="text-white ml-2">{formData.idNat}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Représentant légal dans le récapitulatif */}
-                    {formData.investorType === "company" && formData.representativeName && (
-                      <div className="mt-4 pt-4 border-t border-gray-700">
-                        <p className="text-xs text-gray-500 mb-2">Representant legal:</p>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="text-gray-500">Nom:</span>
-                            <span className="text-white ml-2">{formData.representativeName}</span>
-                          </div>
-                          {formData.representativeFunction && (
-                            <div>
-                              <span className="text-gray-500">Fonction:</span>
-                              <span className="text-white ml-2">{formData.representativeFunction}</span>
-                            </div>
-                          )}
-                          {formData.representativePhone && (
-                            <div>
-                              <span className="text-gray-500">Telephone:</span>
-                              <span className="text-white ml-2">{formData.representativePhone}</span>
-                            </div>
-                          )}
-                          {formData.representativeEmail && (
-                            <div>
-                              <span className="text-gray-500">Email:</span>
-                              <span className="text-white ml-2">{formData.representativeEmail}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Projet */}
-                  <div className="bg-gray-800/30 rounded-xl p-4">
-                    <h3 className="text-sm font-medium text-gray-400 mb-3">Projet</h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-500">Nom:</span>
-                        <span className="text-white ml-2">{formData.projectName || "-"}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Province:</span>
-                        <span className="text-white ml-2">{formData.projectProvince || "-"}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Ville:</span>
-                        <span className="text-white ml-2">{formData.projectCity || "-"}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Commune:</span>
-                        <span className="text-white ml-2">{formData.projectCommune || "-"}</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className="text-gray-500">Investissement:</span>
-                        <span className="text-white ml-2">{formData.investmentAmount ? `${formData.investmentAmount} ${formData.currency}` : "-"}</span>
-                      </div>
-                    </div>
-
-                    {/* Secteurs sélectionnés */}
-                    {formData.sectors.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-gray-700">
-                        <p className="text-xs text-gray-500 mb-2">Secteurs d'activite:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {sectors.filter(s => formData.sectors.includes(s.id)).map(sector => (
-                            <span
-                              key={sector.id}
-                              className="inline-flex items-center gap-1 px-2 py-1 bg-orange-500/20 text-orange-400 rounded-lg text-xs"
-                            >
-                              <Factory className="w-3 h-3" />
-                              {sector.name}
-                            </span>
-                          ))}
-                        </div>
-
-                        {/* Ministères impliqués */}
-                        <p className="text-xs text-gray-500 mt-3 mb-2">Ministeres impliques:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {(() => {
-                            const selectedSectors = sectors.filter(s => formData.sectors.includes(s.id));
-                            const uniqueMinistries = [...new Map(
-                              selectedSectors
-                                .filter(s => s.ministry)
-                                .map(s => [s.ministry.id, s.ministry])
-                            ).values()];
-
-                            return uniqueMinistries.map(ministry => (
-                              <span
-                                key={ministry.id}
-                                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/20 text-blue-400 rounded-lg text-xs"
-                              >
-                                <Building2 className="w-3 h-3" />
-                                {ministry.name}
-                              </span>
-                            ));
-                          })()}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Documents */}
-                  <div className="bg-gray-800/30 rounded-xl p-4">
-                    <h3 className="text-sm font-medium text-gray-400 mb-3">Documents</h3>
-                    <p className="text-white mb-3">{Object.keys(documentsByType).length} fichier(s) telecharge(s)</p>
-                    {Object.keys(documentsByType).length > 0 && (
-                      <div className="space-y-2">
-                        {getRequiredDocuments().map((docType) => {
-                          const uploadedDoc = documentsByType[docType.id];
-                          return (
-                            <div
-                              key={docType.id}
-                              className={`flex items-center gap-3 p-2 rounded-lg ${
-                                uploadedDoc ? "bg-green-500/10" : "bg-gray-700/50"
-                              }`}
-                            >
-                              {uploadedDoc ? (
-                                <CheckCircle2 className="w-4 h-4 text-green-400" />
-                              ) : (
-                                <AlertCircle className="w-4 h-4 text-gray-500" />
-                              )}
-                              <span className="text-sm text-gray-400">{docType.name}:</span>
-                              <span className={`text-sm ${uploadedDoc ? "text-green-400" : "text-gray-500"}`}>
-                                {uploadedDoc ? uploadedDoc.name : "Non fourni"}
-                              </span>
-                              {docType.required && !uploadedDoc && (
-                                <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded">
+                                {docType.name}
+                              </p>
+                              {docType.required && (
+                                <span className="px-1.5 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded font-medium">
                                   Requis
                                 </span>
                               )}
                             </div>
-                          );
-                        })}
+
+                            {uploadedDoc && (
+                              <div className="flex items-center gap-2 mt-1.5 p-1.5 bg-gray-800/50 rounded">
+                                <span className="text-xs text-gray-300 truncate flex-1">
+                                  {uploadedDoc.name}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {uploadedDoc.size}
+                                </span>
+                                <button
+                                  onClick={() => removeDocumentForType(docType.id)}
+                                  className="p-0.5 text-gray-500 hover:text-red-400 transition-colors"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <label className={`flex items-center gap-1 px-3 py-1.5 rounded-lg cursor-pointer transition-colors font-medium text-xs ${
+                          uploadedDoc
+                            ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                            : "bg-orange-500 text-white hover:bg-orange-600"
+                        }`}>
+                          {uploadedDoc ? "Changer" : "Ajouter"}
+                          <input
+                            type="file"
+                            onChange={(e) => handleFileUploadForType(docType.id, e)}
+                            className="hidden"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                          />
+                        </label>
                       </div>
-                    )}
-                  </div>
-                </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
-            {/* Footer Navigation */}
-            <div className="flex items-center justify-between p-4 border-t border-gray-700/50">
-              <button
-                onClick={goToPrevSection}
-                disabled={currentSectionIndex === 0}
-                className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight className="w-4 h-4 rotate-180" />
-                Precedent
-              </button>
-
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">
-                  Etape {currentSectionIndex + 1} / {sections.length}
-                </span>
-                <div className="flex gap-1">
-                  {sections.map((_, idx) => (
-                    <div
-                      key={idx}
-                      className={`w-2 h-2 rounded-full transition-colors ${
-                        idx === currentSectionIndex
-                          ? "bg-orange-500"
-                          : idx < currentSectionIndex
-                          ? "bg-green-500"
-                          : "bg-gray-600"
-                      }`}
-                    />
-                  ))}
+            {/* Summary */}
+            {formData.dossierType && !loadingDocuments && getRequiredDocuments().length > 0 && (
+              <div className="mt-4 p-3 bg-gray-800/30 rounded-xl border border-gray-700">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-400">Documents telecharges:</span>
+                  <span className="text-sm font-medium text-white">
+                    {Object.keys(documentsByType).length} / {getRequiredDocuments().length}
+                  </span>
                 </div>
               </div>
-
-              {currentSectionIndex < sections.length - 1 ? (
-                <button
-                  onClick={goToNextSection}
-                  className="flex items-center gap-2 px-5 py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors font-medium"
-                >
-                  Suivant
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleSubmit(false)}
-                  disabled={loading}
-                  className="flex items-center gap-2 px-5 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors font-medium disabled:opacity-50"
-                >
-                  {loading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
-                  Soumettre
-                </button>
-              )}
-            </div>
-          </div>
+            )}
+          </SectionCard>
         </div>
       </div>
     </div>
   );
 }
 
-// Export avec Suspense pour useSearchParams
+// Export with Suspense for useSearchParams
 export default function NewDossierPage() {
   return (
     <Suspense fallback={

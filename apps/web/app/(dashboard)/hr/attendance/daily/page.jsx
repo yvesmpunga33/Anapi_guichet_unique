@@ -138,8 +138,46 @@ export default function DailyAttendancePage() {
         }),
       ]);
 
-      setDepartments(deptRes?.data || []);
-      setAttendanceData(attRes?.data || { stats: {}, data: [], pagination: {} });
+      // Extract departments array safely (handle various response structures)
+      const deptsArray = deptRes?.data?.departments || deptRes?.data || [];
+      setDepartments(Array.isArray(deptsArray) ? deptsArray : []);
+
+      // Transform API response to expected format
+      // API returns: { attendances: [...], stats: {...}, pagination: {...} }
+      // Frontend expects: { data: [{ employee: {...}, attendance: {...} }], stats: {...}, pagination: {...} }
+      const apiData = attRes?.data || {};
+      const attendances = apiData.attendances || [];
+      const transformedData = attendances.map((item, index) => ({
+        rowNumber: index + 1,
+        employee: {
+          id: item.employee_id,
+          matricule: item.matricule,
+          nom: item.nom,
+          prenom: item.prenom,
+          departement: item.departement_nom || item.departement,
+          photo: item.photo,
+        },
+        attendance: item.id ? {
+          id: item.id,
+          status: item.status?.toLowerCase() || 'absent',
+          checkIn: item.check_in,
+          checkOut: item.check_out,
+          breakStart: item.break_start,
+          breakEnd: item.break_end,
+          workingHours: item.working_hours,
+          overtimeHours: item.overtime_hours,
+          lateMinutes: item.late_minutes,
+          isValidated: item.is_validated,
+          notes: item.notes,
+          source: item.source,
+        } : null,
+      }));
+
+      setAttendanceData({
+        data: transformedData,
+        stats: apiData.stats || {},
+        pagination: apiData.pagination || {},
+      });
     } catch (error) {
       console.error('Error loading data:', error);
       Swal.fire({
@@ -169,9 +207,10 @@ export default function DailyAttendancePage() {
     setProcessingEmployee(employeeId);
     try {
       await checkIn({
-        employeeId,
-        time: new Date().toTimeString().split(' ')[0],
-        location: 'manual',
+        employee_id: employeeId,
+        check_in: new Date().toTimeString().split(' ')[0].substring(0, 5),
+        date: selectedDate,
+        method: 'MANUAL',
       });
       Swal.fire({
         icon: 'success',
@@ -184,7 +223,7 @@ export default function DailyAttendancePage() {
       Swal.fire({
         icon: 'error',
         title: intl.formatMessage({ id: 'common.error', defaultMessage: 'Erreur' }),
-        text: error.message,
+        text: error.response?.data?.message || error.message,
       });
     } finally {
       setProcessingEmployee(null);
@@ -196,9 +235,9 @@ export default function DailyAttendancePage() {
     setProcessingEmployee(employeeId);
     try {
       await checkOut({
-        employeeId,
-        time: new Date().toTimeString().split(' ')[0],
-        location: 'manual',
+        employee_id: employeeId,
+        check_out: new Date().toTimeString().split(' ')[0].substring(0, 5),
+        date: selectedDate,
       });
       Swal.fire({
         icon: 'success',
@@ -211,7 +250,7 @@ export default function DailyAttendancePage() {
       Swal.fire({
         icon: 'error',
         title: intl.formatMessage({ id: 'common.error', defaultMessage: 'Erreur' }),
-        text: error.message,
+        text: error.response?.data?.message || error.message,
       });
     } finally {
       setProcessingEmployee(null);
@@ -222,7 +261,7 @@ export default function DailyAttendancePage() {
   const handleMarkAbsent = async (employeeId) => {
     setProcessingEmployee(employeeId);
     try {
-      await markAbsent({ employeeId, date: selectedDate });
+      await markAbsent({ employee_id: employeeId, date: selectedDate });
       Swal.fire({
         icon: 'info',
         title: intl.formatMessage({ id: 'hr.attendance.markedAbsent', defaultMessage: 'Employe marque absent' }),
@@ -251,10 +290,10 @@ export default function DailyAttendancePage() {
   // Filter employees by tab
   const getFilteredEmployees = () => {
     const data = attendanceData?.data || [];
-    if (activeTab === 0) return data;
-    if (activeTab === 1) return data.filter((item) => item.attendance && ['present', 'late'].includes(item.attendance.status));
-    if (activeTab === 2) return data.filter((item) => !item.attendance || item.attendance.status === 'absent');
-    if (activeTab === 3) return data.filter((item) => item.attendance?.status === 'late');
+    if (activeTab === 0) return data; // All
+    if (activeTab === 1) return data.filter((item) => item.attendance && ['present', 'late'].includes(item.attendance.status)); // Present
+    if (activeTab === 2) return data.filter((item) => !item.attendance || item.attendance.status === 'absent' || !item.attendance.checkIn); // Absent
+    if (activeTab === 3) return data.filter((item) => item.attendance?.status === 'late'); // Late
     return data;
   };
 

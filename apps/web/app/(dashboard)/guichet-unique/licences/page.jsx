@@ -8,6 +8,7 @@ import {
   Filter,
   Eye,
   Edit,
+  Trash2,
   Clock,
   CheckCircle2,
   XCircle,
@@ -29,9 +30,10 @@ import {
   TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
+import Swal from "sweetalert2";
 
 // Services
-import { DossierList } from "@/app/services/admin/GuichetUnique.service";
+import { DossierList, DossierDelete } from "@/app/services/admin/GuichetUnique.service";
 
 // LICENCES - Theme ORANGE/AMBER avec layout en cartes horizontales compactes
 const statusConfig = {
@@ -171,7 +173,7 @@ export default function LicencesPage() {
       const params = {
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
-        type: 'LICENCE_EXPLOITATION',
+        type: 'LICENCE',
       };
 
       if (searchTerm) {
@@ -222,6 +224,41 @@ export default function LicencesPage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  // Handle delete with SweetAlert2
+  const handleDelete = async (dossier) => {
+    const result = await Swal.fire({
+      title: 'Confirmer la suppression',
+      text: `Etes-vous sur de vouloir supprimer la licence ${dossier.dossierNumber} ?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Oui, supprimer',
+      cancelButtonText: 'Annuler'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await DossierDelete(dossier.id);
+        Swal.fire({
+          icon: 'success',
+          title: 'Supprime',
+          text: 'Licence supprimee avec succes',
+          confirmButtonColor: '#f97316'
+        });
+        fetchDossiers();
+      } catch (error) {
+        console.error('Error deleting licence:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: error.response?.data?.message || 'Erreur lors de la suppression',
+          confirmButtonColor: '#ef4444'
+        });
+      }
+    }
+  };
 
   const formatAmount = (amount, currency = 'USD') => {
     return new Intl.NumberFormat("fr-FR", {
@@ -385,14 +422,14 @@ export default function LicencesPage() {
                 >
                   <div className="flex flex-col lg:flex-row">
                     {/* Colonne gauche - Identification avec accent ambre */}
-                    <div className="lg:w-1/4 p-4 bg-stone-50 dark:from-gray-750 dark:to-gray-800 border-b lg:border-b-0 lg:border-r border-stone-200 dark:border-gray-700">
+                    <div className="lg:w-1/4 p-4 bg-stone-100 dark:bg-gray-700 border-b lg:border-b-0 lg:border-r border-stone-200 dark:border-gray-600">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-amber-500/80 shadow-sm">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-amber-500 shadow-sm">
                           <Factory className="w-6 h-6 text-white" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-gray-900 dark:text-white">{dossier.dossierNumber}</h3>
-                          <span className="text-xs text-amber-700 dark:text-amber-400 font-semibold uppercase">Licence</span>
+                          <h3 className="font-bold text-gray-800 dark:text-white text-base">{dossier.dossierNumber}</h3>
+                          <span className="text-xs text-amber-600 dark:text-amber-400 font-bold uppercase">Licence</span>
                         </div>
                       </div>
                       <div className="mt-3 pt-3 border-t border-stone-200 dark:border-gray-700">
@@ -477,6 +514,15 @@ export default function LicencesPage() {
                         >
                           <Edit className="w-4 h-4" />
                         </Link>
+                        {dossier.status === 'DRAFT' && (
+                          <button
+                            onClick={() => handleDelete(dossier)}
+                            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

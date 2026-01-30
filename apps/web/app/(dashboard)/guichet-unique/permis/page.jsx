@@ -8,6 +8,7 @@ import {
   Filter,
   Eye,
   Edit,
+  Trash2,
   Clock,
   CheckCircle2,
   XCircle,
@@ -29,9 +30,10 @@ import {
   Home,
 } from "lucide-react";
 import Link from "next/link";
+import Swal from "sweetalert2";
 
 // Services
-import { DossierList } from "@/app/services/admin/GuichetUnique.service";
+import { DossierList, DossierDelete } from "@/app/services/admin/GuichetUnique.service";
 
 // PERMIS - Theme CYAN/TEAL avec layout en grille de cartes compactes
 const statusConfig = {
@@ -171,7 +173,7 @@ export default function PermisPage() {
       const params = {
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
-        type: 'PERMIS_CONSTRUCTION',
+        type: 'PERMIS',
       };
 
       if (searchTerm) {
@@ -222,6 +224,41 @@ export default function PermisPage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  // Handle delete with SweetAlert2
+  const handleDelete = async (dossier) => {
+    const result = await Swal.fire({
+      title: 'Confirmer la suppression',
+      text: `Etes-vous sur de vouloir supprimer le permis ${dossier.dossierNumber} ?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Oui, supprimer',
+      cancelButtonText: 'Annuler'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await DossierDelete(dossier.id);
+        Swal.fire({
+          icon: 'success',
+          title: 'Supprime',
+          text: 'Permis supprime avec succes',
+          confirmButtonColor: '#0891b2'
+        });
+        fetchDossiers();
+      } catch (error) {
+        console.error('Error deleting permis:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: error.response?.data?.message || 'Erreur lors de la suppression',
+          confirmButtonColor: '#ef4444'
+        });
+      }
+    }
+  };
 
   const formatAmount = (amount, currency = 'USD') => {
     return new Intl.NumberFormat("fr-FR", {
@@ -501,6 +538,15 @@ export default function PermisPage() {
                     >
                       <Edit className="w-4 h-4" />
                     </Link>
+                    {dossier.status === 'DRAFT' && (
+                      <button
+                        onClick={() => handleDelete(dossier)}
+                        className="ml-1 p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               );

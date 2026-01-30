@@ -664,6 +664,14 @@ const translations = {
   },
 };
 
+// Get API base URL
+const getApiBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3502';
+  }
+  return 'http://localhost:3502';
+};
+
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState(null);
@@ -675,7 +683,43 @@ export default function LandingPage() {
   const langMenuRef = useRef(null);
   const mobileLangMenuRef = useRef(null);
 
+  // Dynamic data from API
+  const [apiStats, setApiStats] = useState(null);
+  const [apiSectors, setApiSectors] = useState([]);
+  const [loadingApiData, setLoadingApiData] = useState(true);
+
   const t = translations[currentLang] || translations.fr;
+
+  // Load dynamic data from API
+  useEffect(() => {
+    const loadApiData = async () => {
+      const apiBaseUrl = getApiBaseUrl();
+      try {
+        // Load dashboard stats and sectors in parallel
+        const [statsRes, sectorsRes] = await Promise.all([
+          fetch(`${apiBaseUrl}/api/v1/dashboard/public/stats`).catch(() => null),
+          fetch(`${apiBaseUrl}/api/v1/referentiels/sectors?isActive=true`).catch(() => null),
+        ]);
+
+        if (statsRes?.ok) {
+          const statsData = await statsRes.json();
+          setApiStats(statsData.data || statsData);
+        }
+
+        if (sectorsRes?.ok) {
+          const sectorsData = await sectorsRes.json();
+          const sectors = sectorsData.data?.sectors || sectorsData.sectors || sectorsData.data || [];
+          setApiSectors(Array.isArray(sectors) ? sectors : []);
+        }
+      } catch (error) {
+        console.warn("Could not load API data for landing page:", error.message);
+      } finally {
+        setLoadingApiData(false);
+      }
+    };
+
+    loadApiData();
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -713,8 +757,29 @@ export default function LandingPage() {
     setMobileLangMenuOpen(false);
   };
 
-  // Statistiques clés
-  const stats = [
+  // Statistiques clés - use API data if available, otherwise fallback to default values
+  const stats = apiStats ? [
+    {
+      value: apiStats.totalInvestments >= 1000000000
+        ? (apiStats.totalInvestments / 1000000000).toFixed(1)
+        : apiStats.totalInvestments >= 1000000
+          ? (apiStats.totalInvestments / 1000000).toFixed(0) + "M"
+          : "2.5",
+      suffix: apiStats.totalInvestments >= 1000000000 ? "Mrd $" : apiStats.totalInvestments >= 1000000 ? " $" : "Mrd $",
+      label: t.stats.investments,
+      icon: TrendingUp
+    },
+    { value: apiStats.totalInvestors?.toString() || "500", suffix: "+", label: t.stats.companies, icon: Building },
+    {
+      value: apiStats.totalJobs >= 1000
+        ? (apiStats.totalJobs / 1000).toFixed(0)
+        : apiStats.totalJobs?.toString() || "50",
+      suffix: apiStats.totalJobs >= 1000 ? "K+" : "+",
+      label: t.stats.jobs,
+      icon: Users
+    },
+    { value: "100", suffix: "M", label: t.stats.consumers, icon: Globe },
+  ] : [
     { value: "2.5", suffix: "Mrd $", label: t.stats.investments, icon: TrendingUp },
     { value: "500", suffix: "+", label: t.stats.companies, icon: Building },
     { value: "50", suffix: "K+", label: t.stats.jobs, icon: Users },

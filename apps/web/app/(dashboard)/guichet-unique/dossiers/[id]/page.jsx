@@ -61,6 +61,18 @@ const documentCategoryConfig = {
   OTHER: { label: "Autre", color: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300" },
 };
 
+// Configuration des types de dossiers
+const dossierTypeConfig = {
+  AGREMENT: { label: "Agrément", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400", icon: "🏛️" },
+  AGREMENT_REGIME: { label: "Agrément au Régime", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400", icon: "🏛️" },
+  LICENCE: { label: "Licence", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400", icon: "📜" },
+  LICENCE_EXPLOITATION: { label: "Licence d'Exploitation", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400", icon: "📜" },
+  PERMIS: { label: "Permis", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400", icon: "📋" },
+  PERMIS_CONSTRUCTION: { label: "Permis de Construction", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400", icon: "📋" },
+  AUTORISATION: { label: "Autorisation", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400", icon: "✅" },
+  AUTORISATION_ACTIVITE: { label: "Autorisation d'Activité", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400", icon: "✅" },
+};
+
 const mockDossier = {
   id: "1",
   reference: "GU-2024-00125",
@@ -153,33 +165,43 @@ export default function DossierDetailPage() {
       formData.append('description', uploadDescription);
       formData.append('category', uploadCategory);
 
+      // Recuperer le token d'authentification depuis localStorage
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+
       const response = await fetch(`/api/guichet-unique/dossiers/${params.id}/documents`, {
         method: 'POST',
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
         body: formData,
       });
 
       if (response.ok) {
         const data = await response.json();
-        // Ajouter le nouveau document à la liste
-        setDossier(prev => ({
-          ...prev,
-          documents: [
-            {
-              id: data.document.id,
-              name: data.document.name,
-              fileName: data.document.fileName,
-              filePath: data.document.filePath,
-              type: data.document.mimeType?.includes('pdf') ? 'PDF' :
-                    data.document.mimeType?.includes('sheet') || data.document.mimeType?.includes('excel') ? 'XLSX' : 'Document',
-              mimeType: data.document.mimeType,
-              size: formatFileSize(data.document.fileSize),
-              uploadedAt: data.document.createdAt,
-              category: data.document.category,
-              description: data.document.description,
-            },
-            ...prev.documents,
-          ],
-        }));
+        // L'API peut retourner data.data.document ou data.document selon le wrapper
+        const doc = data.data?.document || data.document;
+        if (doc) {
+          // Ajouter le nouveau document à la liste
+          setDossier(prev => ({
+            ...prev,
+            documents: [
+              {
+                id: doc.id,
+                name: doc.name,
+                fileName: doc.fileName,
+                filePath: doc.filePath,
+                type: doc.mimeType?.includes('pdf') ? 'PDF' :
+                      doc.mimeType?.includes('sheet') || doc.mimeType?.includes('excel') ? 'XLSX' : 'Document',
+                mimeType: doc.mimeType,
+                size: formatFileSize(doc.fileSize),
+                uploadedAt: doc.createdAt || doc.created_at,
+                category: doc.category,
+                description: doc.description,
+              },
+              ...(prev.documents || []),
+            ],
+          }));
+        }
         // Fermer le modal et réinitialiser
         setShowUploadModal(false);
         setUploadFile(null);
@@ -341,12 +363,13 @@ export default function DossierDetailPage() {
           const data = await response.json();
           // Transformer les etapes pour avoir le format attendu
           const steps = (data.steps || []).map(s => ({
-            step: s.step,
+            step: s.step || s.stepNumber,
             name: s.name,
             description: s.description,
             color: s.color,
             icon: s.icon,
             responsibleRole: s.responsibleRole,
+            estimatedDays: s.estimatedDays,
           }));
           setWorkflowSteps(steps);
         } else {
@@ -394,9 +417,13 @@ export default function DossierDetailPage() {
   const handleSaveEdit = async () => {
     setSaving(true);
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
       const response = await fetch(`/api/guichet-unique/dossiers/${params.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
         body: JSON.stringify({
           action: 'update_details',
           ...editFormData,
@@ -544,11 +571,17 @@ export default function DossierDetailPage() {
     // Charger le dossier réel depuis l'API
     const fetchDossier = async () => {
       try {
-        const response = await fetch(`/api/guichet-unique/dossiers/${params.id}`);
+        const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+        const response = await fetch(`/api/guichet-unique/dossiers/${params.id}`, {
+          headers: {
+            ...(token && { 'Authorization': `Bearer ${token}` })
+          }
+        });
         if (response.ok) {
           const data = await response.json();
           // Transformer les données de l'API pour correspondre à la structure attendue
-          const apiDossier = data.dossier;
+          // L'API retourne { success, data: { dossier } } donc on accède à data.data.dossier
+          const apiDossier = data.data?.dossier || data.dossier;
           setDossier({
             id: apiDossier.id,
             reference: apiDossier.dossierNumber || `GU-${apiDossier.id.substring(0, 8)}`,
@@ -662,10 +695,14 @@ export default function DossierDetailPage() {
 
     setValidatingStep(true);
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
       const isFinalStep = selectedStep.step === workflowSteps.length;
       const response = await fetch(`/api/guichet-unique/dossiers/${params.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
         body: JSON.stringify({
           action: 'validate_step',
           note: stepNote,
@@ -820,13 +857,22 @@ export default function DossierDetailPage() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-start gap-4">
-          <Link
-            href="/guichet-unique/dossiers"
+          <button
+            onClick={() => router.back()}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-gray-500" />
-          </Link>
+          </button>
           <div>
+            {/* Type de dossier - affiché en premier */}
+            {dossier.dossierType && dossierTypeConfig[dossier.dossierType] && (
+              <div className="mb-2">
+                <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold ${dossierTypeConfig[dossier.dossierType].color}`}>
+                  <span className="mr-2">{dossierTypeConfig[dossier.dossierType].icon}</span>
+                  {dossierTypeConfig[dossier.dossierType].label}
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 {dossier.reference}
@@ -969,7 +1015,7 @@ export default function DossierDetailPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          window.open(`/api/guichet-unique/dossiers/${params.id}/certificate`, '_blank');
+                          window.open(`/guichet-unique/dossiers/${params.id}/certificate`, '_blank');
                         }}
                         className="mt-2 text-xs px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-full font-medium transition-colors flex items-center gap-1"
                       >
@@ -1248,6 +1294,11 @@ export default function DossierDetailPage() {
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{doc.size} - {formatDate(doc.uploadedAt)}</p>
+                      {doc.description && (
+                        <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 italic">
+                          {doc.description}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -1727,9 +1778,13 @@ export default function DossierDetailPage() {
             <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-900">
               {previewDocument.type === "PDF" || previewDocument.name.endsWith('.pdf') ? (
                 <div className="w-full h-full min-h-[600px]">
-                  {/* Aperçu PDF avec iframe */}
+                  {/* Aperçu PDF avec iframe - passer le token pour l'authentification */}
                   <iframe
-                    src={previewDocument.id ? `/api/documents/${previewDocument.id}/view` : `/api/documents/mock-${encodeURIComponent(previewDocument.name)}/view`}
+                    src={(() => {
+                      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : '';
+                      const baseUrl = previewDocument.id ? `/api/documents/${previewDocument.id}/view` : `/api/documents/mock-${encodeURIComponent(previewDocument.name)}/view`;
+                      return token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl;
+                    })()}
                     className="w-full h-full min-h-[600px] border-0"
                     title={previewDocument.name}
                   />
@@ -1947,7 +2002,7 @@ export default function DossierDetailPage() {
       {/* Modal de validation d'étape */}
       {showStepModal && selectedStep && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-4">
                 <div
@@ -1968,6 +2023,77 @@ export default function DossierDetailPage() {
             </div>
 
             <div className="p-6 space-y-4">
+              {/* Description de l'étape */}
+              {selectedStep.description && (
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description de l'étape</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{selectedStep.description}</p>
+                </div>
+              )}
+
+              {/* Informations sur l'étape */}
+              <div className="grid grid-cols-2 gap-3">
+                {selectedStep.responsibleRole && (
+                  <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3">
+                    <p className="text-xs text-purple-600 dark:text-purple-400 mb-1">Responsable</p>
+                    <p className="text-sm font-medium text-purple-800 dark:text-purple-300 capitalize">
+                      {selectedStep.responsibleRole === 'admin' ? 'Administrateur' :
+                       selectedStep.responsibleRole === 'manager' ? 'Manager' :
+                       selectedStep.responsibleRole === 'agent' ? 'Agent' : selectedStep.responsibleRole}
+                    </p>
+                  </div>
+                )}
+                {selectedStep.estimatedDays && (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mb-1">Délai estimé</p>
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                      {selectedStep.estimatedDays} jour{selectedStep.estimatedDays > 1 ? 's' : ''}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* État des documents du dossier */}
+              {dossier.documents && dossier.documents.length > 0 && (
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Documents du dossier</h4>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="flex items-center gap-1">
+                      <FileText className="w-4 h-4 text-gray-500" />
+                      <span className="text-gray-600 dark:text-gray-400">{dossier.documents.length} document(s)</span>
+                    </span>
+                    <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                      <CheckCircle2 className="w-4 h-4" />
+                      {dossier.documents.filter(d => d.status === 'VALIDATED').length} validé(s)
+                    </span>
+                    {dossier.documents.filter(d => d.status === 'PENDING').length > 0 && (
+                      <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                        <Clock className="w-4 h-4" />
+                        {dossier.documents.filter(d => d.status === 'PENDING').length} en attente
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Étapes précédentes validées */}
+              {selectedStep.step > 1 && (
+                <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-green-700 dark:text-green-300 mb-2">Étapes précédentes validées</h4>
+                  <div className="space-y-1">
+                    {workflowSteps.filter(s => s.step < selectedStep.step).map(prevStep => (
+                      <div key={prevStep.step} className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+                        <span className="text-green-700 dark:text-green-300">
+                          Étape {prevStep.step}: {prevStep.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Message d'attention */}
               <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
                 <p className="text-sm text-blue-700 dark:text-blue-300">
                   <strong>Attention:</strong> En validant cette étape, le dossier passera à l'étape suivante.
@@ -2001,6 +2127,11 @@ export default function DossierDetailPage() {
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
                       {workflowSteps[selectedStep.step]?.name || 'Étape suivante'}
                     </p>
+                    {workflowSteps[selectedStep.step]?.description && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {workflowSteps[selectedStep.step].description}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}

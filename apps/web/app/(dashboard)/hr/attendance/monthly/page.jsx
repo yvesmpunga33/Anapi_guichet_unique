@@ -171,7 +171,9 @@ export default function MonthlyAttendancePage() {
       ]);
 
       setReportData(reportRes?.data || null);
-      setDepartments(deptRes?.data || []);
+      // Extract departments array safely (handle various response structures)
+      const deptsArray = deptRes?.data?.departments || deptRes?.data || [];
+      setDepartments(Array.isArray(deptsArray) ? deptsArray : []);
     } catch (error) {
       console.error('Error loading data:', error);
       Swal.fire({
@@ -500,8 +502,8 @@ export default function MonthlyAttendancePage() {
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredReport.map((row, index) => {
-                  const emp = row.employee;
-                  const summary = row.summary;
+                  const emp = row?.employee || {};
+                  const summary = row?.summary || {};
 
                   return (
                     <tr key={emp.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
@@ -516,9 +518,9 @@ export default function MonthlyAttendancePage() {
                           </div>
                           <div>
                             <p className="whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                              {emp.prenom} {emp.nom}
+                              {emp.prenom || ''} {emp.nom || ''}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{emp.matricule}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{emp.matricule || '-'}</p>
                           </div>
                         </div>
                       </td>

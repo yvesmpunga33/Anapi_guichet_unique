@@ -37,15 +37,18 @@ export default function MinistriesListPage() {
       const response = await ReferentielMinistryList({ limit: 100 });
       const result = response.data;
 
-      const data = result.success ? result.data : (result.ministries || []);
-      const activeMinistries = data.filter(m => m.isActive !== false);
+      const data = result.data?.ministries || result.ministries || result.data || [];
+      const activeMinistries = Array.isArray(data) ? data.filter(m => m.isActive !== false) : [];
       setAllMinistries(activeMinistries);
       setFilteredMinistries(activeMinistries);
 
       // Fetch stats for each ministry
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
       const statsPromises = activeMinistries.map(async (ministry) => {
         try {
-          const statsRes = await fetch(`/api/ministries/${ministry.id}/dashboard`);
+          const statsRes = await fetch(`/api/ministries/${ministry.id}/dashboard`, { headers });
           const statsData = await statsRes.json();
           return { ministryId: ministry.id, stats: statsData.success ? statsData.globalStats : null };
         } catch {

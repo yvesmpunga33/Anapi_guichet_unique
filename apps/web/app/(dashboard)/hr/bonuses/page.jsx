@@ -151,8 +151,11 @@ export default function BonusesDashboardPage() {
 
       if (bonusStatsRes.success) setBonusStats(bonusStatsRes.data);
       if (deductionStatsRes.success) setDeductionStats(deductionStatsRes.data);
-      if (bonusesRes.success) setRecentBonuses(bonusesRes.data?.data || bonusesRes.data || []);
-      if (deductionsRes.success) setRecentDeductions(deductionsRes.data?.data || deductionsRes.data || []);
+      // Extract arrays safely (handle various response structures)
+      const bonusesArray = bonusesRes.data?.bonuses || bonusesRes.data?.data || bonusesRes.data || [];
+      const deductionsArray = deductionsRes.data?.deductions || deductionsRes.data?.data || deductionsRes.data || [];
+      if (bonusesRes.success) setRecentBonuses(Array.isArray(bonusesArray) ? bonusesArray : []);
+      if (deductionsRes.success) setRecentDeductions(Array.isArray(deductionsArray) ? deductionsArray : []);
     } catch (error) {
       console.error('Erreur chargement donnees:', error);
     } finally {

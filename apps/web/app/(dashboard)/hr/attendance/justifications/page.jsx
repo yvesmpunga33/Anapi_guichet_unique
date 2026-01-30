@@ -564,10 +564,14 @@ export default function JustificationsPage() {
         getJustificationStats(),
       ]);
 
-      setJustifications(justRes?.data || []);
+      // Extract arrays safely (handle various response structures)
+      const justArray = justRes?.data?.justifications || justRes?.data || [];
+      const empArray = empRes?.data?.employees || empRes?.data || [];
+      const deptsArray = deptRes?.data?.departments || deptRes?.data || [];
+      setJustifications(Array.isArray(justArray) ? justArray : []);
       setPagination({ page: page + 1, total: justRes?.total || 0 });
-      setEmployees(empRes?.data || []);
-      setDepartments(deptRes?.data || []);
+      setEmployees(Array.isArray(empArray) ? empArray : []);
+      setDepartments(Array.isArray(deptsArray) ? deptsArray : []);
       setStats(statsRes?.data || {});
     } catch (error) {
       console.error('Error loading data:', error);

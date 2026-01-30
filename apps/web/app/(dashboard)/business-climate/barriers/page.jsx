@@ -122,9 +122,10 @@ export default function BarriersPage() {
       if (filters.priority) params.priority = filters.priority;
 
       const response = await BarrierList(params);
-      const data = response.data;
-      setBarriers(data.data || []);
-      setPagination(data.pagination);
+      // API returns { success: true, data: { barriers: [...], pagination: {...} } }
+      const data = response.data?.data || response.data;
+      setBarriers(data.barriers || []);
+      setPagination(data.pagination || { page: 1, total: 0, totalPages: 0 });
     } catch (error) {
       console.error("Error fetching barriers:", error);
     } finally {

@@ -352,8 +352,22 @@ export default function DossiersPage() {
     }
   };
 
+  // Wait for auth token to be available before fetching
   useEffect(() => {
-    fetchDossiers();
+    // Small delay to ensure token is synced from NextAuth session to localStorage
+    const timer = setTimeout(() => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      if (token) {
+        fetchDossiers();
+      } else {
+        // Retry after a short delay if token not yet available
+        const retryTimer = setTimeout(() => {
+          fetchDossiers();
+        }, 500);
+        return () => clearTimeout(retryTimer);
+      }
+    }, 100);
+    return () => clearTimeout(timer);
   }, [pagination.page, statusFilter, typeFilter]);
 
   // Debounce search
@@ -684,7 +698,7 @@ export default function DossiersPage() {
                           <h3 className="font-semibold text-gray-900 dark:text-white">
                             {dossier.dossierNumber}
                           </h3>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${typeInfo.color}`}>
+                          <span className={`inline-flex items-center px-3 py-1 rounded-md text-sm font-semibold ${typeInfo.color}`}>
                             {typeInfo.shortLabel}
                           </span>
                         </div>

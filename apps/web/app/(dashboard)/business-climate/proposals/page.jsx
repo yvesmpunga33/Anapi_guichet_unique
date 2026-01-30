@@ -160,9 +160,10 @@ export default function ProposalsPage() {
       if (filters.priority) params.priority = filters.priority;
 
       const response = await ProposalList(params);
-      const data = response.data;
-      setProposals(data.data || []);
-      setPagination(data.pagination);
+      // API returns { success: true, data: { proposals: [...], pagination: {...} } }
+      const data = response.data?.data || response.data;
+      setProposals(data.proposals || []);
+      setPagination(data.pagination || { page: 1, total: 0, totalPages: 0 });
     } catch (error) {
       console.error("Error fetching proposals:", error);
     } finally {

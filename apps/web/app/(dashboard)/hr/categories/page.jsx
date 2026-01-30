@@ -24,6 +24,7 @@ import {
   deleteCategory,
   generateCode,
 } from '@/app/services/hr/categoryService';
+import { getCurrencies } from '@/app/services/hr/currencyService';
 
 // ANAPI Colors
 const COLORS = {
@@ -53,14 +54,42 @@ function CategoryFormDialog({ open, onClose, category, onSave }) {
   const intl = useIntl();
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [currencies, setCurrencies] = useState([]);
+  const [loadingCurrencies, setLoadingCurrencies] = useState(false);
   const [formData, setFormData] = useState({
     code: '',
     nom: '',
     description: '',
-    salaireBase: '',
-    devise: 'USD',
+    salaire_base: '',
+    salaire_devise: 'USD',
     actif: true,
   });
+
+  // Load currencies when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadCurrencies();
+    }
+  }, [open]);
+
+  const loadCurrencies = async () => {
+    setLoadingCurrencies(true);
+    try {
+      const response = await getCurrencies({ limit: 100 });
+      const currenciesData = response?.data?.currencies || response?.data || [];
+      setCurrencies(Array.isArray(currenciesData) ? currenciesData : []);
+    } catch (error) {
+      console.error('Error loading currencies:', error);
+      // Fallback to default currencies if API fails
+      setCurrencies([
+        { code: 'USD', nom: 'Dollar americain', symbole: '$' },
+        { code: 'CDF', nom: 'Franc congolais', symbole: 'FC' },
+        { code: 'EUR', nom: 'Euro', symbole: '€' },
+      ]);
+    } finally {
+      setLoadingCurrencies(false);
+    }
+  };
 
   useEffect(() => {
     if (open) {
@@ -69,8 +98,8 @@ function CategoryFormDialog({ open, onClose, category, onSave }) {
           code: category.code || '',
           nom: category.nom || '',
           description: category.description || '',
-          salaireBase: category.salaireBase || '',
-          devise: category.devise || 'USD',
+          salaire_base: category.salaire_base || '',
+          salaire_devise: category.salaire_devise || 'USD',
           actif: category.actif !== false,
         });
       } else {
@@ -88,8 +117,8 @@ function CategoryFormDialog({ open, onClose, category, onSave }) {
           code: response.data?.code || '',
           nom: '',
           description: '',
-          salaireBase: '',
-          devise: 'USD',
+          salaire_base: '',
+          salaire_devise: 'USD',
           actif: true,
         });
       }
@@ -99,8 +128,8 @@ function CategoryFormDialog({ open, onClose, category, onSave }) {
         code: '',
         nom: '',
         description: '',
-        salaireBase: '',
-        devise: 'USD',
+        salaire_base: '',
+        salaire_devise: 'USD',
         actif: true,
       });
     }
@@ -117,7 +146,7 @@ function CategoryFormDialog({ open, onClose, category, onSave }) {
     try {
       const dataToSend = {
         ...formData,
-        salaireBase: formData.salaireBase ? parseFloat(formData.salaireBase) : null,
+        salaire_base: formData.salaire_base ? parseFloat(formData.salaire_base) : 0,
       };
 
       if (category) {
@@ -215,9 +244,11 @@ function CategoryFormDialog({ open, onClose, category, onSave }) {
               <input
                 type="number"
                 min="0"
-                value={formData.salaireBase}
-                onChange={handleChange('salaireBase')}
+                step="0.01"
+                value={formData.salaire_base}
+                onChange={handleChange('salaire_base')}
                 className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#D4A853] focus:border-transparent dark:bg-gray-700 dark:text-white"
+                placeholder="0.00"
               />
             </div>
             <div>
@@ -225,13 +256,24 @@ function CategoryFormDialog({ open, onClose, category, onSave }) {
                 <FormattedMessage id="hr.categories.currency" defaultMessage="Devise" />
               </label>
               <select
-                value={formData.devise}
-                onChange={handleChange('devise')}
+                value={formData.salaire_devise}
+                onChange={handleChange('salaire_devise')}
+                disabled={loadingCurrencies}
                 className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#D4A853] focus:border-transparent dark:bg-gray-700 dark:text-white"
               >
-                <option value="USD">USD</option>
-                <option value="CDF">CDF</option>
-                <option value="EUR">EUR</option>
+                {currencies.length > 0 ? (
+                  currencies.map((currency) => (
+                    <option key={currency.code || currency.id} value={currency.code}>
+                      {currency.code} - {currency.nom || currency.name} ({currency.symbole || currency.symbol})
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="USD">USD - Dollar americain ($)</option>
+                    <option value="CDF">CDF - Franc congolais (FC)</option>
+                    <option value="EUR">EUR - Euro (€)</option>
+                  </>
+                )}
               </select>
             </div>
           </div>

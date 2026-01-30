@@ -61,8 +61,11 @@ export default function EditLegalTextPage() {
         DocumentTypeList({ activeOnly: true }),
         LegalDomainList({ activeOnly: true }),
       ]);
-      setDocumentTypes(typesRes.data.types || []);
-      setDomains(domainsRes.data.domains || []);
+      // API returns { success: true, data: { documentTypes/domains } }
+      const typesData = typesRes.data?.data || typesRes.data;
+      const domainsData = domainsRes.data?.data || domainsRes.data;
+      setDocumentTypes(typesData.documentTypes || typesData.types || []);
+      setDomains(domainsData.domains || []);
     } catch (error) {
       console.error("Error fetching referentials:", error);
     }
@@ -71,7 +74,9 @@ export default function EditLegalTextPage() {
   const fetchText = async () => {
     try {
       const response = await LegalTextGetById(params.id);
-      const text = response.data.text;
+      // API returns { success: true, data: { juridicalText } }
+      const data = response.data?.data || response.data;
+      const text = data.juridicalText || data.text;
 
       setFormData({
         title: text.title || "",

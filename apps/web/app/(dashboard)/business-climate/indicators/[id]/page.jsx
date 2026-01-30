@@ -26,6 +26,8 @@ import {
   Printer,
 } from "lucide-react";
 import Swal from "sweetalert2";
+import { exportIndicatorToPDF } from "@/app/utils/pdfExport";
+import { IndicatorGetById, IndicatorDelete } from "@/app/services/admin/BusinessClimate.service";
 
 const categoryConfig = {
   DOING_BUSINESS: { label: "Doing Business", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-100 dark:bg-blue-900/40" },
@@ -83,11 +85,13 @@ export default function IndicatorDetailPage({ params }) {
   const fetchIndicator = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/business-climate/indicators/${id}`);
-      if (response.ok) {
-        const data = await response.json();
+      const response = await IndicatorGetById(id);
+      const data = response.data?.data || response.data;
+      if (data?.indicator) {
+        setIndicator(data.indicator);
+      } else if (data) {
         setIndicator(data);
-      } else if (response.status === 404) {
+      } else {
         Swal.fire({
           icon: "error",
           title: "Introuvable",
@@ -97,12 +101,21 @@ export default function IndicatorDetailPage({ params }) {
       }
     } catch (error) {
       console.error("Error fetching indicator:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Erreur",
-        text: "Impossible de charger l'indicateur",
-        confirmButtonColor: "#9333ea",
-      });
+      if (error.response?.status === 404) {
+        Swal.fire({
+          icon: "error",
+          title: "Introuvable",
+          text: "Cet indicateur n'existe pas.",
+          confirmButtonColor: "#9333ea",
+        }).then(() => router.push("/business-climate/indicators"));
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Erreur",
+          text: "Impossible de charger l'indicateur",
+          confirmButtonColor: "#9333ea",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -334,11 +347,11 @@ export default function IndicatorDetailPage({ params }) {
         </div>
         <div className="flex items-center gap-3 print:hidden">
           <button
-            onClick={() => window.print()}
+            onClick={() => exportIndicatorToPDF(indicator)}
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
           >
             <Printer className="w-4 h-4" />
-            Imprimer
+            Exporter PDF
           </button>
           <Link
             href={`/business-climate/indicators/${id}/edit`}

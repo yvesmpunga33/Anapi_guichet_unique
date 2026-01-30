@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { useIntl } from "react-intl";
 import Swal from "sweetalert2";
@@ -59,6 +60,7 @@ const ROLES = [
 
 export default function UsersPage() {
   const intl = useIntl();
+  const { data: session, status } = useSession();
   const [users, setUsers] = useState([]);
   const [ministries, setMinistries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -69,6 +71,7 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState(null);
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [viewingUser, setViewingUser] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showModulesDropdown, setShowModulesDropdown] = useState(false);
   const fileInputRef = useRef(null);
@@ -90,10 +93,15 @@ export default function UsersPage() {
 
   const [errors, setErrors] = useState({});
 
+  // Attendre que l'authentification soit prête avant de charger les données
   useEffect(() => {
-    fetchUsers();
-    fetchMinistries();
-  }, []);
+    if (status === 'authenticated' && session?.accessToken) {
+      // Synchroniser le token dans localStorage avant de charger
+      localStorage.setItem('authToken', session.accessToken);
+      fetchUsers();
+      fetchMinistries();
+    }
+  }, [status, session]);
 
   // Close modules dropdown when clicking outside
   useEffect(() => {
@@ -115,7 +123,8 @@ export default function UsersPage() {
       if (statusFilter) params.status = statusFilter;
 
       const response = await UserList(params);
-      setUsers(response.data?.users || []);
+      const users = response.data?.data?.users || response.data?.users || [];
+      setUsers(users);
     } catch (error) {
       console.error("Error fetching users:", error);
     } finally {
@@ -126,18 +135,21 @@ export default function UsersPage() {
   const fetchMinistries = async () => {
     try {
       const response = await ReferentielMinistryList();
-      setMinistries(response.data?.ministries || response.data || []);
+      const ministries = response.data?.data?.ministries || response.data?.ministries || response.data?.data || [];
+      setMinistries(Array.isArray(ministries) ? ministries : []);
     } catch (error) {
       console.error("Error fetching ministries:", error);
+      setMinistries([]);
     }
   };
 
   useEffect(() => {
+    if (status !== 'authenticated') return;
     const timer = setTimeout(() => {
       fetchUsers();
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchTerm, roleFilter, statusFilter]);
+  }, [searchTerm, roleFilter, statusFilter, status]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -453,7 +465,7 @@ export default function UsersPage() {
 
       {/* Users Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        {loading ? (
+        {loading || status === 'loading' ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
           </div>
@@ -489,15 +501,15 @@ export default function UsersPage() {
                     <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          {user.image ? (
-                            <Image src={user.image} alt={user.name} width={40} height={40} className="rounded-full object-cover" unoptimized />
+                          {user.image || user.avatar ? (
+                            <Image src={user.image || user.avatar} alt={user.name || `${user.firstName} ${user.lastName}`} width={40} height={40} className="rounded-full object-cover" unoptimized />
                           ) : (
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                              <span className="text-white font-semibold text-sm">{user.name?.charAt(0)?.toUpperCase() || "U"}</span>
+                              <span className="text-white font-semibold text-sm">{(user.firstName || user.name || "U").charAt(0).toUpperCase()}</span>
                             </div>
                           )}
                           <div>
-                            <p className="font-medium text-gray-900 dark:text-white">{user.name}</p>
+                            <p className="font-medium text-gray-900 dark:text-white">{user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</p>
                             <p className="text-sm text-gray-500">{user.department || "-"}</p>
                           </div>
                         </div>
@@ -551,6 +563,9 @@ export default function UsersPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => setViewingUser(user)} className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 dark:text-gray-400 dark:hover:text-green-400 dark:hover:bg-green-900/30 rounded-lg" title="Visualiser">
+                            <Eye className="w-4 h-4" />
+                          </button>
                           <button onClick={() => handleOpenModal(user)} className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-blue-900/30 rounded-lg" title="Modifier">
                             <Edit className="w-4 h-4" />
                           </button>
@@ -903,6 +918,161 @@ export default function UsersPage() {
               </button>
               <button onClick={() => handleDelete(showDeleteConfirm.id)} className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 font-medium transition-colors">
                 Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View User Modal */}
+      {viewingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-600 to-teal-600 px-6 py-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  {viewingUser.image || viewingUser.avatar ? (
+                    <Image src={viewingUser.image || viewingUser.avatar} alt={viewingUser.name || `${viewingUser.firstName} ${viewingUser.lastName}`} width={56} height={56} className="rounded-xl object-cover border-2 border-white/30" unoptimized />
+                  ) : (
+                    <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center border-2 border-white/30">
+                      <span className="text-2xl font-bold text-white">{(viewingUser.firstName || viewingUser.name || "U").charAt(0).toUpperCase()}</span>
+                    </div>
+                  )}
+                  <div>
+                    <h2 className="text-lg font-bold text-white">{viewingUser.name || `${viewingUser.firstName || ''} ${viewingUser.lastName || ''}`.trim()}</h2>
+                    <p className="text-white/70 text-sm">{viewingUser.email}</p>
+                  </div>
+                </div>
+                <button onClick={() => setViewingUser(null)} className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              {/* Informations de base */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Prénom</p>
+                  <p className="text-gray-900 dark:text-white font-medium">{viewingUser.firstName || '-'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Nom</p>
+                  <p className="text-gray-900 dark:text-white font-medium">{viewingUser.lastName || '-'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Rôle</p>
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getRoleBadge(viewingUser.role).color}`}>
+                    {getRoleBadge(viewingUser.role).name}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Statut</p>
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${viewingUser.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"}`}>
+                    {viewingUser.isActive ? "Actif" : "Inactif"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Contact */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Email</p>
+                  <div className="flex items-center gap-2 text-gray-900 dark:text-white text-sm">
+                    <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span className="truncate">{viewingUser.email}</span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Téléphone</p>
+                  <div className="flex items-center gap-2 text-gray-900 dark:text-white text-sm">
+                    <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    {viewingUser.phone || '-'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Département et Langue */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Département</p>
+                  <div className="flex items-center gap-2 text-gray-900 dark:text-white text-sm">
+                    <Briefcase className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    {viewingUser.department || '-'}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Langue</p>
+                  <p className="text-gray-900 dark:text-white text-sm">{viewingUser.language === 'fr' ? 'Français' : viewingUser.language === 'en' ? 'English' : viewingUser.language || '-'}</p>
+                </div>
+              </div>
+
+              {/* Ministère */}
+              {viewingUser.ministry && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Ministère</p>
+                  <div className="flex items-center gap-2 text-gray-900 dark:text-white">
+                    <Building2 className="w-4 h-4 text-gray-400" />
+                    {viewingUser.ministry.name || viewingUser.ministry.shortName}
+                  </div>
+                </div>
+              )}
+
+              {/* Vérification */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Email vérifié</p>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${viewingUser.isVerified ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"}`}>
+                    {viewingUser.isVerified ? "Vérifié" : "Non vérifié"}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">ID</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs font-mono truncate">{viewingUser.id}</p>
+                </div>
+              </div>
+
+              {/* Modules */}
+              {viewingUser.modules && viewingUser.modules.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Modules autorisés</p>
+                  <div className="flex flex-wrap gap-1">
+                    {viewingUser.modules.map((moduleId) => (
+                      <span key={moduleId} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                        {AVAILABLE_MODULES.find((m) => m.id === moduleId)?.name || moduleId}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Dates */}
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs uppercase">Créé le</p>
+                    <p className="text-gray-900 dark:text-white">{viewingUser.created_at ? new Date(viewingUser.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs uppercase">Dernière connexion</p>
+                    <p className="text-gray-900 dark:text-white">{viewingUser.lastLoginAt ? new Date(viewingUser.lastLoginAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Jamais'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-4 flex justify-end gap-3">
+              <button onClick={() => setViewingUser(null)} className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 font-medium transition-colors">
+                Fermer
+              </button>
+              <button onClick={() => { setViewingUser(null); handleOpenModal(viewingUser); }} className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium transition-colors">
+                Modifier
               </button>
             </div>
           </div>

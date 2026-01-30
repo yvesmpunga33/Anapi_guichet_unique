@@ -98,7 +98,7 @@ function StatCard({ stat, loading }) {
   );
 }
 
-// Print Dialog Component
+// Print Dialog Component - Professional Employee Card
 function PrintDialog({ employee, isOpen, onClose, locale, intl }) {
   const printRef = useRef(null);
 
@@ -115,290 +115,388 @@ function PrintDialog({ employee, isOpen, onClose, locale, intl }) {
     });
   };
 
-  const formatCurrency = (amount) => {
-    if (!amount) return '-';
+  const formatCurrency = (amount, currency = 'USD') => {
+    if (amount === null || amount === undefined || amount === '') return 'Non defini';
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount)) return 'Non defini';
     return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: 'USD',
+      currency: currency || 'USD',
       minimumFractionDigits: 2,
-    }).format(amount);
+    }).format(numAmount);
+  };
+
+  const calculateAge = (birthDate) => {
+    if (!birthDate) return null;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const calculateSeniority = (hireDate) => {
+    if (!hireDate) return null;
+    const today = new Date();
+    const hire = new Date(hireDate);
+    const years = today.getFullYear() - hire.getFullYear();
+    const months = today.getMonth() - hire.getMonth();
+    if (years === 0) {
+      return months <= 0 ? 'Moins d\'un mois' : `${months} mois`;
+    }
+    return years === 1 ? '1 an' : `${years} ans`;
   };
 
   if (!isOpen || !employee) return null;
 
+  const photoUrl = getPhotoUrl(employee.photo);
+  const age = calculateAge(employee.dateNaissance);
+  const seniority = calculateSeniority(employee.dateEmbauche);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[90vh] w-full max-w-4xl overflow-auto rounded-2xl bg-white shadow-2xl dark:bg-gray-800">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700 print:hidden">
-          <div className="flex items-center gap-2">
-            <Printer className="h-5 w-5 text-[#D4A853]" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {intl.formatMessage({ id: 'hr.employees.employeeCard', defaultMessage: 'Fiche Employe' })}
-            </h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="max-h-[95vh] w-full max-w-[210mm] overflow-auto rounded-lg bg-white shadow-2xl">
+        {/* Modal Header - Not printed */}
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3 print:hidden">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0A1628]">
+              <Printer className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-gray-900">
+                {intl.formatMessage({ id: 'hr.employees.employeeCard', defaultMessage: 'Fiche Employe' })}
+              </h2>
+              <p className="text-sm text-gray-500">{employee.prenom} {employee.nom}</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 rounded-lg bg-[#0A1628] px-4 py-2 text-white hover:bg-[#0A1628]/90"
+              className="flex items-center gap-2 rounded-lg bg-[#0A1628] px-5 py-2.5 font-medium text-white transition-all hover:bg-[#0A1628]/90 hover:shadow-lg"
             >
               <Printer className="h-4 w-4" />
               {intl.formatMessage({ id: 'common.print', defaultMessage: 'Imprimer' })}
             </button>
             <button
               onClick={onClose}
-              className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="rounded-lg p-2.5 text-gray-500 transition-colors hover:bg-gray-100"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
         </div>
 
-        {/* Print Content */}
-        <div ref={printRef} className="p-6" id="print-content">
-          {/* Header */}
-          <div className="mb-6 border-b-2 border-[#0A1628] pb-4 text-center">
-            <h1 className="text-2xl font-bold text-[#0A1628]">ANAPI</h1>
-            <h2 className="text-xl font-semibold">
-              {intl.formatMessage({ id: 'hr.employees.employeeCardTitle', defaultMessage: 'FICHE EMPLOYE' })}
-            </h2>
-            <p className="text-sm text-gray-500">
-              {intl.formatMessage({ id: 'hr.employees.printDate', defaultMessage: 'Imprime le' })}:{' '}
-              {new Date().toLocaleDateString(locale, {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </p>
+        {/* Print Content - A4 Format */}
+        <div ref={printRef} className="bg-white p-8 print:p-6" id="print-content">
+          {/* Official Header with Logo Band */}
+          <div className="mb-6 print:mb-4">
+            {/* Top Band */}
+            <div className="flex items-center justify-between rounded-t-lg bg-[#0A1628] px-6 py-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white">
+                  <span className="text-xl font-bold text-[#0A1628]">ANAPI</span>
+                </div>
+                <div className="text-white">
+                  <h1 className="text-xl font-bold tracking-wide">AGENCE NATIONALE POUR LA PROMOTION DES INVESTISSEMENTS</h1>
+                  <p className="text-sm text-gray-300">Direction des Ressources Humaines</p>
+                </div>
+              </div>
+              <div className="text-right text-white">
+                <p className="text-sm">Document officiel</p>
+                <p className="text-xs text-gray-300">Ref: {employee.matricule}</p>
+              </div>
+            </div>
+
+            {/* Gold Accent Line */}
+            <div className="h-1.5 bg-gradient-to-r from-[#D4A853] via-[#F4D03F] to-[#D4A853]"></div>
+
+            {/* Title */}
+            <div className="border-b-2 border-gray-200 bg-gray-50 py-3 text-center">
+              <h2 className="text-2xl font-bold tracking-widest text-[#0A1628]">FICHE INDIVIDUELLE D'EMPLOYE</h2>
+              <p className="mt-1 text-sm text-gray-600">
+                Editee le {new Date().toLocaleDateString(locale, { day: '2-digit', month: 'long', year: 'numeric' })}
+              </p>
+            </div>
           </div>
 
-          {/* Photo and Main Info */}
-          <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-            <div className="text-center">
-              <div className="mx-auto mb-4 flex h-44 w-44 items-center justify-center overflow-hidden rounded-lg border-4 border-[#0A1628] bg-gray-100 shadow-lg">
-                {employee.photo ? (
-                  <img
-                    src={getPhotoUrl(employee.photo)}
-                    alt={`${employee.prenom} ${employee.nom}`}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="text-5xl font-bold text-[#0A1628]">
-                    {employee.prenom?.[0]}
-                    {employee.nom?.[0]}
+          {/* Main Content Grid */}
+          <div className="mb-6 grid grid-cols-12 gap-6 print:gap-4">
+            {/* Left Column - Photo & Identity */}
+            <div className="col-span-4">
+              {/* Photo Card */}
+              <div className="rounded-lg border-2 border-[#0A1628] bg-white p-4 text-center shadow-md">
+                <div className="mx-auto mb-3 h-40 w-36 overflow-hidden rounded-lg border-4 border-[#D4A853] bg-gray-100 shadow-inner">
+                  {photoUrl ? (
+                    <img
+                      src={photoUrl}
+                      alt={`${employee.prenom} ${employee.nom}`}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div
+                    className={`flex h-full w-full items-center justify-center bg-gradient-to-br from-[#0A1628] to-[#1a2d4a] ${photoUrl ? 'hidden' : ''}`}
+                  >
+                    <span className="text-4xl font-bold text-white">
+                      {employee.prenom?.[0]}{employee.nom?.[0]}
+                    </span>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-bold text-[#0A1628]">
+                  {employee.prenom} {employee.postnom ? `${employee.postnom} ` : ''}{employee.nom}
+                </h3>
+
+                <div className="mt-2 inline-block rounded-md bg-[#0A1628] px-4 py-1.5">
+                  <span className="font-mono text-sm font-bold tracking-wider text-[#D4A853]">{employee.matricule}</span>
+                </div>
+
+                <div className="mt-3 flex justify-center gap-2">
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusStyles(employee.statut)}`}>
+                    {employee.statut || 'Non defini'}
                   </span>
+                </div>
+
+                {seniority && (
+                  <p className="mt-3 text-sm text-gray-600">
+                    <Calendar className="mr-1 inline h-4 w-4" />
+                    Anciennete: <span className="font-semibold">{seniority}</span>
+                  </p>
                 )}
               </div>
-              <h3 className="text-xl font-bold text-gray-900">
-                {employee.prenom} {employee.postnom && `${employee.postnom} `}
-                {employee.nom}
-              </h3>
-              <span className="mt-2 inline-block rounded-full bg-[#0A1628] px-3 py-1 text-sm font-semibold text-white">
-                {employee.matricule}
-              </span>
-              <div className="mt-2 flex justify-center gap-2">
-                <span className={`rounded-full px-2 py-1 text-xs font-medium ${getStatusStyles(employee.statut)}`}>
-                  {employee.statut || intl.formatMessage({ id: 'common.undefined', defaultMessage: 'Non defini' })}
-                </span>
-                <span className={`rounded-full border px-2 py-1 text-xs font-medium ${getContractStyles(employee.typeContrat)}`}>
-                  {employee.typeContrat || intl.formatMessage({ id: 'common.undefined', defaultMessage: 'Non defini' })}
-                </span>
-              </div>
             </div>
 
-            <div className="col-span-2 rounded-lg border border-gray-200 p-4">
-              <h4 className="mb-3 flex items-center gap-2 font-semibold text-[#0A1628]">
-                <Briefcase className="h-5 w-5" />
-                {intl.formatMessage({ id: 'hr.employees.professionalInfo', defaultMessage: 'Informations Professionnelles' })}
-              </h4>
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-                <div>
-                  <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.department', defaultMessage: 'Departement' })}</p>
-                  <p className="font-medium">{employee.departement || '-'}</p>
+            {/* Right Column - Professional Info */}
+            <div className="col-span-8 space-y-4">
+              {/* Professional Information */}
+              <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+                <div className="flex items-center gap-2 border-b border-gray-200 bg-[#0A1628] px-4 py-2 rounded-t-lg">
+                  <Briefcase className="h-5 w-5 text-[#D4A853]" />
+                  <h4 className="font-semibold text-white">
+                    {intl.formatMessage({ id: 'hr.employees.professionalInfo', defaultMessage: 'Informations Professionnelles' })}
+                  </h4>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.position', defaultMessage: 'Poste' })}</p>
-                  <p className="font-medium">{employee.poste || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.category', defaultMessage: 'Categorie' })}</p>
-                  <p className="font-medium">{employee.categorie || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.grade', defaultMessage: 'Grade' })}</p>
-                  <p className="font-medium">{employee.grade || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.hireDate', defaultMessage: "Date d'embauche" })}</p>
-                  <p className="font-medium">{formatDate(employee.dateEmbauche)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.contractEndDate', defaultMessage: 'Date fin contrat' })}</p>
-                  <p className="font-medium">{formatDate(employee.dateFinContrat)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.contractType', defaultMessage: 'Type contrat' })}</p>
-                  <p className="font-medium">{employee.typeContrat || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.baseSalary', defaultMessage: 'Salaire de base' })}</p>
-                  <p className="font-semibold text-green-600">{formatCurrency(employee.salaireBase)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.status', defaultMessage: 'Statut' })}</p>
-                  <p className="font-medium">{employee.statut || '-'}</p>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-3 p-4">
+                  <div className="flex items-start gap-2">
+                    <Building2 className="mt-0.5 h-4 w-4 text-gray-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Departement</p>
+                      <p className="font-semibold text-gray-900">{employee.departement_nom || employee.departement || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Briefcase className="mt-0.5 h-4 w-4 text-gray-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Poste / Fonction</p>
+                      <p className="font-semibold text-gray-900">{employee.poste_nom || employee.poste || '-'}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Categorie</p>
+                    <p className="font-semibold text-gray-900">{employee.categorie_nom || employee.categorie || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Grade / Echelon</p>
+                    <p className="font-semibold text-gray-900">{employee.grade_nom || employee.grade || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Type de Contrat</p>
+                    <p className="font-semibold text-gray-900">
+                      <span className={`inline-flex rounded border px-2 py-0.5 text-sm ${getContractStyles(employee.typeContrat)}`}>
+                        {employee.typeContrat || '-'}
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Date d'embauche</p>
+                    <p className="font-semibold text-gray-900">{formatDate(employee.dateEmbauche)}</p>
+                  </div>
+                  {employee.dateFinContrat && (
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Fin de Contrat</p>
+                      <p className="font-semibold text-gray-900">{formatDate(employee.dateFinContrat)}</p>
+                    </div>
+                  )}
+                  <div className="col-span-2 rounded-lg bg-green-50 p-3">
+                    <p className="text-xs font-medium uppercase tracking-wider text-green-700">Salaire de Base Mensuel</p>
+                    <p className="text-xl font-bold text-green-700">
+                      {formatCurrency(employee.salaireBase || employee.salaire_base || employee.categorie_salaire, employee.salaireDevise || employee.salaire_devise || 'USD')}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Personal Info */}
-          <div className="mb-6 rounded-lg border border-gray-200 p-4">
-            <h4 className="mb-3 flex items-center gap-2 font-semibold text-[#0A1628]">
-              <Users className="h-5 w-5" />
-              {intl.formatMessage({ id: 'hr.employees.personalInfo', defaultMessage: 'Informations Personnelles' })}
-            </h4>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {/* Personal Information Section */}
+          <div className="mb-4 rounded-lg border border-gray-200 bg-white shadow-sm print:mb-3">
+            <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2 rounded-t-lg">
+              <Users className="h-5 w-5 text-[#0A1628]" />
+              <h4 className="font-semibold text-[#0A1628]">
+                {intl.formatMessage({ id: 'hr.employees.personalInfo', defaultMessage: 'Informations Personnelles' })}
+              </h4>
+            </div>
+            <div className="grid grid-cols-4 gap-4 p-4 print:grid-cols-4 print:gap-2 print:p-3 print:text-sm">
               <div>
-                <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.gender', defaultMessage: 'Genre' })}</p>
-                <p className="font-medium">
-                  {employee.genre === 'M'
-                    ? intl.formatMessage({ id: 'hr.employees.male', defaultMessage: 'Masculin' })
-                    : employee.genre === 'F'
-                      ? intl.formatMessage({ id: 'hr.employees.female', defaultMessage: 'Feminin' })
-                      : '-'}
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Genre</p>
+                <p className="font-medium text-gray-900">
+                  {employee.genre === 'M' ? 'Masculin' : employee.genre === 'F' ? 'Feminin' : '-'}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.birthDate', defaultMessage: 'Date de naissance' })}</p>
-                <p className="font-medium">{formatDate(employee.dateNaissance)}</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Date de Naissance</p>
+                <p className="font-medium text-gray-900">
+                  {formatDate(employee.dateNaissance)}
+                  {age && <span className="ml-1 text-gray-500">({age} ans)</span>}
+                </p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.birthPlace', defaultMessage: 'Lieu de naissance' })}</p>
-                <p className="font-medium">{employee.lieuNaissance || '-'}</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Lieu de Naissance</p>
+                <p className="font-medium text-gray-900">{employee.lieuNaissance || '-'}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.nationality', defaultMessage: 'Nationalite' })}</p>
-                <p className="font-medium">{employee.nationalite || '-'}</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Nationalite</p>
+                <p className="font-medium text-gray-900">{employee.nationalite || '-'}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.idNumber', defaultMessage: "N Carte d'identite" })}</p>
-                <p className="font-medium">{employee.numeroIdentite || '-'}</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-500">N° Carte d'Identite</p>
+                <p className="font-medium text-gray-900">{employee.numeroIdentite || '-'}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.maritalStatus', defaultMessage: 'Etat civil' })}</p>
-                <p className="font-medium">
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Etat Civil</p>
+                <p className="font-medium text-gray-900">
                   {employee.etatCivil ? employee.etatCivil.charAt(0).toUpperCase() + employee.etatCivil.slice(1) : '-'}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.childrenCount', defaultMessage: "Nombre d'enfants" })}</p>
-                <p className="font-medium">{employee.nombreEnfants ?? '-'}</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Nombre d'Enfants</p>
+                <p className="font-medium text-gray-900">{employee.nombreEnfants ?? '-'}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.spouseName', defaultMessage: 'Nom du conjoint' })}</p>
-                <p className="font-medium">{employee.nomConjoint || '-'}</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Nom du Conjoint</p>
+                <p className="font-medium text-gray-900">{employee.nomConjoint || '-'}</p>
               </div>
             </div>
           </div>
 
-          {/* Contact Info */}
-          <div className="mb-6 rounded-lg border border-gray-200 p-4">
-            <h4 className="mb-3 flex items-center gap-2 font-semibold text-[#0A1628]">
-              <Phone className="h-5 w-5" />
-              {intl.formatMessage({ id: 'hr.employees.contactInfo', defaultMessage: 'Coordonnees' })}
-            </h4>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-gray-400" />
-                <div>
-                  <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.email', defaultMessage: 'Email' })}</p>
-                  <p className="font-medium">{employee.email || '-'}</p>
-                </div>
+          {/* Contact & Address Section */}
+          <div className="mb-4 grid grid-cols-2 gap-4 print:mb-3 print:gap-3">
+            {/* Contact */}
+            <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+              <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2 rounded-t-lg">
+                <Phone className="h-5 w-5 text-[#0A1628]" />
+                <h4 className="font-semibold text-[#0A1628]">Coordonnees</h4>
               </div>
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-gray-400" />
-                <div>
-                  <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.phone1', defaultMessage: 'Telephone 1' })}</p>
-                  <p className="font-medium">{employee.telephone1 || '-'}</p>
+              <div className="space-y-3 p-4 print:space-y-2 print:p-3 print:text-sm">
+                <div className="flex items-center gap-3">
+                  <Mail className="h-4 w-4 text-gray-400" />
+                  <div>
+                    <p className="text-xs text-gray-500">Email</p>
+                    <p className="font-medium text-gray-900">{employee.email || '-'}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-gray-400" />
-                <div>
-                  <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.phone2', defaultMessage: 'Telephone 2' })}</p>
-                  <p className="font-medium">{employee.telephone2 || '-'}</p>
+                <div className="flex items-center gap-3">
+                  <Phone className="h-4 w-4 text-gray-400" />
+                  <div>
+                    <p className="text-xs text-gray-500">Telephone Principal</p>
+                    <p className="font-medium text-gray-900">{employee.telephone1 || '-'}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="col-span-3 flex items-start gap-2">
-                <MapPin className="mt-1 h-4 w-4 text-gray-400" />
-                <div>
-                  <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.fullAddress', defaultMessage: 'Adresse complete' })}</p>
-                  <p className="font-medium">
-                    {employee.adresse || '-'}
-                    {employee.commune && `, ${employee.commune}`}
-                    {employee.ville && `, ${employee.ville}`}
-                    {employee.province && ` - ${employee.province}`}
-                  </p>
+                {employee.telephone2 && (
+                  <div className="flex items-center gap-3">
+                    <Phone className="h-4 w-4 text-gray-400" />
+                    <div>
+                      <p className="text-xs text-gray-500">Telephone Secondaire</p>
+                      <p className="font-medium text-gray-900">{employee.telephone2}</p>
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-start gap-3">
+                  <MapPin className="mt-0.5 h-4 w-4 text-gray-400" />
+                  <div>
+                    <p className="text-xs text-gray-500">Adresse</p>
+                    <p className="font-medium text-gray-900">
+                      {employee.adresse || '-'}
+                      {employee.commune && `, ${employee.commune}`}
+                      {employee.ville && `, ${employee.ville}`}
+                      {employee.province && ` - ${employee.province}`}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Bank Info */}
-          <div className="mb-6 rounded-lg border border-gray-200 p-4">
-            <h4 className="mb-3 flex items-center gap-2 font-semibold text-[#0A1628]">
-              <CreditCard className="h-5 w-5" />
-              {intl.formatMessage({ id: 'hr.employees.bankInfo', defaultMessage: 'Informations Bancaires' })}
-            </h4>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div>
-                <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.bank', defaultMessage: 'Banque' })}</p>
-                <p className="font-medium">{employee.banque || '-'}</p>
+            {/* Bank Info */}
+            <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+              <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2 rounded-t-lg">
+                <CreditCard className="h-5 w-5 text-[#0A1628]" />
+                <h4 className="font-semibold text-[#0A1628]">Informations Bancaires</h4>
               </div>
-              <div>
-                <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.bankCode', defaultMessage: 'Code banque' })}</p>
-                <p className="font-medium">{employee.numeroBanque || '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.accountNumber', defaultMessage: 'Numero compte' })}</p>
-                <p className="font-medium">{employee.numeroCompte || '-'}</p>
+              <div className="space-y-3 p-4 print:space-y-2 print:p-3 print:text-sm">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Banque</p>
+                  <p className="font-medium text-gray-900">{employee.banque || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Code Banque</p>
+                  <p className="font-mono font-medium text-gray-900">{employee.numeroBanque || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Numero de Compte</p>
+                  <p className="font-mono font-medium text-gray-900">{employee.numeroCompte || '-'}</p>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Emergency Contact */}
-          <div className="rounded-lg border border-gray-200 p-4">
-            <h4 className="mb-3 flex items-center gap-2 font-semibold text-[#0A1628]">
-              <AlertCircle className="h-5 w-5" />
-              {intl.formatMessage({ id: 'hr.employees.emergencyContact', defaultMessage: "Contact d'urgence" })}
-            </h4>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="mb-6 rounded-lg border-2 border-red-200 bg-red-50 shadow-sm print:mb-4">
+            <div className="flex items-center gap-2 border-b border-red-200 bg-red-100 px-4 py-2 rounded-t-lg">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <h4 className="font-semibold text-red-800">Contact d'Urgence</h4>
+            </div>
+            <div className="grid grid-cols-3 gap-4 p-4 print:gap-2 print:p-3 print:text-sm">
               <div>
-                <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.contactName', defaultMessage: 'Nom' })}</p>
-                <p className="font-medium">{employee.nomUrgence || '-'}</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-red-600">Nom Complet</p>
+                <p className="font-semibold text-gray-900">{employee.nomUrgence || '-'}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.relationship', defaultMessage: 'Lien' })}</p>
-                <p className="font-medium">{employee.lienUrgence || '-'}</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-red-600">Lien de Parente</p>
+                <p className="font-semibold text-gray-900">{employee.lienUrgence || '-'}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">{intl.formatMessage({ id: 'hr.employees.phone', defaultMessage: 'Telephone' })}</p>
-                <p className="font-medium">{employee.telephoneUrgence || '-'}</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-red-600">Telephone</p>
+                <p className="font-semibold text-gray-900">{employee.telephoneUrgence || '-'}</p>
               </div>
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="mt-6 border-t border-gray-200 pt-4 text-center">
-            <p className="text-xs text-gray-500">
-              {intl.formatMessage({ id: 'hr.employees.documentGenerated', defaultMessage: 'Document genere automatiquement par ANAPI' })}
-            </p>
-            <p className="text-xs text-gray-500">
-              {intl.formatMessage({ id: 'hr.employees.confidentialNotice', defaultMessage: 'Ce document est strictement confidentiel et reserve a usage interne.' })}
-            </p>
+          {/* Official Footer */}
+          <div className="border-t-2 border-[#0A1628] pt-4 print:pt-3">
+            <div className="grid grid-cols-2 gap-8">
+              <div>
+                <p className="mb-8 text-sm text-gray-600">Signature de l'employe</p>
+                <div className="border-b border-gray-400 w-48"></div>
+              </div>
+              <div className="text-right">
+                <p className="mb-8 text-sm text-gray-600">Le Directeur des Ressources Humaines</p>
+                <div className="border-b border-gray-400 w-48 ml-auto"></div>
+              </div>
+            </div>
+            <div className="mt-6 text-center print:mt-4">
+              <p className="text-xs text-gray-500">
+                Document genere automatiquement par le Systeme de Gestion des Ressources Humaines - ANAPI
+              </p>
+              <p className="mt-1 text-xs font-semibold text-red-600">
+                DOCUMENT STRICTEMENT CONFIDENTIEL - RESERVE A L'USAGE INTERNE
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -406,6 +504,10 @@ function PrintDialog({ employee, isOpen, onClose, locale, intl }) {
       {/* Print Styles */}
       <style jsx global>{`
         @media print {
+          @page {
+            size: A4;
+            margin: 10mm;
+          }
           body * {
             visibility: hidden;
           }
@@ -418,6 +520,37 @@ function PrintDialog({ employee, isOpen, onClose, locale, intl }) {
             left: 0;
             top: 0;
             width: 100%;
+            font-size: 11pt;
+          }
+          .print\\:hidden {
+            display: none !important;
+          }
+          .print\\:mb-3 {
+            margin-bottom: 0.75rem !important;
+          }
+          .print\\:mb-4 {
+            margin-bottom: 1rem !important;
+          }
+          .print\\:gap-2 {
+            gap: 0.5rem !important;
+          }
+          .print\\:gap-3 {
+            gap: 0.75rem !important;
+          }
+          .print\\:p-3 {
+            padding: 0.75rem !important;
+          }
+          .print\\:pt-3 {
+            padding-top: 0.75rem !important;
+          }
+          .print\\:mt-4 {
+            margin-top: 1rem !important;
+          }
+          .print\\:text-sm {
+            font-size: 0.875rem !important;
+          }
+          .print\\:space-y-2 > :not([hidden]) ~ :not([hidden]) {
+            margin-top: 0.5rem !important;
           }
         }
       `}</style>
@@ -520,10 +653,34 @@ export default function EmployeesListPage() {
   const handleMenuOpen = (event, employee) => {
     event.stopPropagation();
     const rect = event.currentTarget.getBoundingClientRect();
+    const menuHeight = 200; // Approximate menu height
+    const menuWidth = 180;
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+
+    // Calculate optimal position
+    let x = rect.left - menuWidth + rect.width;
+    let y = rect.bottom + 5;
+
+    // Check if menu would go off the bottom of screen
+    if (y + menuHeight > viewportHeight) {
+      y = rect.top - menuHeight - 5; // Show above instead
+    }
+
+    // Check if menu would go off the right edge
+    if (x + menuWidth > viewportWidth) {
+      x = viewportWidth - menuWidth - 10;
+    }
+
+    // Check if menu would go off the left edge
+    if (x < 10) {
+      x = 10;
+    }
+
     setContextMenu({
       visible: true,
-      x: rect.left - 100,
-      y: rect.bottom + 5,
+      x,
+      y,
       employee,
     });
   };
@@ -809,10 +966,10 @@ export default function EmployeesListPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
-                      {employee.departement || '-'}
+                      {employee.departement_nom || employee.departement || '-'}
                     </td>
                     <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
-                      {employee.poste || '-'}
+                      {employee.poste_nom || employee.poste || '-'}
                     </td>
                     <td className="px-6 py-4">
                       <span

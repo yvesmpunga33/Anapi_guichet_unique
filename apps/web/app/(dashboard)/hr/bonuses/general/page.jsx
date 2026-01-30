@@ -484,7 +484,9 @@ export default function GeneralBonusesPage() {
       }
 
       if (categoriesRes.success) {
-        setCategories(categoriesRes.data?.data || categoriesRes.data || []);
+        // Extract categories array safely
+        const catsArray = categoriesRes.data?.categories || categoriesRes.data?.data || categoriesRes.data || [];
+        setCategories(Array.isArray(catsArray) ? catsArray : []);
       }
     } catch (error) {
       console.error('Erreur chargement:', error);

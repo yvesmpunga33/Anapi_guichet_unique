@@ -23,7 +23,11 @@ import {
   Scale,
   AlertTriangle,
   ExternalLink,
+  Printer,
 } from "lucide-react";
+
+import { exportProposalToPDF } from "@/app/utils/pdfExport";
+import { ProposalGetById, ProposalDelete } from "@/app/services/admin/BusinessClimate.service";
 
 const statusConfig = {
   DRAFT: { label: "Brouillon", color: "text-gray-600 dark:text-gray-300", bg: "bg-gray-100 dark:bg-gray-600", icon: Clock },
@@ -151,15 +155,18 @@ export default function ProposalDetailPage() {
   const fetchProposal = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/business-climate/proposals/${params.id}`);
-      if (!response.ok) {
+      const response = await ProposalGetById(params.id);
+      const data = response.data?.data || response.data;
+      if (data?.proposal) {
+        setProposal(data.proposal);
+      } else if (data) {
+        setProposal(data);
+      } else {
         throw new Error("Proposition non trouvée");
       }
-      const data = await response.json();
-      setProposal(data);
     } catch (err) {
       console.error("Error fetching proposal:", err);
-      setError(err.message);
+      setError(err.response?.status === 404 ? "Proposition non trouvée" : "Erreur de connexion");
     } finally {
       setLoading(false);
     }
@@ -267,6 +274,13 @@ export default function ProposalDetailPage() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportProposalToPDF(proposal)}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-white"
+            >
+              <Printer className="w-4 h-4" />
+              Exporter PDF
+            </button>
             <Link
               href={`/business-climate/proposals/${proposal.id}/edit`}
               className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"

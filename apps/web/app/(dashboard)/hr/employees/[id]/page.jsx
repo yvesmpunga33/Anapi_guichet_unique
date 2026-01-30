@@ -673,7 +673,7 @@ export default function EmployeeDetailPage() {
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
                 <span className="font-semibold text-[#D4A853]">{employee.matricule}</span>
-                {employee.poste && ` - ${employee.poste}`}
+                {(employee.poste_nom || employee.poste) && ` - ${employee.poste_nom || employee.poste}`}
               </p>
             </div>
           </div>
@@ -803,10 +803,10 @@ export default function EmployeeDetailPage() {
               <div>
                 <SectionHeader icon={Building2} title={intl.formatMessage({ id: 'hr.employees.assignment', defaultMessage: 'Affectation' })} color="text-[#0A1628]" />
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.department', defaultMessage: 'Departement' })} value={employee.departement} />
-                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.position', defaultMessage: 'Poste' })} value={employee.poste} />
-                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.grade', defaultMessage: 'Grade' })} value={employee.grade} />
-                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.category', defaultMessage: 'Categorie' })} value={employee.categorie} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.department', defaultMessage: 'Departement' })} value={employee.departement_nom || employee.departement} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.position', defaultMessage: 'Poste' })} value={employee.poste_nom || employee.poste} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.grade', defaultMessage: 'Grade' })} value={employee.grade_nom || employee.grade} />
+                  <InfoItem label={intl.formatMessage({ id: 'hr.employees.category', defaultMessage: 'Categorie' })} value={employee.categorie_nom || employee.categorie} />
                 </div>
               </div>
 

@@ -31,23 +31,25 @@ export default function LegalDashboardPage() {
   const fetchStats = async () => {
     try {
       const response = await LegalStats();
-      setStats(response.data);
+      console.log('Legal Dashboard - Raw response:', response);
+      console.log('Legal Dashboard - response.data:', response.data);
+      console.log('Legal Dashboard - response.data.data:', response.data?.data);
+
+      // API returns { success: true, data: { stats, recent, quickStats } }
+      // We need to access response.data.data to get the actual stats
+      const statsData = response.data?.data || response.data;
+      console.log('Legal Dashboard - Final statsData:', statsData);
+      setStats(statsData);
     } catch (error) {
       console.error("Error fetching stats:", error);
       // Set default empty stats on error
       setStats({
-        data: {
-          totals: {
-            juridicalTexts: 0,
-            contracts: 0,
-            alerts: 0,
-            domains: 0,
-            documentTypes: 0,
-            contractTypes: 0,
-            pendingAlerts: 0,
-            activeContracts: 0
-          }
-        }
+        stats: {
+          texts: { total: 0, active: 0 },
+          contracts: { total: 0, active: 0, expiringSoon: 0 },
+          alerts: { pending: 0, inProgress: 0, urgent: 0 }
+        },
+        recent: { texts: [], contracts: [], alerts: [] }
       });
     } finally {
       setLoading(false);

@@ -25,7 +25,11 @@ import {
   Edit,
   Trash2,
   MapPin,
+  Printer,
 } from "lucide-react";
+
+import { exportDialogueToPDF } from "@/app/utils/pdfExport";
+import { DialogueGetById, DialogueDelete } from "@/app/services/admin/BusinessClimate.service";
 
 const statusConfig = {
   PLANNED: { label: "Planifié", color: "text-gray-600 dark:text-gray-300", bg: "bg-gray-100 dark:bg-gray-600", icon: Clock },
@@ -129,15 +133,18 @@ export default function DialogueDetailPage() {
   const fetchDialogue = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/business-climate/dialogues/${params.id}`);
-      if (!response.ok) {
+      const response = await DialogueGetById(params.id);
+      const data = response.data?.data || response.data;
+      if (data?.dialogue) {
+        setDialogue(data.dialogue);
+      } else if (data) {
+        setDialogue(data);
+      } else {
         throw new Error("Dialogue non trouvé");
       }
-      const data = await response.json();
-      setDialogue(data);
     } catch (err) {
       console.error("Error fetching dialogue:", err);
-      setError(err.message);
+      setError(err.response?.status === 404 ? "Dialogue non trouvé" : "Erreur de connexion");
     } finally {
       setLoading(false);
     }
@@ -250,6 +257,13 @@ export default function DialogueDetailPage() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportDialogueToPDF(dialogue)}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-white"
+            >
+              <Printer className="w-4 h-4" />
+              Exporter PDF
+            </button>
             <Link
               href={`/business-climate/dialogues/${dialogue.id}/edit`}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

@@ -116,8 +116,8 @@ export default function IndicatorsPage() {
       if (filters.measureType) params.measureType = filters.measureType;
 
       const response = await IndicatorList(params);
-      const data = response.data;
-      setIndicators(data.data || []);
+      const data = response.data?.data || response.data;
+      setIndicators(data.indicators || data.data || []);
       setPagination(prev => ({
         ...prev,
         total: data.pagination?.total || 0,

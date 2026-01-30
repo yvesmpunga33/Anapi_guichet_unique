@@ -78,16 +78,40 @@ export default function TrackingPage() {
 
       const params = {};
       if (statusFilter !== "all") {
-        params.status = statusFilter;
+        // Convert uppercase status to lowercase for API
+        params.status = statusFilter.toLowerCase();
       }
       if (searchTerm) {
         params.search = searchTerm;
       }
 
       const response = await ProjectList(params);
-      const data = response.data;
+      // API returns { success: true, data: { investments: [...], stats: {...}, pagination: {...} } }
+      const data = response.data?.data || response.data;
+      const investments = data.investments || [];
 
-      setProjects(data.projects || []);
+      // Map investments to expected project format
+      const mappedProjects = investments.map(inv => ({
+        id: inv.id,
+        projectCode: inv.referenceNumber,
+        projectName: inv.projectName,
+        description: inv.description,
+        amount: parseFloat(inv.amount) || 0,
+        currency: inv.currency || 'USD',
+        status: (inv.status || 'draft').toUpperCase().replace(/_/g, '_'),
+        progress: inv.progress || 0,
+        jobsCreated: inv.jobsCreated || 0,
+        startDate: inv.startDate,
+        endDate: inv.endDate,
+        approvalDate: inv.approvedAt,
+        rejectionReason: inv.notes,
+        investor: inv.investor,
+        sector: inv.sector?.name || inv.sector?.nameFr || null,
+        province: inv.province?.name || inv.province?.nameFr || null,
+        city: inv.city?.name || null,
+      }));
+
+      setProjects(mappedProjects);
     } catch (err) {
       console.error("Error fetching projects:", err);
       setError(err.response?.data?.message || err.message || intl.formatMessage({ id: "tracking.error.loading", defaultMessage: "Erreur lors du chargement des projets" }));

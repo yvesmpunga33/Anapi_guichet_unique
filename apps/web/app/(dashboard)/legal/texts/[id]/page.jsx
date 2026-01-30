@@ -41,7 +41,9 @@ export default function LegalTextDetailPage() {
   const fetchText = async () => {
     try {
       const response = await LegalTextGetById(params.id);
-      setText(response.data.text);
+      // API returns { success: true, data: { juridicalText } }
+      const data = response.data?.data || response.data;
+      setText(data.juridicalText || data.text);
     } catch (error) {
       console.error("Error fetching text:", error);
       router.push("/legal/texts");

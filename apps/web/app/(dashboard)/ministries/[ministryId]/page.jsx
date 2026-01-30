@@ -97,7 +97,11 @@ export default function MinistryDashboard({ params }) {
     else setLoading(true);
 
     try {
-      const response = await fetch(`/api/ministries/${ministryId}/dashboard`);
+      // Get token from localStorage for the API call
+      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+      const response = await fetch(`/api/ministries/${ministryId}/dashboard`, { headers });
       const result = await response.json();
 
       if (response.ok) {
@@ -178,7 +182,7 @@ export default function MinistryDashboard({ params }) {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-xl shadow-blue-500/25">
           <div className="relative z-10">
             <p className="text-blue-100 text-sm font-medium">Total Demandes</p>
@@ -211,6 +215,21 @@ export default function MinistryDashboard({ params }) {
             <div className="flex items-center gap-2 mt-3 text-green-100 text-sm">
               <CheckCircle2 className="w-4 h-4" />
               <span>Valides</span>
+            </div>
+          </div>
+          <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full" />
+        </div>
+
+        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl shadow-indigo-500/25">
+          <div className="relative z-10">
+            <p className="text-indigo-100 text-sm font-medium">Investissements</p>
+            <p className="text-2xl font-bold mt-2">
+              {((data.globalStats?.totalInvestment || 0) / 1000000).toFixed(1)}
+              <span className="text-lg font-normal text-indigo-200 ml-1">M$</span>
+            </p>
+            <div className="flex items-center gap-2 mt-3 text-indigo-100 text-sm">
+              <TrendingUp className="w-4 h-4" />
+              <span>Total USD</span>
             </div>
           </div>
           <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full" />
@@ -263,21 +282,25 @@ export default function MinistryDashboard({ params }) {
               </div>
 
               <div className="p-5">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
+                <div className="grid grid-cols-5 gap-2">
+                  <div className="text-center p-2 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                    <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
                   </div>
-                  <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl">
-                    <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pending}</p>
-                    <p className="text-xs text-yellow-600 dark:text-yellow-400">En attente</p>
+                  <div className="text-center p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl">
+                    <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pending}</p>
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400">Attente</p>
                   </div>
-                  <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-xl">
-                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.approved}</p>
+                  <div className="text-center p-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                    <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{stats.inProgress}</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400">En cours</p>
+                  </div>
+                  <div className="text-center p-2 bg-green-50 dark:bg-green-900/20 rounded-xl">
+                    <p className="text-xl font-bold text-green-600 dark:text-green-400">{stats.approved}</p>
                     <p className="text-xs text-green-600 dark:text-green-400">Approuves</p>
                   </div>
-                  <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
-                    <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.rejected}</p>
+                  <div className="text-center p-2 bg-red-50 dark:bg-red-900/20 rounded-xl">
+                    <p className="text-xl font-bold text-red-600 dark:text-red-400">{stats.rejected}</p>
                     <p className="text-xs text-red-600 dark:text-red-400">Rejetes</p>
                   </div>
                 </div>
@@ -365,13 +388,21 @@ export default function MinistryDashboard({ params }) {
           <div className="divide-y divide-gray-100 dark:divide-gray-700 max-h-[400px] overflow-y-auto">
             {data.recentRequests?.length > 0 ? (
               data.recentRequests.map((request) => {
-                const typeConfig = requestTypeConfig[request.requestType] || requestTypeConfig.OTHER;
+                // Map dossierType to requestType for display
+                const dossierType = (request.dossierType || '').toUpperCase();
+                let requestType = 'AUTORISATION';
+                if (dossierType.includes('LICENCE') || dossierType.includes('EXPLOITATION')) {
+                  requestType = 'LICENCE';
+                } else if (dossierType.includes('PERMIS') || dossierType.includes('CONSTRUCTION')) {
+                  requestType = 'PERMIS';
+                }
+                const typeConfig = requestTypeConfig[requestType] || requestTypeConfig.OTHER;
                 const status = statusConfig[request.status] || statusConfig.DRAFT;
 
                 return (
                   <Link
                     key={request.id}
-                    href={`/ministries/${ministryId}/requests/${request.id}`}
+                    href={`/guichet-unique/dossiers/${request.id}`}
                     className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                   >
                     <div className={`w-10 h-10 ${typeConfig.bgLight} rounded-lg flex items-center justify-center`}>
@@ -380,29 +411,23 @@ export default function MinistryDashboard({ params }) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <p className="font-medium text-gray-900 dark:text-white">
-                          {request.requestNumber}
+                          {request.dossierNumber}
                         </p>
                         <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${status.color}`}>
                           {status.label}
                         </span>
                       </div>
                       <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                        {request.subject}
+                        {request.projectName} - {request.investorName}
                       </p>
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                         {formatDate(request.createdAt)}
                       </p>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {request.currentStep}/{request.totalSteps}
-                      </div>
-                      <div className="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1">
-                        <div
-                          className={`h-1.5 rounded-full bg-gradient-to-r ${typeConfig.gradient}`}
-                          style={{ width: `${(request.currentStep / request.totalSteps) * 100}%` }}
-                        />
-                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {request.dossierType?.replace('_', ' ')}
+                      </p>
                     </div>
                   </Link>
                 );

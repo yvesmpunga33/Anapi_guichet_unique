@@ -129,9 +129,10 @@ export default function MediationsPage() {
       if (filters.urgencyLevel) params.urgencyLevel = filters.urgencyLevel;
 
       const response = await MediationList(params);
-      const data = response.data;
-      setMediations(data.data || []);
-      setPagination(data.pagination);
+      // API returns { success: true, data: { mediations: [...], pagination: {...} } }
+      const data = response.data?.data || response.data;
+      setMediations(data.mediations || data.cases || []);
+      setPagination(data.pagination || { page: 1, total: 0, totalPages: 0 });
     } catch (error) {
       console.error("Error fetching mediations:", error);
     } finally {

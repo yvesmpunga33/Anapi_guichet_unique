@@ -1,5 +1,5 @@
 {
-  "name": "with-tailwind",
+  "name": "anapi-management",
   "private": true,
   "scripts": {
     "build": "turbo run build",

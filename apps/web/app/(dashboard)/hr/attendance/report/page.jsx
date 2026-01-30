@@ -159,8 +159,9 @@ function ProgressRing({ value, size = 120, strokeWidth = 12, color = '#D4A853' }
 }
 
 // Bar Chart Component (Simple CSS-based)
-function SimpleBarChart({ data, loading }) {
-  const maxValue = Math.max(...data.map((d) => d.value), 1);
+function SimpleBarChart({ data = [], loading }) {
+  const safeData = Array.isArray(data) ? data : [];
+  const maxValue = safeData.length > 0 ? Math.max(...safeData.map((d) => d?.value || 0), 1) : 1;
 
   return (
     <div className="space-y-3">
@@ -172,7 +173,7 @@ function SimpleBarChart({ data, loading }) {
           </div>
         ))
       ) : (
-        data.map((item, index) => (
+        safeData.map((item, index) => (
           <div key={index} className="flex items-center gap-3">
             <span className="w-20 text-sm text-gray-600 dark:text-gray-400">{item.label}</span>
             <div className="flex-1 h-6 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
@@ -316,7 +317,9 @@ export default function AttendanceReportPage() {
 
       setStats(statsRes?.data || {});
       setReportData(reportRes?.data || null);
-      setDepartments(deptRes?.data || []);
+      // Extract departments array safely
+      const deptsArray = deptRes?.data?.departments || deptRes?.data || [];
+      setDepartments(Array.isArray(deptsArray) ? deptsArray : []);
     } catch (error) {
       console.error('Error loading data:', error);
       Swal.fire({
@@ -449,20 +452,20 @@ export default function AttendanceReportPage() {
 
   // Export data
   const exportReport = () => {
-    if (!reportData?.report) return;
+    if (!reportData?.report || !Array.isArray(reportData.report)) return;
 
     const headers = ['Matricule', 'Nom', 'Prenom', 'Departement', 'Presents', 'Absents', 'Retards', 'Conges', 'Heures', 'Taux'];
     const rows = reportData.report.map((r) => [
-      r.employee.matricule,
-      r.employee.nom,
-      r.employee.prenom,
-      r.employee.department || '-',
-      r.summary.present,
-      r.summary.absent,
-      r.summary.late,
-      r.summary.onLeave,
-      formatWorkingHours(r.summary.totalWorkingHours),
-      `${r.attendanceRate}%`,
+      r?.employee?.matricule || '-',
+      r?.employee?.nom || '-',
+      r?.employee?.prenom || '-',
+      r?.employee?.department || '-',
+      r?.summary?.present || 0,
+      r?.summary?.absent || 0,
+      r?.summary?.late || 0,
+      r?.summary?.onLeave || 0,
+      formatWorkingHours(r?.summary?.totalWorkingHours || 0),
+      `${r?.attendanceRate || 0}%`,
     ]);
 
     const csv = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');

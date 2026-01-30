@@ -53,8 +53,11 @@ export default function NewLegalTextPage() {
         DocumentTypeList({ activeOnly: true }),
         LegalDomainList({ activeOnly: true }),
       ]);
-      setDocumentTypes(typesRes.data.types || []);
-      setDomains(domainsRes.data.domains || []);
+      // API returns { success: true, data: { documentTypes/domains } }
+      const typesData = typesRes.data?.data || typesRes.data;
+      const domainsData = domainsRes.data?.data || domainsRes.data;
+      setDocumentTypes(typesData.documentTypes || typesData.types || []);
+      setDomains(domainsData.domains || []);
     } catch (error) {
       console.error("Error fetching referentials:", error);
     }

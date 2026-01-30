@@ -49,7 +49,8 @@ export default function LegalAlertsPage() {
   const fetchStats = async () => {
     try {
       const response = await LegalAlertGenerateStats();
-      setStats(response.data.stats);
+      const data = response.data?.data || response.data;
+      setStats(data.stats);
     } catch (error) {
       console.error("Error fetching stats:", error);
     }
@@ -90,7 +91,7 @@ export default function LegalAlertsPage() {
       if (filters.type) params.type = filters.type;
 
       const response = await LegalAlertList(params);
-      const data = response.data;
+      const data = response.data?.data || response.data;
       setAlerts(data.alerts || []);
       setPagination((prev) => ({
         ...prev,

@@ -42,7 +42,9 @@ export default function ContractDetailPage() {
   const fetchContract = async () => {
     try {
       const response = await ContractGetById(params.id);
-      setContract(response.data.contract);
+      // API returns { success: true, data: { contract } }
+      const data = response.data?.data || response.data;
+      setContract(data.contract);
     } catch (err) {
       console.error("Error fetching contract:", err.response?.data?.message || err.message);
       router.push("/legal/contracts");

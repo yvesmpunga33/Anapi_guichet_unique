@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { QRCodeSVG } from "qrcode.react";
 import {
   ArrowLeft,
   Printer,
@@ -15,6 +17,7 @@ import {
   Mail,
   Globe,
   CheckCircle2,
+  Award,
 } from "lucide-react";
 
 const statusLabels = {
@@ -27,56 +30,131 @@ const statusLabels = {
   COMPLETED: "Termine",
 };
 
-const workflowSteps = [
-  { step: 1, name: "Soumission", description: "Depot du dossier" },
-  { step: 2, name: "Verification", description: "Controle documents" },
-  { step: 3, name: "Examen Technique", description: "Analyse technique" },
-  { step: 4, name: "Examen Juridique", description: "Validation legale" },
-  { step: 5, name: "Commission", description: "Decision finale" },
-  { step: 6, name: "Agrement", description: "Delivrance" },
-];
-
-const mockDossier = {
-  id: "1",
-  reference: "GU-2024-00125",
-  investorName: "Congo Mining Corporation",
-  investorType: "company",
-  investorEmail: "contact@congomining.com",
-  investorPhone: "+243 81 234 5678",
-  investorAddress: "Avenue de la Paix, 123",
-  investorCountry: "Afrique du Sud",
-  projectName: "Extension Mine de Cuivre Kolwezi",
-  projectDescription: "Projet d'extension de la capacite de production de la mine de cuivre avec nouvelles installations de traitement du minerai et infrastructure logistique associee.",
-  sector: "Mines et Extraction",
-  subSector: "Cuivre et Cobalt",
-  province: "Lualaba",
-  city: "Kolwezi",
-  status: "UNDER_REVIEW",
-  submittedAt: "2024-01-15",
-  updatedAt: "2024-01-20",
-  amount: 15000000,
-  currency: "USD",
-  jobsCreated: 500,
-  jobsIndirect: 1500,
-  currentStep: 3,
-  totalSteps: 6,
-  startDate: "2024-06-01",
-  endDate: "2026-12-31",
+// Configuration des types de dossiers
+const dossierTypeConfig = {
+  AGREMENT: { label: "Agrément", color: "bg-emerald-600 text-white" },
+  AGREMENT_REGIME: { label: "Agrément au Régime", color: "bg-emerald-600 text-white" },
+  LICENCE: { label: "Licence", color: "bg-blue-600 text-white" },
+  LICENCE_EXPLOITATION: { label: "Licence d'Exploitation", color: "bg-blue-600 text-white" },
+  PERMIS: { label: "Permis", color: "bg-amber-600 text-white" },
+  PERMIS_CONSTRUCTION: { label: "Permis de Construction", color: "bg-amber-600 text-white" },
+  AUTORISATION: { label: "Autorisation", color: "bg-purple-600 text-white" },
+  AUTORISATION_ACTIVITE: { label: "Autorisation d'Activité", color: "bg-purple-600 text-white" },
 };
+
+// Étapes de workflow par défaut (fallback)
+const defaultWorkflowSteps = [
+  { step: 1, name: "Reception", description: "Reception et enregistrement" },
+  { step: 2, name: "Verification", description: "Controle documents" },
+  { step: 3, name: "Examen fiscal", description: "Analyse fiscale" },
+  { step: 4, name: "Decision finale", description: "Prise de decision" },
+];
 
 export default function DossierPreviewPage() {
   const params = useParams();
   const router = useRouter();
   const [dossier, setDossier] = useState(null);
+  const [workflowSteps, setWorkflowSteps] = useState(defaultWorkflowSteps);
   const [loading, setLoading] = useState(true);
   const printRef = useRef(null);
 
+  // Handle back navigation with fallback
+  const handleBack = () => {
+    // Check if there's history to go back to
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      // Fallback to dossier detail page
+      router.push(`/guichet-unique/dossiers/${params.id}`);
+    }
+  };
+
+  // Charger les étapes de workflow
   useEffect(() => {
-    setTimeout(() => {
-      setDossier({ ...mockDossier, id: params.id });
-      setLoading(false);
-    }, 300);
-  }, [params.id]);
+    const fetchWorkflowSteps = async () => {
+      try {
+        const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        const baseUrl = hostname === 'anapi.futurissvision.com' || hostname === 'www.anapi.futurissvision.com'
+          ? 'https://anapibackend.futurissvision.com/api/v1'
+          : 'http://localhost:3502/api/v1';
+
+        const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+        const response = await fetch(`${baseUrl}/config/workflow-steps?type=AGREMENT`, { headers });
+        if (response.ok) {
+          const data = await response.json();
+          const steps = (data.steps || []).map(s => ({
+            step: s.step || s.stepNumber,
+            name: s.name,
+            description: s.description,
+          }));
+          if (steps.length > 0) {
+            setWorkflowSteps(steps);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching workflow steps:', error);
+      }
+    };
+    fetchWorkflowSteps();
+  }, []);
+
+  // Charger les données du dossier
+  useEffect(() => {
+    const fetchDossier = async () => {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+        const response = await fetch(`/api/guichet-unique/dossiers/${params.id}`, {
+          headers: {
+            ...(token && { 'Authorization': `Bearer ${token}` })
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const apiDossier = data.data?.dossier || data.dossier;
+
+          if (apiDossier) {
+            setDossier({
+              id: apiDossier.id,
+              reference: apiDossier.dossierNumber || `GU-${apiDossier.id.substring(0, 8)}`,
+              dossierType: apiDossier.dossierType || '',
+              investorName: apiDossier.investorName || '',
+              investorType: apiDossier.investorType || 'company',
+              investorEmail: apiDossier.investorEmail || '',
+              investorPhone: apiDossier.investorPhone || '',
+              investorAddress: apiDossier.investorAddress || '',
+              investorCountry: apiDossier.investorCountry || 'RDC',
+              projectName: apiDossier.projectName || '',
+              projectDescription: apiDossier.projectDescription || '',
+              sector: apiDossier.sector || '',
+              subSector: apiDossier.subSector || '',
+              province: apiDossier.projectProvince || '',
+              city: apiDossier.projectCity || '',
+              status: apiDossier.status || 'DRAFT',
+              submittedAt: apiDossier.submittedAt || apiDossier.createdAt,
+              updatedAt: apiDossier.updatedAt,
+              amount: apiDossier.investmentAmount || 0,
+              currency: apiDossier.currency || 'USD',
+              jobsCreated: apiDossier.directJobs || 0,
+              jobsIndirect: apiDossier.indirectJobs || 0,
+              currentStep: apiDossier.currentStep || 1,
+              totalSteps: workflowSteps.length,
+              startDate: apiDossier.startDate,
+              endDate: apiDossier.endDate,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching dossier:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDossier();
+  }, [params.id, workflowSteps.length]);
 
   const formatAmount = (amount, currency) => {
     return new Intl.NumberFormat("fr-FR", {
@@ -96,6 +174,15 @@ export default function DossierPreviewPage() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  // Generate verification URL for QR code
+  const getVerificationUrl = () => {
+    if (typeof window !== 'undefined') {
+      const baseUrl = window.location.origin;
+      return `${baseUrl}/verify/${dossier?.id || params.id}`;
+    }
+    return `https://anapi.futurissvision.com/verify/${dossier?.id || params.id}`;
   };
 
   if (loading) {
@@ -121,9 +208,9 @@ export default function DossierPreviewPage() {
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => window.close()}
+              onClick={handleBack}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Fermer"
+              title="Retour"
             >
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
@@ -133,6 +220,15 @@ export default function DossierPreviewPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {(dossier.status === 'APPROVED' || dossier.status === 'COMPLETED') && (
+              <Link
+                href={`/guichet-unique/dossiers/${params.id}/certificate`}
+                className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+              >
+                <Award className="w-4 h-4 mr-2" />
+                Certificat
+              </Link>
+            )}
             <button
               onClick={handlePrint}
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -141,7 +237,7 @@ export default function DossierPreviewPage() {
               Imprimer
             </button>
             <button
-              onClick={() => window.close()}
+              onClick={handleBack}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
               title="Fermer"
             >
@@ -172,6 +268,14 @@ export default function DossierPreviewPage() {
                 </div>
               </div>
               <div className="text-right">
+                {/* Type de dossier */}
+                {dossier.dossierType && dossierTypeConfig[dossier.dossierType] && (
+                  <div className="mb-2">
+                    <span className="inline-block px-3 py-1 bg-white text-blue-900 rounded-lg text-sm font-bold">
+                      {dossierTypeConfig[dossier.dossierType].label}
+                    </span>
+                  </div>
+                )}
                 <p className="text-sm text-blue-200">Reference</p>
                 <p className="text-xl font-bold">{dossier.reference}</p>
                 <p className="text-sm text-blue-200 mt-2">Statut</p>
@@ -184,6 +288,14 @@ export default function DossierPreviewPage() {
 
           {/* Document Title */}
           <div className="border-b-4 border-blue-600 p-6 bg-gray-50">
+            {/* Type de dossier - affiché en grand */}
+            {dossier.dossierType && dossierTypeConfig[dossier.dossierType] && (
+              <div className="text-center mb-3">
+                <span className={`inline-block px-6 py-2 rounded-lg text-lg font-bold ${dossierTypeConfig[dossier.dossierType].color}`}>
+                  {dossierTypeConfig[dossier.dossierType].label.toUpperCase()}
+                </span>
+              </div>
+            )}
             <h2 className="text-xl font-bold text-gray-900 text-center uppercase tracking-wider">
               Fiche de Suivi de Dossier d'Investissement
             </h2>
@@ -370,13 +482,27 @@ export default function DossierPreviewPage() {
             </section>
           </div>
 
-          {/* Footer */}
+          {/* Footer with QR Code */}
           <div className="border-t-4 border-blue-600 p-6 bg-gray-50 mt-8">
             <div className="flex items-center justify-between text-sm text-gray-500">
               <div>
                 <p className="font-medium text-gray-700">ANAPI - Agence Nationale pour la Promotion des Investissements</p>
                 <p>Kinshasa, Republique Democratique du Congo</p>
               </div>
+
+              {/* QR Code de verification */}
+              <div className="flex flex-col items-center">
+                <div className="bg-white p-2 rounded-lg border border-gray-200">
+                  <QRCodeSVG
+                    value={getVerificationUrl()}
+                    size={80}
+                    level="M"
+                    includeMargin={false}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1 text-center">Scannez pour verifier</p>
+              </div>
+
               <div className="text-right">
                 <p>Document confidentiel</p>
                 <p>Page 1/1</p>

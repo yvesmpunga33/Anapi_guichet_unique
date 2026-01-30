@@ -87,7 +87,7 @@ export const deleteEmployeePhoto = async (id) => {
 // Helper pour construire l'URL complete de la photo
 export const getPhotoUrl = (photoPath) => {
   if (!photoPath) return null;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4951/api/v1';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3502/api/v1';
   // Enlever /api/v1 ou /api de l'URL pour les images statiques
   const baseUrl = apiUrl.replace(/\/api\/v\d+|\/api/g, '');
   return `${baseUrl}${photoPath}`;

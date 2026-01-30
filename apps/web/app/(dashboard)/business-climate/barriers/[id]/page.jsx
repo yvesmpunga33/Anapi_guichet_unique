@@ -27,7 +27,11 @@ import {
   Users,
   PhoneCall,
   TrendingUp,
+  Printer,
 } from "lucide-react";
+
+import { exportBarrierToPDF } from "@/app/utils/pdfExport";
+import { BarrierGetById, BarrierResolutionCreate } from "@/app/services/admin/BusinessClimate.service";
 
 const priorityConfig = {
   CRITICAL: { label: "Critique", color: "text-red-600 dark:text-red-400", bg: "bg-red-100 dark:bg-red-900/30" },
@@ -123,18 +127,22 @@ export default function BarrierDetailPage() {
   const fetchBarrier = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/business-climate/barriers/${params.id}`);
-      if (response.ok) {
-        const data = await response.json();
+      const response = await BarrierGetById(params.id);
+      const data = response.data?.data || response.data;
+      if (data?.barrier) {
+        setBarrier(data.barrier);
+      } else if (data) {
         setBarrier(data);
-      } else if (response.status === 404) {
-        setError("Obstacle non trouvé");
       } else {
-        setError("Erreur lors du chargement");
+        setError("Obstacle non trouvé");
       }
     } catch (err) {
       console.error("Error fetching barrier:", err);
-      setError("Erreur de connexion");
+      if (err.response?.status === 404) {
+        setError("Obstacle non trouvé");
+      } else {
+        setError("Erreur de connexion");
+      }
     } finally {
       setLoading(false);
     }
@@ -169,33 +177,27 @@ export default function BarrierDetailPage() {
 
     setSubmitting(true);
     try {
-      const response = await fetch(`/api/business-climate/barriers/${params.id}/resolutions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(actionForm),
+      // Clean the data - remove empty strings
+      const cleanData = Object.fromEntries(
+        Object.entries(actionForm).filter(([_, value]) => value !== "" && value !== null && value !== undefined)
+      );
+      await BarrierResolutionCreate(params.id, cleanData);
+      setShowActionModal(false);
+      setActionForm({
+        actionType: "CONTACT_ADMIN",
+        description: "",
+        newStatus: "",
+        contactName: "",
+        contactOrganization: "",
+        contactEmail: "",
+        followUpDate: "",
+        isInternal: false,
       });
-
-      if (response.ok) {
-        setShowActionModal(false);
-        setActionForm({
-          actionType: "CONTACT_ADMIN",
-          description: "",
-          newStatus: "",
-          contactName: "",
-          contactOrganization: "",
-          contactEmail: "",
-          followUpDate: "",
-          isInternal: false,
-        });
-        showNotification("Action ajoutée avec succès", "success");
-        fetchBarrier(); // Refresh data
-      } else {
-        const data = await response.json();
-        showNotification(data.error || "Erreur lors de l'ajout de l'action", "error");
-      }
+      showNotification("Action ajoutée avec succès", "success");
+      fetchBarrier(); // Refresh data
     } catch (err) {
       console.error("Error adding action:", err);
-      showNotification("Erreur de connexion", "error");
+      showNotification(err.response?.data?.message || "Erreur lors de l'ajout de l'action", "error");
     } finally {
       setSubmitting(false);
     }
@@ -210,28 +212,18 @@ export default function BarrierDetailPage() {
 
     setSubmitting(true);
     try {
-      const response = await fetch(`/api/business-climate/barriers/${params.id}/resolutions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          actionType: "COMMENT",
-          description: commentText,
-          isInternal: true,
-        }),
+      await BarrierResolutionCreate(params.id, {
+        actionType: "COMMENT",
+        description: commentText,
+        isInternal: true,
       });
-
-      if (response.ok) {
-        setShowCommentModal(false);
-        setCommentText("");
-        showNotification("Commentaire ajouté avec succès", "success");
-        fetchBarrier(); // Refresh data
-      } else {
-        const data = await response.json();
-        showNotification(data.error || "Erreur lors de l'ajout du commentaire", "error");
-      }
+      setShowCommentModal(false);
+      setCommentText("");
+      showNotification("Commentaire ajouté avec succès", "success");
+      fetchBarrier(); // Refresh data
     } catch (err) {
       console.error("Error adding comment:", err);
-      showNotification("Erreur de connexion", "error");
+      showNotification(err.response?.data?.message || "Erreur lors de l'ajout du commentaire", "error");
     } finally {
       setSubmitting(false);
     }
@@ -356,13 +348,22 @@ export default function BarrierDetailPage() {
             </div>
           </div>
 
-          <Link
-            href={`/business-climate/barriers/${params.id}/edit`}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-white"
-          >
-            <Edit2 className="w-4 h-4" />
-            Modifier
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportBarrierToPDF(barrier)}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-white"
+            >
+              <Printer className="w-4 h-4" />
+              Exporter PDF
+            </button>
+            <Link
+              href={`/business-climate/barriers/${params.id}/edit`}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-white"
+            >
+              <Edit2 className="w-4 h-4" />
+              Modifier
+            </Link>
+          </div>
         </div>
       </div>
 

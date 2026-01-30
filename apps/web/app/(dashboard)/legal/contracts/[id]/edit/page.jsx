@@ -68,8 +68,11 @@ export default function EditContractPage() {
         ContractTypeList({ activeOnly: true }),
         CurrencyList({ activeOnly: true }),
       ]);
-      setContractTypes(typesRes.data.types || []);
-      setCurrencies(currenciesRes.data.currencies || []);
+      // API returns { success: true, data: { contractTypes/currencies } }
+      const typesData = typesRes.data?.data || typesRes.data;
+      const currenciesData = currenciesRes.data?.data || currenciesRes.data;
+      setContractTypes(typesData.contractTypes || typesData.types || []);
+      setCurrencies(currenciesData.currencies || []);
     } catch (err) {
       console.error("Error fetching referentials:", err.response?.data?.message || err.message);
     }
@@ -78,7 +81,9 @@ export default function EditContractPage() {
   const fetchContract = async () => {
     try {
       const response = await ContractGetById(params.id);
-      const contract = response.data.contract;
+      // API returns { success: true, data: { contract } }
+      const data = response.data?.data || response.data;
+      const contract = data.contract;
 
       setFormData({
         title: contract.title || "",

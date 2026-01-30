@@ -25,7 +25,12 @@ import {
   Phone,
   Mail,
   Briefcase,
+  Printer,
+  Edit2,
 } from "lucide-react";
+
+import { exportMediationToPDF } from "@/app/utils/pdfExport";
+import { MediationGetById } from "@/app/services/admin/BusinessClimate.service";
 
 const statusConfig = {
   SUBMITTED: { label: "Soumis", color: "text-gray-600 dark:text-gray-400", bg: "bg-gray-100 dark:bg-gray-700", icon: Clock },
@@ -98,15 +103,18 @@ export default function MediationDetailPage() {
   const fetchMediation = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/business-climate/mediations/${params.id}`);
-      if (!response.ok) {
+      const response = await MediationGetById(params.id);
+      const data = response.data?.data || response.data;
+      if (data?.mediation) {
+        setMediation(data.mediation);
+      } else if (data) {
+        setMediation(data);
+      } else {
         throw new Error("Médiation non trouvée");
       }
-      const data = await response.json();
-      setMediation(data);
     } catch (err) {
       console.error("Error fetching mediation:", err);
-      setError(err.message);
+      setError(err.response?.status === 404 ? "Médiation non trouvée" : "Erreur de connexion");
     } finally {
       setLoading(false);
     }
@@ -264,6 +272,24 @@ export default function MediationDetailPage() {
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportMediationToPDF(mediation)}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-white"
+            >
+              <Printer className="w-4 h-4" />
+              Exporter PDF
+            </button>
+            <Link
+              href={`/business-climate/mediations/${mediation.id}/edit`}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
+            >
+              <Edit2 className="w-4 h-4" />
+              Modifier
+            </Link>
           </div>
         </div>
       </div>

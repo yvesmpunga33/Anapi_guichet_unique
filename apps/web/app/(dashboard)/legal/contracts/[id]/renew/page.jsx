@@ -51,7 +51,8 @@ export default function RenewContractPage() {
   const fetchRenewalInfo = async () => {
     try {
       const response = await ContractRenewalInfo(params.id);
-      const data = response.data;
+      // API returns { success: true, data: { contract, suggestions, ... } }
+      const data = response.data?.data || response.data;
       setRenewalData(data);
 
       // Pre-remplir le formulaire avec les suggestions
@@ -85,7 +86,9 @@ export default function RenewContractPage() {
     setSaving(true);
     try {
       const response = await ContractRenew(params.id, formData);
-      router.push(`/legal/contracts/${response.data.renewedContract.id}`);
+      // API returns { success: true, data: { renewedContract } }
+      const data = response.data?.data || response.data;
+      router.push(`/legal/contracts/${data.renewedContract.id}`);
     } catch (err) {
       console.error("Error renewing contract:", err);
       alert(err.response?.data?.error || "Erreur lors du renouvellement");

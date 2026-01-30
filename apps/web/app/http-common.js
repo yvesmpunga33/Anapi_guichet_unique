@@ -35,7 +35,7 @@ const http = axios.create({
 // Intercepteur pour ajouter le token d'authentification
 http.interceptors.request.use(
   (config) => {
-    // Côté client - récupérer le token depuis localStorage ou cookie
+    // Côté client - récupérer le token depuis localStorage
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('authToken');
       if (token) {

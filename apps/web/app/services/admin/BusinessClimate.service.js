@@ -140,22 +140,95 @@ export const BusinessClimateStatistics = (params = {}) => {
 
 // ============ BARRIER RESOLUTIONS ============
 export const BarrierResolutionList = (barrierId) => {
-  return http.get(`/business-climate/barriers/${barrierId}/resolutions`);
+  return http.get(`/business-climate/resolutions?barrierId=${barrierId}`);
 };
 
 export const BarrierResolutionCreate = (barrierId, data) => {
-  return http.post(`/business-climate/barriers/${barrierId}/resolutions`, data);
+  return http.post('/business-climate/resolutions', { ...data, barrierId });
 };
 
-export const BarrierResolutionUpdate = (barrierId, resolutionId, data) => {
-  return http.put(`/business-climate/barriers/${barrierId}/resolutions/${resolutionId}`, data);
+export const BarrierResolutionUpdate = (resolutionId, data) => {
+  return http.put(`/business-climate/resolutions/${resolutionId}`, data);
+};
+
+export const BarrierResolutionDelete = (resolutionId) => {
+  return http.delete(`/business-climate/resolutions/${resolutionId}`);
 };
 
 // ============ INDICATOR VALUES ============
 export const IndicatorValueList = (indicatorId) => {
-  return http.get(`/business-climate/indicators/${indicatorId}/values`);
+  return http.get(`/business-climate/indicator-values?indicatorId=${indicatorId}`);
 };
 
 export const IndicatorValueCreate = (indicatorId, data) => {
-  return http.post(`/business-climate/indicators/${indicatorId}/values`, data);
+  return http.post('/business-climate/indicator-values', { ...data, indicatorId });
+};
+
+export const IndicatorValueUpdate = (valueId, data) => {
+  return http.put(`/business-climate/indicator-values/${valueId}`, data);
+};
+
+export const IndicatorValueDelete = (valueId) => {
+  return http.delete(`/business-climate/indicator-values/${valueId}`);
+};
+
+// ============ BARRIER STATISTICS ============
+export const BarrierStatistics = () => {
+  return http.get('/business-climate/barriers/stats/overview');
+};
+
+// ============ MEDIATION ACTIONS ============
+export const MediationStart = (id) => {
+  return http.post(`/business-climate/mediations/${id}/start`);
+};
+
+export const MediationResolve = (id, resolution) => {
+  return http.post(`/business-climate/mediations/${id}/resolve`, { resolution });
+};
+
+export const MediationClose = (id) => {
+  return http.post(`/business-climate/mediations/${id}/close`);
+};
+
+// ============ PROPOSAL ACTIONS ============
+export const ProposalSubmit = (id) => {
+  return http.post(`/business-climate/proposals/${id}/submit`);
+};
+
+export const ProposalStartReview = (id) => {
+  return http.post(`/business-climate/proposals/${id}/review`);
+};
+
+export const ProposalAdopt = (id) => {
+  return http.post(`/business-climate/proposals/${id}/adopt`);
+};
+
+export const ProposalReject = (id) => {
+  return http.post(`/business-climate/proposals/${id}/reject`);
+};
+
+// ============ TREATY ACTIONS ============
+export const TreatyRatify = (id) => {
+  return http.post(`/business-climate/treaties/${id}/ratify`);
+};
+
+export const TreatyActivate = (id) => {
+  return http.post(`/business-climate/treaties/${id}/activate`);
+};
+
+// ============ DIALOGUE PARTICIPANTS ============
+export const DialogueParticipantList = (dialogueId) => {
+  return http.get(`/business-climate/participants?dialogueId=${dialogueId}`);
+};
+
+export const DialogueParticipantCreate = (dialogueId, data) => {
+  return http.post('/business-climate/participants', { ...data, dialogueId });
+};
+
+export const DialogueParticipantUpdate = (participantId, data) => {
+  return http.put(`/business-climate/participants/${participantId}`, data);
+};
+
+export const DialogueParticipantDelete = (participantId) => {
+  return http.delete(`/business-climate/participants/${participantId}`);
 };

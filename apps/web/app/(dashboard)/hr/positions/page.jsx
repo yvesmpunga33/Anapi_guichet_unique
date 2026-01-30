@@ -393,8 +393,10 @@ export default function PositionsPage() {
       };
       const response = await getPositions(params);
       if (response.success) {
-        setPositions(response.data || []);
-        setTotal(response.pagination?.total || response.data?.length || 0);
+        // Extract positions array safely
+        const posArray = response.data?.positions || response.data || [];
+        setPositions(Array.isArray(posArray) ? posArray : []);
+        setTotal(response.pagination?.total || posArray.length || 0);
       }
     } catch (error) {
       console.error('Erreur chargement positions:', error);
@@ -409,8 +411,11 @@ export default function PositionsPage() {
         getDepartments({ limit: 100 }),
         getGrades({ limit: 100 }),
       ]);
-      if (deptRes.success) setDepartments(deptRes.data || []);
-      if (gradeRes.success) setGrades(gradeRes.data || []);
+      // Extract arrays safely (handle various response structures)
+      const deptsArray = deptRes?.data?.departments || deptRes?.data || [];
+      const gradesArray = gradeRes?.data?.grades || gradeRes?.data || [];
+      if (deptRes.success) setDepartments(Array.isArray(deptsArray) ? deptsArray : []);
+      if (gradeRes.success) setGrades(Array.isArray(gradesArray) ? gradesArray : []);
     } catch (error) {
       console.error('Erreur chargement dependances:', error);
     }

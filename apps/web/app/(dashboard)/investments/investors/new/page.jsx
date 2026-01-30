@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,6 +16,7 @@ import {
 
 // Services
 import { InvestorCreate } from "@/app/services/admin/Investor.service";
+import { ReferentielProvinceList, CountryList } from "@/app/services/admin/Referentiel.service";
 
 const investorTypes = [
   { value: "company", label: "Societe", icon: Building2, description: "Entreprise ou societe commerciale" },
@@ -24,7 +25,8 @@ const investorTypes = [
   { value: "government", label: "Gouvernement", icon: Building2, description: "Entite gouvernementale" },
 ];
 
-const provinces = [
+// Fallback provinces
+const DEFAULT_PROVINCES = [
   "Kinshasa", "Kongo-Central", "Kwango", "Kwilu", "Mai-Ndombe",
   "Equateur", "Mongala", "Nord-Ubangi", "Sud-Ubangi", "Tshuapa",
   "Tshopo", "Bas-Uele", "Haut-Uele", "Ituri", "Nord-Kivu",
@@ -56,6 +58,68 @@ export default function NewInvestorPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // Dynamic data loading
+  const [provinces, setProvinces] = useState([]);
+  const [countries, setCountries] = useState([]);
+  const [loadingData, setLoadingData] = useState(true);
+
+  // Load reference data on mount
+  useEffect(() => {
+    const loadReferenceData = async () => {
+      try {
+        const [provincesRes, countriesRes] = await Promise.all([
+          ReferentielProvinceList().catch(() => null),
+          CountryList().catch(() => null),
+        ]);
+
+        // Extract provinces with multiple fallback paths
+        const provincesData = provincesRes?.data?.data?.provinces
+          || provincesRes?.data?.provinces
+          || provincesRes?.data?.data
+          || provincesRes?.data
+          || [];
+
+        if (Array.isArray(provincesData) && provincesData.length > 0) {
+          // Check if data is already in {id, name} format or just strings
+          const formattedProvinces = provincesData.map((p, i) =>
+            typeof p === 'string' ? { id: i, name: p } : { id: p.id || i, name: p.name || p.nom || p }
+          );
+          setProvinces(formattedProvinces);
+        } else {
+          setProvinces(DEFAULT_PROVINCES.map((name, i) => ({ id: i, name })));
+        }
+
+        // Extract countries
+        const countriesData = countriesRes?.data?.data?.countries
+          || countriesRes?.data?.countries
+          || countriesRes?.data?.data
+          || countriesRes?.data
+          || [];
+
+        if (Array.isArray(countriesData) && countriesData.length > 0) {
+          setCountries(countriesData);
+        } else {
+          // Default countries fallback
+          setCountries([
+            { code: "RDC", name: "RD Congo" },
+            { code: "other", name: "Autre" }
+          ]);
+        }
+      } catch (error) {
+        console.error("Error loading reference data:", error);
+        setProvinces(DEFAULT_PROVINCES.map((name, i) => ({ id: i, name })));
+        setCountries([
+          { code: "RDC", name: "RD Congo" },
+          { code: "other", name: "Autre" }
+        ]);
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    loadReferenceData();
+  }, []);
 
   const [formData, setFormData] = useState({
     type: "company",
@@ -268,9 +332,19 @@ export default function NewInvestorPage() {
                 value={formData.country}
                 onChange={(e) => handleChange("country", e.target.value)}
                 className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-orange-500"
+                disabled={loadingData}
               >
-                <option value="RDC" className="bg-gray-800">RD Congo</option>
-                <option value="other" className="bg-gray-800">Autre</option>
+                {loadingData ? (
+                  <option value="" className="bg-gray-800">Chargement...</option>
+                ) : (
+                  <>
+                    {countries.map((c) => (
+                      <option key={c.code || c.id} value={c.code || c.id} className="bg-gray-800">
+                        {c.name || c.nom}
+                      </option>
+                    ))}
+                  </>
+                )}
               </select>
             </div>
 
@@ -280,11 +354,18 @@ export default function NewInvestorPage() {
                 value={formData.province}
                 onChange={(e) => handleChange("province", e.target.value)}
                 className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-orange-500"
+                disabled={loadingData}
               >
-                <option value="" className="bg-gray-800">Selectionnez</option>
-                {provinces.map((p) => (
-                  <option key={p} value={p} className="bg-gray-800">{p}</option>
-                ))}
+                {loadingData ? (
+                  <option value="" className="bg-gray-800">Chargement...</option>
+                ) : (
+                  <>
+                    <option value="" className="bg-gray-800">Selectionnez</option>
+                    {provinces.map((p) => (
+                      <option key={p.id} value={p.name} className="bg-gray-800">{p.name}</option>
+                    ))}
+                  </>
+                )}
               </select>
             </div>
 

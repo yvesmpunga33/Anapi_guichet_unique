@@ -54,8 +54,11 @@ export default function LegalTextsPage() {
         DocumentTypeList({ activeOnly: true }),
         LegalDomainList({ activeOnly: true }),
       ]);
-      setDocumentTypes(typesRes.data.types || []);
-      setDomains(domainsRes.data.domains || []);
+      // API returns documentTypes and domains in data.data
+      const typesData = typesRes.data?.data || typesRes.data;
+      const domainsData = domainsRes.data?.data || domainsRes.data;
+      setDocumentTypes(typesData.documentTypes || typesData.types || []);
+      setDomains(domainsData.domains || []);
     } catch (error) {
       console.error("Error fetching referentials:", error);
     }
@@ -74,8 +77,9 @@ export default function LegalTextsPage() {
       if (filters.status) params.status = filters.status;
 
       const response = await LegalTextList(params);
-      const data = response.data;
-      setTexts(data.texts || []);
+      const data = response.data?.data || response.data;
+      // API returns juridicalTexts, not texts
+      setTexts(data.juridicalTexts || data.texts || []);
       setPagination((prev) => ({
         ...prev,
         totalPages: data.pagination?.totalPages || 1,

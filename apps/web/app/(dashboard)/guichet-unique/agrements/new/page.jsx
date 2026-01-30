@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -21,7 +21,9 @@ import {
   ClipboardList,
   Shield,
   ChevronRight,
+  RefreshCw,
 } from "lucide-react";
+import { ReferentielProvinceList, ReferentielSectorList } from "@/app/services/admin/Referentiel.service";
 
 const sections = [
   { id: "type", name: "Type de demande", icon: Shield },
@@ -72,7 +74,8 @@ const priorityOptions = [
   { value: "URGENT", label: "Urgente" },
 ];
 
-const sectorsList = [
+// Fallback data in case API fails
+const DEFAULT_SECTORS = [
   "Agriculture et elevage",
   "Mines et extraction",
   "Industries manufacturieres",
@@ -87,7 +90,7 @@ const sectorsList = [
   "Education et formation",
 ];
 
-const provinces = [
+const DEFAULT_PROVINCES = [
   "Kinshasa", "Kongo-Central", "Kwango", "Kwilu", "Mai-Ndombe",
   "Equateur", "Mongala", "Nord-Ubangi", "Sud-Ubangi", "Tshuapa",
   "Tshopo", "Bas-Uele", "Haut-Uele", "Ituri", "Nord-Kivu",
@@ -122,6 +125,12 @@ export default function NewAgrementPage() {
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState("type");
 
+  // Dynamic data loaded from API
+  const [provinces, setProvinces] = useState([]);
+  const [sectors, setSectors] = useState([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [dataError, setDataError] = useState(null);
+
   const [formData, setFormData] = useState({
     approvalType: "",
     priority: "NORMAL",
@@ -152,6 +161,47 @@ export default function NewAgrementPage() {
 
   const [documents, setDocuments] = useState([]);
   const [errors, setErrors] = useState({});
+
+  // Load provinces and sectors from API
+  useEffect(() => {
+    const loadReferenceData = async () => {
+      setLoadingData(true);
+      setDataError(null);
+      try {
+        const [provincesRes, sectorsRes] = await Promise.all([
+          ReferentielProvinceList().catch(() => null),
+          ReferentielSectorList().catch(() => null),
+        ]);
+
+        // Extract provinces - handle various response structures
+        const provincesData = provincesRes?.data?.data?.provinces
+          || provincesRes?.data?.provinces
+          || provincesRes?.data?.data
+          || provincesRes?.data
+          || [];
+        setProvinces(Array.isArray(provincesData) ? provincesData : DEFAULT_PROVINCES.map((name, i) => ({ id: i, name })));
+
+        // Extract sectors - handle various response structures
+        const sectorsData = sectorsRes?.data?.data?.sectors
+          || sectorsRes?.data?.sectors
+          || sectorsRes?.data?.data
+          || sectorsRes?.data
+          || [];
+        setSectors(Array.isArray(sectorsData) ? sectorsData : DEFAULT_SECTORS.map((name, i) => ({ id: i, name })));
+
+      } catch (error) {
+        console.error("Error loading reference data:", error);
+        setDataError("Erreur lors du chargement des donnees de reference");
+        // Use fallback data
+        setProvinces(DEFAULT_PROVINCES.map((name, i) => ({ id: i, name })));
+        setSectors(DEFAULT_SECTORS.map((name, i) => ({ id: i, name })));
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    loadReferenceData();
+  }, []);
 
   const currentSectionIndex = sections.findIndex((s) => s.id === activeSection);
 
@@ -553,11 +603,16 @@ export default function NewAgrementPage() {
                     <select
                       value={formData.sector}
                       onChange={(e) => handleChange("sector", e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white focus:ring-2 focus:ring-orange-500"
+                      disabled={loadingData}
+                      className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white focus:ring-2 focus:ring-orange-500 disabled:opacity-50"
                     >
-                      <option value="" className="bg-gray-800">Selectionnez un secteur</option>
-                      {sectorsList.map((s) => (
-                        <option key={s} value={s} className="bg-gray-800">{s}</option>
+                      <option value="" className="bg-gray-800">
+                        {loadingData ? "Chargement..." : "Selectionnez un secteur"}
+                      </option>
+                      {sectors.map((s) => (
+                        <option key={s.id || s.name || s} value={s.name || s} className="bg-gray-800">
+                          {s.name || s}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -601,13 +656,18 @@ export default function NewAgrementPage() {
                     <select
                       value={formData.projectProvince}
                       onChange={(e) => handleChange("projectProvince", e.target.value)}
-                      className={`w-full px-4 py-3 bg-gray-700/50 border rounded-xl text-white focus:ring-2 focus:ring-orange-500 ${
+                      disabled={loadingData}
+                      className={`w-full px-4 py-3 bg-gray-700/50 border rounded-xl text-white focus:ring-2 focus:ring-orange-500 disabled:opacity-50 ${
                         errors.projectProvince ? "border-red-500" : "border-gray-600"
                       }`}
                     >
-                      <option value="" className="bg-gray-800">Selectionnez une province</option>
+                      <option value="" className="bg-gray-800">
+                        {loadingData ? "Chargement..." : "Selectionnez une province"}
+                      </option>
                       {provinces.map((p) => (
-                        <option key={p} value={p} className="bg-gray-800">{p}</option>
+                        <option key={p.id || p.name || p} value={p.name || p} className="bg-gray-800">
+                          {p.name || p}
+                        </option>
                       ))}
                     </select>
                     {errors.projectProvince && (

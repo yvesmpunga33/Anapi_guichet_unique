@@ -189,12 +189,13 @@ function WelcomeCard({ totalEmployees, presentToday, intl }) {
 }
 
 // Department Distribution Chart
-function DepartmentChart({ departments, intl }) {
-  const total = departments.reduce((acc, dep) => acc + (dep.employeeCount || 0), 0);
+function DepartmentChart({ departments = [], intl }) {
+  const safeDepartments = Array.isArray(departments) ? departments : [];
+  const total = safeDepartments.reduce((acc, dep) => acc + (dep?.employeeCount || 0), 0);
 
-  const chartData = departments.slice(0, 6).map((dept, index) => ({
-    name: dept.name,
-    value: dept.employeeCount || 0,
+  const chartData = safeDepartments.slice(0, 6).map((dept, index) => ({
+    name: dept?.name || 'Non défini',
+    value: dept?.employeeCount || 0,
     color: CHART_COLORS[index % CHART_COLORS.length],
   }));
 
@@ -645,11 +646,13 @@ export default function HRDashboardPage() {
       });
 
       // Map departments with employee counts from backend
-      const deptWithCounts = departmentsList.map(dept => {
-        const deptStats = employeesByDepartment.find(d => d.departement === dept.nom);
+      const safeDeptList = Array.isArray(departmentsList) ? departmentsList : [];
+      const safeEmpByDept = Array.isArray(employeesByDepartment) ? employeesByDepartment : [];
+      const deptWithCounts = safeDeptList.map(dept => {
+        const deptStats = safeEmpByDept.find(d => d?.departement === dept?.nom);
         return {
           ...dept,
-          name: dept.nom,
+          name: dept?.nom || 'Non défini',
           employeeCount: parseInt(deptStats?.count || 0),
         };
       });

@@ -751,6 +751,7 @@ const initialFormData = {
   dateEmbauche: '',
   dateFinContrat: '',
   salaireBase: '',
+  salaireDevise: 'USD',
   statut: 'Actif',
   // Bank Information
   banque: '',
@@ -781,6 +782,8 @@ export default function NewEmployeePage() {
     banques: [],
     liensParente: [],
   });
+  // Store full category objects to access salaire_base and salaire_devise
+  const [categoriesData, setCategoriesData] = useState([]);
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const photoInputRef = useRef(null);
@@ -816,11 +819,15 @@ export default function NewEmployeePage() {
         }));
       };
 
+      // Store full categories data for salary lookup
+      const categoriesRawData = categoriesRes?.data?.categories || categoriesRes?.data || [];
+      setCategoriesData(Array.isArray(categoriesRawData) ? categoriesRawData : []);
+
       setConfigs({
         departements: transformToOptions(deptsRes?.data?.departments || deptsRes?.data || [], 'nom', 'id'),
         postes: transformToOptions(positionsRes?.data?.positions || positionsRes?.data || [], 'title', 'id'),
         grades: transformToOptions(gradesRes?.data?.grades || gradesRes?.data || [], 'nom', 'id'),
-        categories: transformToOptions(categoriesRes?.data?.categories || categoriesRes?.data || [], 'nom', 'id'),
+        categories: transformToOptions(categoriesRawData, 'nom', 'id'),
         typesContrat: transformToOptions(contractTypesRes?.data?.contractTypes || contractTypesRes?.data || [], 'name', 'code'),
         statuts: [],
         banques: [],
@@ -835,6 +842,29 @@ export default function NewEmployeePage() {
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
+
+    // Handle category change - auto-fill salary from category configuration
+    if (name === 'categorie' && value) {
+      const selectedCategory = categoriesData.find(cat =>
+        cat.id === value || cat.id === parseInt(value) || String(cat.id) === value
+      );
+      if (selectedCategory) {
+        const salaryValue = selectedCategory.salaire_base || selectedCategory.salaireBase || selectedCategory.baseSalary || '';
+        const currencyValue = selectedCategory.salaire_devise || selectedCategory.salaireDevise || selectedCategory.currency || 'USD';
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+          salaireBase: salaryValue,
+          salaireDevise: currencyValue,
+        }));
+        // Clear errors
+        if (errors[name]) {
+          setErrors((prev) => ({ ...prev, [name]: null, salaireBase: null }));
+        }
+        return;
+      }
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'number' ? (value === '' ? '' : Number(value)) : value,
@@ -1487,14 +1517,23 @@ export default function NewEmployeePage() {
                 onChange={handleChange}
                 error={errors.dateFinContrat}
               />
-              <FormInput
-                label={intl.formatMessage({ id: 'hr.employees.baseSalary', defaultMessage: 'Salaire de base (USD)' })}
-                name="salaireBase"
-                type="number"
-                value={formData.salaireBase}
-                onChange={handleChange}
-                error={errors.salaireBase}
-              />
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {intl.formatMessage({ id: 'hr.employees.baseSalary', defaultMessage: 'Salaire de base' })}
+                  {formData.salaireDevise && <span className="ml-1 text-gray-500">({formData.salaireDevise})</span>}
+                </label>
+                <input
+                  type="number"
+                  name="salaireBase"
+                  value={formData.salaireBase}
+                  readOnly
+                  disabled
+                  className="w-full rounded-lg border border-gray-300 bg-gray-100 px-4 py-2.5 text-gray-600 cursor-not-allowed dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {intl.formatMessage({ id: 'hr.employees.salaryFromCategory', defaultMessage: 'Le salaire est defini par la categorie selectionnee' })}
+                </p>
+              </div>
             </div>
           </FormSection>
 

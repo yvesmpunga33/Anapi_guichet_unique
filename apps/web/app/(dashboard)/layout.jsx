@@ -177,6 +177,16 @@ const getNavigation = (intl) => [
     ],
   },
   {
+    titleKey: "nav.investments",
+    title: intl.formatMessage({ id: "nav.investments", defaultMessage: "INVESTISSEMENTS" }),
+    items: [
+      { name: intl.formatMessage({ id: "nav.investors", defaultMessage: "Investisseurs" }), href: "/investments/investors", icon: Briefcase },
+      { name: intl.formatMessage({ id: "nav.investmentProjects", defaultMessage: "Projets d'investissement" }), href: "/investments/projects", icon: TrendingUp },
+      { name: intl.formatMessage({ id: "nav.projectTracking", defaultMessage: "Suivi des projets" }), href: "/investments/tracking", icon: ClipboardList },
+      { name: intl.formatMessage({ id: "nav.opportunities", defaultMessage: "Opportunités par province" }), href: "/investments/opportunities", icon: MapPinned },
+    ],
+  },
+  {
     titleKey: "nav.legal",
     title: intl.formatMessage({ id: "nav.legal", defaultMessage: "DIRECTION JURIDIQUE" }),
     items: [
@@ -185,16 +195,6 @@ const getNavigation = (intl) => [
       { name: intl.formatMessage({ id: "nav.contracts", defaultMessage: "Contrats" }), href: "/legal/contracts", icon: FileSignature },
       { name: intl.formatMessage({ id: "nav.legalAlerts", defaultMessage: "Alertes" }), href: "/legal/alerts", icon: Bell },
       { name: intl.formatMessage({ id: "nav.legalConfig", defaultMessage: "Configurations" }), href: "/legal/configurations", icon: Settings },
-    ],
-  },
-  {
-    titleKey: "nav.investments",
-    title: intl.formatMessage({ id: "nav.investments", defaultMessage: "GESTION DES INVESTISSEMENTS" }),
-    items: [
-      { name: intl.formatMessage({ id: "nav.investors", defaultMessage: "Investisseurs" }), href: "/investments/investors", icon: Briefcase },
-      { name: intl.formatMessage({ id: "nav.investmentProjects", defaultMessage: "Projets d'investissement" }), href: "/investments/projects", icon: TrendingUp },
-      { name: intl.formatMessage({ id: "nav.projectTracking", defaultMessage: "Suivi des projets" }), href: "/investments/tracking", icon: ClipboardList },
-      { name: intl.formatMessage({ id: "nav.opportunities", defaultMessage: "Opportunités par province" }), href: "/investments/opportunities", icon: MapPinned },
     ],
   },
   {

@@ -4,6 +4,14 @@ import { useState, useEffect, useMemo, memo, useCallback } from "react";
 import Link from "next/link";
 import { MapPin, TrendingUp, Users, ArrowRight, Building } from "lucide-react";
 
+// Get API base URL
+const getApiBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3502';
+  }
+  return 'http://localhost:3502';
+};
+
 // ANAPI Colors
 const ANAPI_COLORS = {
   darkBlue: "#0A1628",
@@ -135,20 +143,37 @@ const DRCMapPublicComponent = ({ className = "" }) => {
 
   // Load GeoJSON and provinces data
   useEffect(() => {
-    Promise.all([
-      fetch("/data/drc-provinces-simple.json").then(res => res.json()),
-      fetch("/api/v1/geography/public/provinces").then(res => res.json())
-    ])
-      .then(([geoJson, provincesData]) => {
+    const apiBaseUrl = getApiBaseUrl();
+
+    const loadData = async () => {
+      try {
+        // Load GeoJSON first
+        const geoRes = await fetch("/data/drc-provinces-simple.json");
+        if (!geoRes.ok) {
+          console.error("Failed to load GeoJSON:", geoRes.status);
+        }
+        const geoJson = await geoRes.json();
         setGeoData(geoJson);
-        setProvinces(provincesData.provinces || []);
-        setStats(provincesData.stats || null);
+
+        // Load provinces from API
+        try {
+          const provRes = await fetch(`${apiBaseUrl}/api/v1/geography/public/provinces`);
+          if (provRes.ok) {
+            const provincesData = await provRes.json();
+            setProvinces(provincesData.provinces || []);
+            setStats(provincesData.stats || null);
+          }
+        } catch (apiErr) {
+          console.warn("Could not load provinces from API:", apiErr.message);
+        }
+      } catch (err) {
+        console.error("Error loading map data:", err);
+      } finally {
         setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error loading data:", err);
-        setLoading(false);
-      });
+      }
+    };
+
+    loadData();
   }, []);
 
   const bounds = useMemo(() => {

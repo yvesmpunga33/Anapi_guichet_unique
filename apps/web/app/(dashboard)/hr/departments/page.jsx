@@ -404,10 +404,11 @@ export default function DepartmentsPage() {
       });
 
       if (response.success) {
-        setDepartments(response.data || []);
-        setTotal(response.pagination?.total || 0);
-
-        const depts = response.data || [];
+        // Extract departments array safely
+        const deptsArray = response.data?.departments || response.data || [];
+        const depts = Array.isArray(deptsArray) ? deptsArray : [];
+        setDepartments(depts);
+        setTotal(response.pagination?.total || depts.length || 0);
         setStats({
           totalDepartments: response.pagination?.total || depts.length,
           totalPostes: depts.reduce((sum, d) => sum + (d.nombrePostes || 0), 0),

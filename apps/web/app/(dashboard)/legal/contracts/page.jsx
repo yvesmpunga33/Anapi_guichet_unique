@@ -45,7 +45,8 @@ export default function ContractsPage() {
   const fetchContractTypes = async () => {
     try {
       const response = await ContractTypeList({ activeOnly: true });
-      setContractTypes(response.data.types || []);
+      const data = response.data?.data || response.data;
+      setContractTypes(data.contractTypes || data.types || []);
     } catch (err) {
       console.error("Error fetching contract types:", err.response?.data?.message || err.message);
     }
@@ -63,10 +64,11 @@ export default function ContractsPage() {
       if (filters.expiring) params.expiring = filters.expiring;
 
       const response = await ContractList(params);
-      setContracts(response.data.contracts || []);
+      const data = response.data?.data || response.data;
+      setContracts(data.contracts || []);
       setPagination((prev) => ({
         ...prev,
-        totalPages: response.data.pagination?.totalPages || 1,
+        totalPages: data.pagination?.totalPages || 1,
       }));
     } catch (err) {
       console.error("Error fetching contracts:", err.response?.data?.message || err.message);

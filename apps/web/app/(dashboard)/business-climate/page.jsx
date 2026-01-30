@@ -165,7 +165,9 @@ export default function BusinessClimateDashboard() {
       else setLoading(true);
 
       const response = await BusinessClimateStatistics({ year: selectedYear });
-      setStats(response.data);
+      // API returns { success: true, data: { barriers: {...}, ... } }
+      const data = response.data?.data || response.data;
+      setStats(data);
     } catch (error) {
       console.error("Error fetching stats:", error);
     } finally {

@@ -137,7 +137,9 @@ export default function DeductionsDashboardPage() {
       ]);
 
       if (deductionStatsRes.success) setDeductionStats(deductionStatsRes.data);
-      if (deductionsRes.success) setRecentDeductions(deductionsRes.data?.data || deductionsRes.data || []);
+      // Extract arrays safely (handle various response structures)
+      const deductionsArray = deductionsRes.data?.deductions || deductionsRes.data?.data || deductionsRes.data || [];
+      if (deductionsRes.success) setRecentDeductions(Array.isArray(deductionsArray) ? deductionsArray : []);
     } catch (error) {
       console.error('Erreur chargement donnees:', error);
     } finally {

@@ -85,8 +85,8 @@ export default function TreatiesPage() {
       if (search) params.search = search;
 
       const response = await TreatyList(params);
-      const data = response.data;
-      setTreaties(data.data || []);
+      const data = response.data?.data || response.data;
+      setTreaties(data.treaties || data.data || []);
       setPagination((prev) => ({
         ...prev,
         total: data.pagination?.total || 0,

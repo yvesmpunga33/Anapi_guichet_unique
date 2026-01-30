@@ -336,7 +336,9 @@ export default function AttendancePage() {
         }),
       ]);
 
-      setDepartments(deptRes?.data || []);
+      // Extract departments array from response (handle various response structures)
+      const deptsArray = deptRes?.data?.departments || deptRes?.data || [];
+      setDepartments(Array.isArray(deptsArray) ? deptsArray : []);
       setAttendanceData(attRes?.data || { stats: {}, data: [], pagination: {} });
     } catch (error) {
       console.error('Error loading data:', error);

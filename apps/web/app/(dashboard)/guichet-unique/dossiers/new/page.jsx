@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Swal from "sweetalert2";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -218,10 +219,18 @@ function NewDossierForm() {
     return requiredDocuments.map(doc => ({
       id: doc.id,
       name: doc.name,
-      required: doc.isRequired,
+      required: doc.required ?? doc.isRequired ?? true, // Support both API formats
       code: doc.code
     }));
   };
+
+  // Sync dossierType from URL when component mounts or URL changes
+  useEffect(() => {
+    if (typeFromUrl && typeFromUrl !== formData.dossierType) {
+      console.log('Syncing dossierType from URL:', typeFromUrl);
+      setFormData(prev => ({ ...prev, dossierType: typeFromUrl }));
+    }
+  }, [typeFromUrl]);
 
   // Load sectors
   useEffect(() => {
@@ -567,7 +576,17 @@ function NewDossierForm() {
       case "financial":
         return !!formData.investmentAmount;
       case "documents":
-        const requiredDocs = getRequiredDocuments().filter(d => d.required);
+        // Documents section is complete only if:
+        // 1. A dossier type is selected AND documents are loaded
+        // 2. At least one document has been uploaded
+        // 3. All required documents have been uploaded
+        if (!formData.dossierType || loadingDocuments) return false;
+        const allDocs = getRequiredDocuments();
+        if (allDocs.length === 0) return false; // No documents configured yet
+        const uploadedCount = Object.keys(documentsByType).length;
+        if (uploadedCount === 0) return false; // No documents uploaded yet
+        const requiredDocs = allDocs.filter(d => d.required);
+        if (requiredDocs.length === 0) return uploadedCount > 0; // No required docs but has uploads
         return requiredDocs.every(doc => documentsByType[doc.id]);
       default:
         return false;
@@ -637,6 +656,12 @@ function NewDossierForm() {
 
     setLoading(true);
     try {
+      // Debug: Log the dossierType being submitted
+      console.log('=== SOUMISSION DOSSIER ===');
+      console.log('Type de dossier:', formData.dossierType);
+      console.log('Type depuis URL:', typeFromUrl);
+      console.log('FormData complet:', JSON.stringify(formData, null, 2));
+
       const submitFormData = new FormData();
       submitFormData.append('data', JSON.stringify({
         ...formData,
@@ -672,10 +697,25 @@ function NewDossierForm() {
         throw new Error(errorMessage);
       }
 
+      // Success message
+      await Swal.fire({
+        icon: 'success',
+        title: 'Dossier soumis avec succès !',
+        html: `<p>Votre dossier a été enregistré avec le numéro:</p><p class="text-lg font-bold text-orange-600 mt-2">${result.data?.dossier?.dossierNumber || 'N/A'}</p>`,
+        confirmButtonText: 'Voir mes dossiers',
+        confirmButtonColor: '#f97316'
+      });
+
       router.push("/guichet-unique/dossiers");
     } catch (error) {
       console.error('Submit error:', error);
-      setErrors({ submit: error.message || 'Une erreur est survenue' });
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.message || 'Une erreur est survenue lors de la soumission',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#ef4444'
+      });
       setLoading(false);
     }
   };

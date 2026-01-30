@@ -127,9 +127,10 @@ export default function DialoguesPage() {
       if (viewMode === "upcoming") params.upcoming = "true";
 
       const response = await DialogueList(params);
-      const data = response.data;
-      setDialogues(data.data || []);
-      setPagination(data.pagination);
+      // API returns { success: true, data: { dialogues: [...], pagination: {...} } }
+      const data = response.data?.data || response.data;
+      setDialogues(data.dialogues || []);
+      setPagination(data.pagination || { page: 1, total: 0, totalPages: 0 });
     } catch (error) {
       console.error("Error fetching dialogues:", error);
     } finally {

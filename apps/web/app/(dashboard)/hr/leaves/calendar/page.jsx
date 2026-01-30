@@ -256,8 +256,11 @@ export default function LeaveCalendarPage() {
           getLeaveTypes({ actif: true }),
           getDepartments(),
         ]);
-        setLeaveTypes(typesRes?.data || []);
-        setDepartments(deptsRes?.data || []);
+        // Extract arrays safely (handle various response structures)
+        const typesArray = typesRes?.data?.leaveTypes || typesRes?.data || [];
+        const deptsArray = deptsRes?.data?.departments || deptsRes?.data || [];
+        setLeaveTypes(Array.isArray(typesArray) ? typesArray : []);
+        setDepartments(Array.isArray(deptsArray) ? deptsArray : []);
       } catch (error) {
         console.error('Error loading config:', error);
       }

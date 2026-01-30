@@ -8,6 +8,7 @@ import {
   Filter,
   Eye,
   Edit,
+  Trash2,
   Clock,
   CheckCircle2,
   XCircle,
@@ -31,9 +32,10 @@ import {
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import Link from "next/link";
+import Swal from "sweetalert2";
 
 // Services
-import { DossierList } from "@/app/services/admin/GuichetUnique.service";
+import { DossierList, DossierDelete } from "@/app/services/admin/GuichetUnique.service";
 
 // Helper function to get icon dynamically
 const getIcon = (iconName) => {
@@ -203,7 +205,7 @@ export default function AutorisationsPage() {
       const params = {
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
-        type: 'AUTORISATION_ACTIVITE',
+        type: 'AUTORISATION',
       };
 
       if (searchTerm) {
@@ -258,6 +260,41 @@ export default function AutorisationsPage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  // Handle delete with SweetAlert2
+  const handleDelete = async (dossier) => {
+    const result = await Swal.fire({
+      title: 'Confirmer la suppression',
+      text: `Etes-vous sur de vouloir supprimer l'autorisation ${dossier.dossierNumber} ?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Oui, supprimer',
+      cancelButtonText: 'Annuler'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await DossierDelete(dossier.id);
+        Swal.fire({
+          icon: 'success',
+          title: 'Supprime',
+          text: 'Autorisation supprimee avec succes',
+          confirmButtonColor: '#8b5cf6'
+        });
+        fetchDossiers();
+      } catch (error) {
+        console.error('Error deleting autorisation:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: error.response?.data?.message || 'Erreur lors de la suppression',
+          confirmButtonColor: '#ef4444'
+        });
+      }
+    }
+  };
 
   const formatAmount = (amount, currency = 'USD') => {
     return new Intl.NumberFormat("fr-FR", {
@@ -526,6 +563,15 @@ export default function AutorisationsPage() {
                           >
                             <Edit className="w-5 h-5" />
                           </Link>
+                          {dossier.status === 'DRAFT' && (
+                            <button
+                              onClick={() => handleDelete(dossier)}
+                              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { usePageTitle } from "../../../../../contexts/PageTitleContext";
+import { exportTreatyToPDF } from "@/app/utils/pdfExport";
+import { TreatyGetById, TreatyDelete } from "@/app/services/admin/BusinessClimate.service";
 
 const treatyTypeConfig = {
   BIT: { label: "Traité bilatéral d'investissement", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-100 dark:bg-blue-900/40" },
@@ -72,9 +74,11 @@ export default function TreatyDetailPage({ params }) {
 
   const fetchTreaty = async () => {
     try {
-      const response = await fetch(`/api/business-climate/treaties/${id}`);
-      if (response.ok) {
-        const data = await response.json();
+      const response = await TreatyGetById(id);
+      const data = response.data?.data || response.data;
+      if (data?.treaty) {
+        setTreaty(data.treaty);
+      } else if (data) {
         setTreaty(data);
       } else {
         Swal.fire({
@@ -86,6 +90,14 @@ export default function TreatyDetailPage({ params }) {
       }
     } catch (error) {
       console.error("Error fetching treaty:", error);
+      if (error.response?.status === 404) {
+        Swal.fire({
+          icon: "error",
+          title: "Erreur",
+          text: "Traité non trouvé",
+          confirmButtonColor: "#2563eb",
+        }).then(() => router.push("/business-climate/treaties"));
+      }
     } finally {
       setLoading(false);
     }
@@ -244,11 +256,11 @@ export default function TreatyDetailPage({ params }) {
           </div>
           <div className="flex items-center gap-3 print:hidden">
             <button
-              onClick={() => window.print()}
+              onClick={() => exportTreatyToPDF(treaty)}
               className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
             >
               <Printer className="w-4 h-4" />
-              Imprimer
+              Exporter PDF
             </button>
             <Link
               href={`/business-climate/treaties/${id}/edit`}

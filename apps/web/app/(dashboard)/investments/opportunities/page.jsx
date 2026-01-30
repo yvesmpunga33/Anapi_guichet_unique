@@ -120,8 +120,8 @@ function OpportunityForm({ opportunity, provinces, sectors, onSave, onCancel, sa
     description: opportunity?.description || "",
     provinceId: opportunity?.provinceId || "",
     sectorId: opportunity?.sectorId || "",
-    minInvestment: opportunity?.minInvestment || "",
-    maxInvestment: opportunity?.maxInvestment || "",
+    investmentMin: opportunity?.investmentMin || "",
+    investmentMax: opportunity?.investmentMax || "",
     expectedJobs: opportunity?.expectedJobs || "",
     projectDuration: opportunity?.projectDuration || "",
     location: opportunity?.location || "",
@@ -133,7 +133,7 @@ function OpportunityForm({ opportunity, provinces, sectors, onSave, onCancel, sa
     deadline: opportunity?.deadline || "",
     status: opportunity?.status || "DRAFT",
     priority: opportunity?.priority || "MEDIUM",
-    isFeatured: opportunity?.isFeatured || false,
+    featured: opportunity?.featured || false,
     requiredDocuments: opportunity?.requiredDocuments || [],
   });
 
@@ -255,8 +255,8 @@ function OpportunityForm({ opportunity, provinces, sectors, onSave, onCancel, sa
             <input
               type="number"
               min="0"
-              value={formData.minInvestment}
-              onChange={(e) => setFormData({ ...formData, minInvestment: e.target.value })}
+              value={formData.investmentMin}
+              onChange={(e) => setFormData({ ...formData, investmentMin: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               placeholder="100000"
             />
@@ -268,8 +268,8 @@ function OpportunityForm({ opportunity, provinces, sectors, onSave, onCancel, sa
             <input
               type="number"
               min="0"
-              value={formData.maxInvestment}
-              onChange={(e) => setFormData({ ...formData, maxInvestment: e.target.value })}
+              value={formData.investmentMax}
+              onChange={(e) => setFormData({ ...formData, investmentMax: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               placeholder="500000"
             />
@@ -489,8 +489,8 @@ function OpportunityForm({ opportunity, provinces, sectors, onSave, onCancel, sa
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={formData.isFeatured}
-                onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
+                checked={formData.featured}
+                onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
                 className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
               />
               <span className="text-sm text-gray-700 dark:text-gray-300">Mettre en avant</span>
@@ -568,7 +568,8 @@ export default function OpportunitiesPage() {
       if (filterStatus) params.status = filterStatus;
 
       const response = await OpportunityList(params);
-      const data = response.data;
+      // API returns { success: true, data: { opportunities: [...], stats: {...}, pagination: {...} } }
+      const data = response.data?.data || response.data;
 
       setOpportunities(data.opportunities || []);
       setStats(data.stats || {});
@@ -583,7 +584,8 @@ export default function OpportunitiesPage() {
   const fetchProvinces = async () => {
     try {
       const response = await ReferentielProvinceList({ activeOnly: true });
-      setProvinces(response.data?.provinces || []);
+      const data = response.data?.data || response.data;
+      setProvinces(data?.provinces || []);
     } catch (error) {
       console.error("Error fetching provinces:", error);
     }
@@ -592,7 +594,8 @@ export default function OpportunitiesPage() {
   const fetchSectors = async () => {
     try {
       const response = await ReferentielSectorList({ activeOnly: true });
-      setSectors(response.data?.sectors || []);
+      const data = response.data?.data || response.data;
+      setSectors(data?.sectors || []);
     } catch (error) {
       console.error("Error fetching sectors:", error);
     }
@@ -641,7 +644,7 @@ export default function OpportunitiesPage() {
 
   const toggleFeatured = async (opp) => {
     try {
-      await OpportunityUpdate(opp.id, { isFeatured: !opp.isFeatured });
+      await OpportunityUpdate(opp.id, { featured: !opp.featured });
       fetchOpportunities();
     } catch (error) {
       console.error("Error toggling featured:", error);
@@ -802,7 +805,7 @@ export default function OpportunitiesPage() {
                   <tr key={opp.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
-                        {opp.isFeatured && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
+                        {opp.featured && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
                         <div>
                           <p className="font-medium text-gray-900 dark:text-white">{opp.title}</p>
                           <p className="text-xs text-gray-500">{opp.reference}</p>
@@ -824,8 +827,8 @@ export default function OpportunitiesPage() {
                     <td className="px-4 py-4">
                       <div>
                         <p className="text-gray-900 dark:text-white font-medium">
-                          {formatCurrency(opp.minInvestment)}
-                          {opp.maxInvestment && ` - ${formatCurrency(opp.maxInvestment)}`}
+                          {formatCurrency(opp.investmentMin)}
+                          {opp.investmentMax && ` - ${formatCurrency(opp.investmentMax)}`}
                         </p>
                         {opp.expectedJobs && (
                           <p className="text-xs text-gray-500">{opp.expectedJobs} emplois</p>
@@ -857,9 +860,9 @@ export default function OpportunitiesPage() {
                         <button
                           onClick={() => toggleFeatured(opp)}
                           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                          title={opp.isFeatured ? "Retirer des vedettes" : "Mettre en vedette"}
+                          title={opp.featured ? "Retirer des vedettes" : "Mettre en vedette"}
                         >
-                          {opp.isFeatured ? (
+                          {opp.featured ? (
                             <StarOff className="w-4 h-4 text-yellow-500" />
                           ) : (
                             <Star className="w-4 h-4 text-gray-400" />
@@ -932,60 +935,251 @@ export default function OpportunitiesPage() {
         )}
       </Modal>
 
-      {/* View Modal */}
-      <Modal isOpen={showViewModal} onClose={() => { setShowViewModal(false); setSelectedOpportunity(null); }} title="Details de l'opportunite" size="lg">
+      {/* View Modal - Professional Detail View (Same structure as Edit Form) */}
+      <Modal isOpen={showViewModal} onClose={() => { setShowViewModal(false); setSelectedOpportunity(null); }} title="Details de l'opportunite" size="xl">
         {selectedOpportunity && (
-          <div className="space-y-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{selectedOpportunity.title}</h3>
-                <p className="text-sm text-gray-500">{selectedOpportunity.reference}</p>
-              </div>
-              <StatusBadge status={selectedOpportunity.status} />
-            </div>
-
-            {selectedOpportunity.description && (
-              <p className="text-gray-600 dark:text-gray-300">{selectedOpportunity.description}</p>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-gray-400" />
-                <span className="text-gray-900 dark:text-white">{selectedOpportunity.province?.name}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Factory className="w-5 h-5 text-gray-400" />
-                <span className="text-gray-900 dark:text-white">{selectedOpportunity.sector?.name || "-"}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-gray-400" />
-                <span className="text-gray-900 dark:text-white">
-                  {formatCurrency(selectedOpportunity.minInvestment)}
-                  {selectedOpportunity.maxInvestment && ` - ${formatCurrency(selectedOpportunity.maxInvestment)}`}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-gray-400" />
-                <span className="text-gray-900 dark:text-white">{selectedOpportunity.expectedJobs || 0} emplois prevus</span>
-              </div>
-            </div>
-
-            {selectedOpportunity.requiredDocuments?.length > 0 && (
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white mb-2">Documents requis</h4>
-                <div className="space-y-1">
-                  {selectedOpportunity.requiredDocuments.map((doc) => (
-                    <div key={doc.id} className="flex items-center gap-2 text-sm">
-                      <FileText className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-600 dark:text-gray-300">{doc.name}</span>
-                      {doc.isRequired && <span className="text-xs text-red-500">*</span>}
-                    </div>
-                  ))}
+          <div className="space-y-6">
+            {/* Basic Info - Same layout as form */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Titre de l&apos;opportunite
+                </label>
+                <div className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white">
+                  {selectedOpportunity.title || "-"}
                 </div>
               </div>
-            )}
 
-            <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Province
+                </label>
+                <div className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white">
+                  {selectedOpportunity.province?.name || "-"}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Secteur d&apos;activite
+                </label>
+                <div className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white">
+                  {selectedOpportunity.sector?.name || "-"}
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description
+                </label>
+                <div className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white min-h-[100px] whitespace-pre-wrap">
+                  {selectedOpportunity.description || "-"}
+                </div>
+              </div>
+            </div>
+
+            {/* Investment Details - Same layout as form */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Details de l&apos;investissement</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Investissement minimum (USD)
+                  </label>
+                  <div className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white">
+                    {formatCurrency(selectedOpportunity.investmentMin) || "-"}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Investissement maximum (USD)
+                  </label>
+                  <div className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white">
+                    {formatCurrency(selectedOpportunity.investmentMax) || "-"}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Emplois prevus
+                  </label>
+                  <div className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white">
+                    {selectedOpportunity.expectedJobs || "-"}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Duree du projet
+                  </label>
+                  <div className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white">
+                    {selectedOpportunity.projectDuration || "-"}
+                  </div>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Localisation precise
+                  </label>
+                  <div className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white">
+                    {selectedOpportunity.location || "-"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Advantages - Same layout as form */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Avantages offerts</h4>
+              <div className="flex flex-wrap gap-2 min-h-[40px]">
+                {selectedOpportunity.advantages?.length > 0 ? (
+                  selectedOpportunity.advantages.map((adv, i) => (
+                    <span key={i} className="flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                      {adv}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-gray-500 dark:text-gray-400 text-sm italic">Aucun avantage specifie</span>
+                )}
+              </div>
+            </div>
+
+            {/* Requirements - Same layout as form */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Exigences pour les investisseurs</h4>
+              <div className="flex flex-wrap gap-2 min-h-[40px]">
+                {selectedOpportunity.requirements?.length > 0 ? (
+                  selectedOpportunity.requirements.map((req, i) => (
+                    <span key={i} className="flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">
+                      {req}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-gray-500 dark:text-gray-400 text-sm italic">Aucune exigence specifiee</span>
+                )}
+              </div>
+            </div>
+
+            {/* Required Documents - Same layout as form */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Documents requis</h4>
+              <div className="space-y-2 min-h-[40px]">
+                {selectedOpportunity.requiredDocuments?.length > 0 ? (
+                  selectedOpportunity.requiredDocuments.map((doc, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-900 dark:text-white">{doc.name}</span>
+                        <span className="px-2 py-0.5 text-xs bg-gray-200 dark:bg-gray-600 rounded">{doc.category || "Autre"}</span>
+                      </div>
+                      {doc.isRequired && (
+                        <span className="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded">Obligatoire</span>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <span className="text-gray-500 dark:text-gray-400 text-sm italic">Aucun document requis</span>
+                )}
+              </div>
+            </div>
+
+            {/* Contact Info - Same layout as form */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Contact</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nom du contact</label>
+                  <div className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white">
+                    {selectedOpportunity.contactName || "-"}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                  <div className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                    {selectedOpportunity.contactEmail ? (
+                      <a href={`mailto:${selectedOpportunity.contactEmail}`} className="text-blue-600 hover:underline">
+                        {selectedOpportunity.contactEmail}
+                      </a>
+                    ) : (
+                      <span className="text-gray-900 dark:text-white">-</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telephone</label>
+                  <div className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                    {selectedOpportunity.contactPhone ? (
+                      <a href={`tel:${selectedOpportunity.contactPhone}`} className="text-blue-600 hover:underline">
+                        {selectedOpportunity.contactPhone}
+                      </a>
+                    ) : (
+                      <span className="text-gray-900 dark:text-white">-</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Status & Options - Same layout as form */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Parametres</h4>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Statut</label>
+                  <div className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                    <StatusBadge status={selectedOpportunity.status} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priorite</label>
+                  <div className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                    <PriorityBadge priority={selectedOpportunity.priority} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date limite</label>
+                  <div className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white">
+                    {selectedOpportunity.deadline
+                      ? new Date(selectedOpportunity.deadline).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })
+                      : "-"
+                    }
+                  </div>
+                </div>
+                <div className="flex items-center pt-6">
+                  <div className="flex items-center gap-2">
+                    {selectedOpportunity.featured ? (
+                      <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                    ) : (
+                      <StarOff className="w-5 h-5 text-gray-400" />
+                    )}
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      {selectedOpportunity.featured ? "Mis en avant" : "Non mis en avant"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Metadata */}
+            <div className="flex items-center justify-between text-xs text-gray-500 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-4">
+                <span className="font-medium">Reference: {selectedOpportunity.reference || `REF-${selectedOpportunity.id?.substring(0, 8).toUpperCase()}`}</span>
+                {selectedOpportunity.viewCount > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Eye className="w-3 h-3" /> {selectedOpportunity.viewCount} vues
+                  </span>
+                )}
+                {selectedOpportunity.created_at && (
+                  <span>Cree le {new Date(selectedOpportunity.created_at).toLocaleDateString("fr-FR")}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                Fermer
+              </button>
               <button
                 onClick={() => {
                   setShowViewModal(false);

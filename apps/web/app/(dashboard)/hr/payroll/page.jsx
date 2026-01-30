@@ -711,8 +711,9 @@ export default function PayrollPage() {
       ]);
 
       if (payrollsRes.success) {
-        setPayrolls(payrollsRes.data || []);
-        setTotal(payrollsRes.pagination?.total || 0);
+        const payrollsArray = payrollsRes.data?.payrolls || payrollsRes.data || [];
+        setPayrolls(Array.isArray(payrollsArray) ? payrollsArray : []);
+        setTotal(payrollsRes.pagination?.total || payrollsRes.data?.pagination?.total || 0);
       }
 
       if (recapRes.success) {
@@ -741,8 +742,11 @@ export default function PayrollPage() {
           getCategories(),
           getDepartments(),
         ]);
-        if (catRes.success) setCategories(catRes.data || []);
-        if (deptRes.success) setDepartments(deptRes.data || []);
+        // Extract arrays safely (handle various response structures)
+        const catsArray = catRes?.data?.categories || catRes?.data || [];
+        const deptsArray = deptRes?.data?.departments || deptRes?.data || [];
+        if (catRes.success) setCategories(Array.isArray(catsArray) ? catsArray : []);
+        if (deptRes.success) setDepartments(Array.isArray(deptsArray) ? deptsArray : []);
       } catch (err) {
         console.error('Error loading filters:', err);
       }
@@ -773,7 +777,7 @@ export default function PayrollPage() {
         Swal.fire({
           icon: 'success',
           title: intl.formatMessage({ id: 'common.success', defaultMessage: 'Succes' }),
-          text: `${response.data.employees_traites} fiches de paie generees pour ${modeLabel}`,
+          text: `${response.data?.employees_traites || 0} fiches de paie generees pour ${modeLabel}`,
           timer: 3000,
         });
         setProcessDialog(false);
@@ -798,7 +802,7 @@ export default function PayrollPage() {
         Swal.fire({
           icon: 'success',
           title: intl.formatMessage({ id: 'common.success', defaultMessage: 'Succes' }),
-          text: `${response.data.updatedCount} fiches validees`,
+          text: `${response.data?.updatedCount || 0} fiches validees`,
           timer: 2000,
         });
         setSelected([]);
@@ -821,7 +825,7 @@ export default function PayrollPage() {
         Swal.fire({
           icon: 'success',
           title: intl.formatMessage({ id: 'common.success', defaultMessage: 'Succes' }),
-          text: `${response.data.updatedCount} fiches marquees comme payees`,
+          text: `${response.data?.updatedCount || 0} fiches marquees comme payees`,
           timer: 2000,
         });
         setSelected([]);
@@ -843,7 +847,7 @@ export default function PayrollPage() {
         Swal.fire({
           icon: 'success',
           title: intl.formatMessage({ id: 'common.success', defaultMessage: 'Succes' }),
-          text: response.data.message,
+          text: response.data?.message || 'Archive effectuee',
           timer: 2000,
         });
         setArchiveDialog(false);

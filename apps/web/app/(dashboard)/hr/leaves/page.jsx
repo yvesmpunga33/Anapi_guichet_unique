@@ -226,7 +226,7 @@ function LeaveFormDialog({ isOpen, onClose, leave, leaveTypes, employees, employ
                 className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-[#D4A853] focus:outline-none focus:ring-2 focus:ring-[#D4A853]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               >
                 <option value="">{intl.formatMessage({ id: 'hr.leaves.selectEmployee', defaultMessage: 'Selectionner un employe' })}</option>
-                {employees.map((emp) => (
+                {Array.isArray(employees) && employees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
                     {emp.matricule} - {emp.prenom} {emp.nom}
                   </option>
@@ -245,7 +245,7 @@ function LeaveFormDialog({ isOpen, onClose, leave, leaveTypes, employees, employ
               className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-[#D4A853] focus:outline-none focus:ring-2 focus:ring-[#D4A853]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             >
               <option value="">{intl.formatMessage({ id: 'hr.leaves.selectLeaveType', defaultMessage: 'Selectionner un type' })}</option>
-              {leaveTypes.map((type) => (
+              {Array.isArray(leaveTypes) && leaveTypes.map((type) => (
                 <option key={type.id} value={type.id}>
                   {type.nom} ({type.joursParDefaut} {intl.formatMessage({ id: 'hr.leaves.daysPerYear', defaultMessage: 'jours/an' })})
                 </option>
@@ -637,8 +637,11 @@ export default function LeavesPage() {
         getLeaveTypes({ actif: true }),
         getEmployees({ limit: 500 }),
       ]);
-      if (typesRes.success) setLeaveTypes(typesRes.data || []);
-      if (employeesRes.success) setEmployees(employeesRes.data || []);
+      // Extract arrays safely (handle various response structures)
+      const typesArray = typesRes.data?.leaveTypes || typesRes.data || [];
+      const empArray = employeesRes.data?.employees || employeesRes.data || [];
+      if (typesRes.success) setLeaveTypes(Array.isArray(typesArray) ? typesArray : []);
+      if (employeesRes.success) setEmployees(Array.isArray(empArray) ? empArray : []);
     } catch (error) {
       console.error('Error loading initial data:', error);
     }
@@ -1153,7 +1156,7 @@ export default function LeavesPage() {
                 className="w-full appearance-none rounded-xl border border-gray-200 py-2.5 pl-10 pr-10 focus:border-[#D4A853] focus:outline-none focus:ring-2 focus:ring-[#D4A853]/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               >
                 <option value="">{intl.formatMessage({ id: 'hr.leaves.allTypes', defaultMessage: 'Tous les types' })}</option>
-                {leaveTypes.map((type) => (
+                {Array.isArray(leaveTypes) && leaveTypes.map((type) => (
                   <option key={type.id} value={type.id}>{type.nom}</option>
                 ))}
               </select>

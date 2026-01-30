@@ -53,8 +53,11 @@ export default function NewContractPage() {
         ContractTypeList({ activeOnly: true }),
         CurrencyList({ activeOnly: true }),
       ]);
-      setContractTypes(typesRes.data.types || []);
-      setCurrencies(currenciesRes.data.currencies || []);
+      // API returns { success: true, data: { contractTypes/currencies } }
+      const typesData = typesRes.data?.data || typesRes.data;
+      const currenciesData = currenciesRes.data?.data || currenciesRes.data;
+      setContractTypes(typesData.contractTypes || typesData.types || []);
+      setCurrencies(currenciesData.currencies || []);
     } catch (err) {
       console.error("Error fetching referentials:", err.response?.data?.message || err.message);
     }
